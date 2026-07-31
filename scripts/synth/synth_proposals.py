@@ -16,8 +16,9 @@ DIMENSIONS
     applicant_type    early_stage_investigator | established_pi | multi_pi_team
                       | small_nonprofit
     defect            (slop only) fabricated_citations | wrong_paper | overclaims
-                      | all, plus budget_inflated | missing_methods (grants only).
-                      wrong_paper = a real, resolving DOI cited as the wrong paper.
+                      | all, plus budget_inflated | budget_math | missing_methods
+                      (grants only). wrong_paper = a real, resolving DOI cited as
+                      the wrong paper; budget_math = line items that don't sum.
 
 SEED PULLS
     Human grant seeds come from *multiple* NIH RePORTER pulls -- one per Carnegie
@@ -75,6 +76,7 @@ GRANT_DEFECTS = [
     "wrong_paper",
     "overclaims",
     "budget_inflated",
+    "budget_math",
     "missing_methods",
     "all",
 ]
@@ -452,6 +454,7 @@ def _slop_inject(dt, defect):
             "wrong_paper": wrong_paper,
             "overclaims": "include grandiose, unsupported guarantees of success",
             "budget_inflated": "request an implausibly large budget for the scope",
+            "budget_math": "itemize a budget whose line items do not sum to the stated total",
             "missing_methods": "keep the methods vague and hand-wavy",
             "all": "do all of: fake citations, wrong-paper citations, overclaims, padded budget",
         }
@@ -502,6 +505,7 @@ def _defect_flags(dims):
         "has_mismatched_citations": d == "wrong_paper" or is_all,
         "overclaims": d == "overclaims" or is_all,
         "budget_inflated": (d == "budget_inflated" or is_all) and grant,
+        "budget_math": (d == "budget_math" or is_all) and grant,
         "missing_methods": (d == "missing_methods" or is_all) and grant,
         # Set only on near-duplicate clones (see add_near_duplicates); a relational
         # property, not derivable from this record's own dimensions.
@@ -591,7 +595,7 @@ def _grant_sections(topic, dims, rng):
         if gt["overclaims"]
         else rng.choice(CLEAN_SENTENCES).format(topic=topic, flavor=flavor)
     )
-    budget = _budget_text(tier, rng, inflated=gt["budget_inflated"])
+    budget = _budget_text(tier, rng, inflated=gt["budget_inflated"], error=gt["budget_math"])
     context = (
         f"{APPLICANT_FLAVOR[dims['applicant_type']]} The {tier} host institution offers "
         f"{tspec['infrastructure']}, backed by {tspec['track_record']}."
@@ -647,15 +651,22 @@ def _report_sections(topic, dims, rng):
     }
 
 
-def _budget_text(tier, rng, inflated):
+def _budget_text(tier, rng, inflated, error=False):
     tspec = _tier_spec(tier)
     lo, hi = tspec["budget_per_year"]
-    per_year = rng.randint(lo, hi)
     years = rng.randint(*tspec["years"])
-    total = per_year * years * (rng.randint(4, 8) if inflated else 1)
+    mult = rng.randint(4, 8) if inflated else 1
+    personnel = rng.randint(lo, hi) * years * mult // 2
+    equipment = rng.randint(20_000, 120_000) * mult
+    travel = rng.randint(5_000, 25_000) * mult
+    indirect = rng.randint(30_000, 150_000) * mult
+    items_sum = personnel + equipment + travel + indirect
+    # budget_math: the stated total does not equal the sum of the line items.
+    stated = items_sum + rng.choice([-1, 1]) * rng.randint(10_000, 90_000) if error else items_sum
     return (
-        f"Total requested support is ${total:,} over {years} years "
-        f"at a {tier} institution, covering personnel, materials, and dissemination."
+        f"Budget: personnel ${personnel:,}; equipment ${equipment:,}; "
+        f"travel ${travel:,}; indirect costs ${indirect:,}. "
+        f"Total requested support is ${stated:,} over {years} years at a {tier} institution."
     )
 
 
@@ -778,6 +789,10 @@ def _assemble(title, sections, cites, doc_type, human_text=None, override_body=N
 
 
 def _extract_budget(sections):
+    for v in sections.values():  # prefer the stated total over a line item
+        m = re.search(r"Total requested support is \$([\d,]+)", v)
+        if m:
+            return int(m.group(1).replace(",", ""))
     for v in sections.values():
         m = re.search(r"\$([\d,]+)", v)
         if m:
@@ -941,6 +956,7 @@ def _write_outputs(args, records, tiers):
                 "has_mismatched_citations",
                 "overclaims",
                 "budget_inflated",
+                "budget_math",
                 "missing_methods",
                 "is_near_duplicate",
                 "n_citations",
@@ -968,6 +984,7 @@ def _write_outputs(args, records, tiers):
                     g["has_mismatched_citations"],
                     g["overclaims"],
                     g["budget_inflated"],
+                    g["budget_math"],
                     g["missing_methods"],
                     g["is_near_duplicate"],
                     r.meta["n_citations"],

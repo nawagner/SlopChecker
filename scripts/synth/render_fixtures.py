@@ -47,6 +47,7 @@ GRANT_CASES = [
     "wrong_paper",
     "overclaims",
     "budget_inflated",
+    "budget_math",
     "missing_methods",
 ]
 TEXT_CASES = ["ai_clean", "fabricated_citations", "wrong_paper", "overclaims"]
@@ -56,6 +57,7 @@ GROUND_TRUTH_FIELDS = [
     "has_mismatched_citations",
     "overclaims",
     "budget_inflated",
+    "budget_math",
     "missing_methods",
 ]
 

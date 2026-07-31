@@ -5,6 +5,15 @@ Append-only. Newest entry on top. One line per entry:
 
 ## Log
 
+- 13:22 Alex (claude-code) — #22 fixtures: added `budget_math` (grant budgets now
+  itemized; stated total ≠ sum of line items) — the last corpus case. Unlike
+  wrong-paper/near-dup, it's deterministically checkable: label-aware demo hits
+  precision/recall 1.00, matching fabricated-citations. That completes every #22
+  fixture case (3 doc types, all defects, MD/HTML/DOCX/PDF, wrong-paper, near-dup,
+  budget-math). Stacked branch `alex/22-budget-math` on #77 / next: none — corpus
+  done; awaiting review/merge of the five-PR stack (#48/#54/#68/#73/#77 + this) /
+  blocked on nothing.
+
 - 13:11 Alex (claude-code) — #22 fixtures: added near-duplicate pairs
   (`--near-dups N`): light-paraphrase clones flagged `is_near_duplicate` +
   `duplicate_of`, for the similarity/dedup check. A relational property, not a

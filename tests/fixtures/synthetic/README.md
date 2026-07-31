@@ -22,9 +22,9 @@ Tooling lives in `scripts/synth/` (`synth_proposals.py`, `score.py`, `render_fix
 
 `files/` holds a representative subset rendered into **real document formats** —
 `.md`, `.html`, `.docx`, `.pdf` — so the ingestion module (#4) and downstream
-checks can be exercised on actual files, not text-in-JSON. 15 fixtures span the
+checks can be exercised on actual files, not text-in-JSON. 16 fixtures span the
 three document types and the key cases (clean, fabricated citations, wrong paper,
-overclaims, plus budget-inflated and missing-methods for grants).
+overclaims, plus budget-inflated, budget-math, and missing-methods for grants).
 `files/files_index.csv` maps each file back to its `corpus_id` and ground-truth
 flags.
 
@@ -60,6 +60,7 @@ Each is a ground-truth column in `manifest.csv`:
 - `has_mismatched_citations` — a cited DOI resolves, but to a different paper than cited (the "wrong paper" case). **All doc types.**
 - `overclaims` — grandiose, unsupported claims. **All doc types.**
 - `budget_inflated` — an implausibly large budget. **Grant applications only.**
+- `budget_math` — an itemized budget whose line items do not sum to the stated total. **Grant applications only.**
 - `missing_methods` — a vague, hand-waved methods section. **Grant applications only.**
 
 The `all` defect sets every *applicable* flag for that document type at once.
@@ -84,7 +85,8 @@ Each ground-truth column maps to a `CheckResult.name` in that contract:
 | `has_mismatched_citations` | `doi_resolves` (true) + `metadata_match` (false) |
 | `ai_generated` | `pangram_span` / `pangram_document` (score lane) |
 | `overclaims`, `budget_inflated`, `missing_methods` | quality-tier checks |
-| `is_near_duplicate` | similarity / embedding check vs the rest of the corpus |
+| `budget_math` | budget arithmetic / feasibility check (line items vs. total) |
+| `is_near_duplicate` | similarity / embedding check vs. the rest of the corpus |
 
 The `has_mismatched_citations` "wrong paper" case is the sharp one: the DOI
 *resolves* but points to a different paper than cited (each such citation carries
@@ -123,6 +125,11 @@ naive baseline scores well on grant templates but drops sharply on blog/report
 prose and model-backed text — a check that only passes on templates has not been
 tested against realistic slop.
 
-## Open items (tracked on #22)
+## Coverage status (#22)
 
-- A budget with a deliberate arithmetic error.
+All fixture cases called for in #22 are now generated: three document types,
+clean / AI-clean / laundered / slop authorship, fabricated and wrong-paper
+citations, overclaims, inflated and non-summing budgets, missing methods, and
+near-duplicate pairs — with committed files in MD/HTML/DOCX/PDF. Possible future
+additions (not required by #22): scanned-image PDFs (ingestion returns `errored`),
+and multi-paragraph quote-in-source mismatches.

@@ -1,38 +1,39 @@
-# Advancing machine learning for protein structure prediction in drug discovery
+# Measuring the labor-market effects of remote work policy
 
 ## Specific Aims
 
-Aim 1: Advance machine learning for protein structure prediction in drug discovery via a characterization-focused strategy.
-Aim 2: Advance machine learning for protein structure prediction in drug discovery via a characterization-focused strategy.
+Aim 1: Advance measuring the labor-market effects of remote work policy via a field experiment-focused strategy.
+Aim 2: Advance measuring the labor-market effects of remote work policy via a field experiment-focused strategy.
+Aim 3: Advance measuring the labor-market effects of remote work policy via a field experiment-focused strategy.
 
 ## Background
 
-Our preliminary data suggest a tractable path toward measurable improvement. Rigorous, pre-registered analyses will guard against bias and support reproducibility. Findings will be disseminated through peer-reviewed publication and open data release. Prior work has established a partial understanding, yet key gaps remain.
+The approach integrates established field experiment methods with a novel analytical pipeline. Our preliminary data suggest a tractable path toward measurable improvement. This proposal addresses measuring the labor-market effects of remote work policy, a problem with substantial significance. We will assemble a multidisciplinary team with complementary expertise.
 
 ## Approach
 
-This proposal addresses machine learning for protein structure prediction in drug discovery, a problem with substantial significance. Rigorous, pre-registered analyses will guard against bias and support reproducibility. Findings will be disseminated through peer-reviewed publication and open data release. We will assemble a multidisciplinary team with complementary expertise.
+Findings will be disseminated through peer-reviewed publication and open data release. The approach integrates established field experiment methods with a novel analytical pipeline. Prior work has established a partial understanding, yet key gaps remain. Our preliminary data suggest a tractable path toward measurable improvement.
 
 ## Innovation
 
-Our preliminary data suggest a tractable path toward measurable improvement.
+Prior work has established a partial understanding, yet key gaps remain.
 
 ## Investigator Context
 
-The PI's first independent award; strong mentorship is in place. The R2 host institution offers focused departmental resources and regional research partnerships, backed by a growing institutional research base.
+Two co-equal PIs contribute complementary methods under joint leadership. The R2 host institution offers focused departmental resources and regional research partnerships, backed by a growing institutional research base.
 
 ## Budget Justification
 
-Total requested support is $575,604 over 3 years at a R2 institution, covering personnel, materials, and dissemination.
+Budget: personnel $265,462; equipment $95,223; travel $8,779; indirect costs $59,937. Total requested support is $429,401 over 3 years at a R2 institution.
 
 ## References
 
-- [1] https://doi.org/10.1289/ehp.1104477
-- [2] https://doi.org/10.1101/gr.229102
-- [3] https://doi.org/10.1093/nar/gky1055
-- [4] https://doi.org/10.1073/pnas.1517384113
-- [5] https://doi.org/10.8454/x0948npf
-- [6] https://doi.org/10.6927/ehd96m8j
-- [7] https://doi.org/10.9525/2hn5f62d
-- [8] https://doi.org/10.7806/3d93tbzq
-- [9] https://doi.org/10.4570/ec1we8de
+- [1] https://doi.org/10.1038/s41586-020-2649-2
+- [2] https://doi.org/10.1073/pnas.1517384113
+- [3] https://doi.org/10.7274/jlc90oup
+- [4] https://doi.org/10.1001/jama.2016.9797
+- [5] https://doi.org/10.1038/nature14539
+- [6] https://doi.org/10.1862/lo7cze3s
+- [7] https://doi.org/10.1001/jama.2016.9797
+- [8] https://doi.org/10.1038/s41586-020-2649-2
+- [9] https://doi.org/10.5979/p3x5m8pj
