@@ -2,12 +2,12 @@
 
 ## Specific Aims
 
-Aim 1: Advance behavioral economics of retirement savings among gig workers via a policy-focused strategy.
-Aim 2: Advance behavioral economics of retirement savings among gig workers via a policy-focused strategy.
+Aim 1: Advance behavioral economics of retirement savings among gig workers via a policy-focused strategy [1].
+Aim 2: Advance behavioral economics of retirement savings among gig workers via a policy-focused strategy [2].
 
 ## Background
 
-Findings will be disseminated through peer-reviewed publication and open data release. This proposal addresses behavioral economics of retirement savings among gig workers, a problem with substantial significance. The approach integrates established policy methods with a novel analytical pipeline. Prior work has established a partial understanding, yet key gaps remain.
+Findings will be disseminated through peer-reviewed publication and open data release [3]. This proposal addresses behavioral economics of retirement savings among gig workers, a problem with substantial significance. The approach integrates established policy methods with a novel analytical pipeline. Prior work has established a partial understanding, yet key gaps remain.
 
 ## Approach
 
@@ -24,6 +24,7 @@ The PI's first independent award; strong mentorship is in place. The R2 host ins
 ## Budget Justification
 
 Budget: personnel $240,707; equipment $88,012; travel $14,307; indirect costs $140,878. Total requested support is $483,904 over 2 years at a R2 institution.
+As one source notes, “The approach integrates established core methods with a novel analytical pipeline.” [1]
 
 ## References
 

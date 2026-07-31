@@ -2,19 +2,20 @@
 
 ## Dek
 
-What we know about behavioral economics of retirement savings among gig workers, and what to watch.
+What we know about behavioral economics of retirement savings among gig workers, and what to watch [1] [9].
 
 ## Intro
 
-This piece examines behavioral economics of retirement savings among gig workers, a question of growing public interest. Careful framing guards against overstatement. Practitioners and policymakers alike have a role to play here.
+This piece examines behavioral economics of retirement savings among gig workers, a question of growing public interest [2]. Careful framing guards against overstatement [3]. Practitioners and policymakers alike have a role to play here [4].
 
 ## Body
 
-The takeaways are meant to inform, not to prescribe. Recent analysis points toward a tractable path forward. The discussion draws on established population methods and current data.
+The takeaways are meant to inform, not to prescribe [5]. Recent analysis points toward a tractable path forward [6]. The discussion draws on established population methods and current data [7].
 
 ## Takeaway
 
-This piece examines behavioral economics of retirement savings among gig workers, a question of growing public interest.
+This piece examines behavioral economics of retirement savings among gig workers, a question of growing public interest [8].
+As one source notes, “This proposal addresses the target problem, a problem with substantial significance.” [1]
 
 ## Sources
 

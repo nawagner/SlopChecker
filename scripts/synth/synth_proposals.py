@@ -774,15 +774,63 @@ def _generate_body(topic, dims, backend, model, rng):
     return sections, text, None
 
 
+# Sentence-ending punctuation an in-text marker can trail (followed by
+# whitespace, a closing quote/paren, or end of text).
+_SENT_END_RE = re.compile(r"[.!?](?=[\s\"'”’)]|$)")
+
+
+def _cite_field(cite, name):
+    """Read ``name`` off a Citation dataclass or an already-asdict()'d dict, so the
+    weaver works from build_record (objects) and render_fixtures (corpus dicts)."""
+    return getattr(cite, name) if hasattr(cite, name) else cite[name]
+
+
+def weave_body_blocks(blocks, cites):
+    """Weave in-text citations into ordered ``(heading, text)`` body blocks (#123).
+
+    Distributes every citation marker across the prose's claim sentences
+    round-robin, then appends one grounded quote (a citation's own claim in quotes,
+    with its marker adjacent) to the final block. That gives ``citations_linked``
+    in-text markers to link and ``check_quotes`` a quoted passage to ground --
+    both were dark on this corpus because every marker sat inside the bibliography.
+
+    Shared by the generator (``_assemble``) and ``render_fixtures`` so
+    ``corpus.jsonl['text']`` and the rendered files carry identical in-text
+    citations. Deterministic and additive: it draws no randomness and only inserts
+    substrings, so regenerating perturbs the corpus by exactly these markers and
+    the one quote, nothing else. ``cites`` may be Citation objects or dicts.
+    """
+    out = [[h, t] for h, t in blocks]
+    if not cites or not out:
+        return [tuple(b) for b in out]
+
+    markers = [_cite_field(c, "marker") for c in cites]
+    ends = [(bi, m.start()) for bi, (_, t) in enumerate(out) for m in _SENT_END_RE.finditer(t)]
+    if ends:
+        placed = {}
+        for j, marker in enumerate(markers):
+            placed.setdefault(ends[j % len(ends)], []).append(marker)
+        # Right-to-left within each block keeps earlier offsets valid as we insert.
+        for bi, pos in sorted(placed, reverse=True):
+            text = out[bi][1]
+            out[bi][1] = text[:pos] + " " + " ".join(placed[(bi, pos)]) + text[pos:]
+
+    lead, mark = _cite_field(cites[0], "claim"), _cite_field(cites[0], "marker")
+    quote = f"As one source notes, “{lead}” {mark}"
+    out[-1][1] = f"{out[-1][1].rstrip()}\n{quote}"
+    return [tuple(b) for b in out]
+
+
 def _assemble(title, sections, cites, doc_type, human_text=None, override_body=None):
     parts = [title, ""]
     if human_text is not None:
-        parts.append(human_text)
+        blocks = [("", human_text)]
     elif override_body is not None:
-        parts.append(override_body)
+        blocks = [("", override_body)]
     else:
-        for k, v in sections.items():
-            parts.append(f"{k.replace('_', ' ').title()}\n{v}")
+        blocks = [(k.replace("_", " ").title(), v) for k, v in sections.items()]
+    blocks = weave_body_blocks(blocks, cites)
+    parts.extend(f"{h}\n{t}" if h else t for h, t in blocks)
     parts.append("\n" + CITATION_HEADING.get(doc_type, "References"))
     parts.extend(f"{c.marker} https://doi.org/{c.doi}" for c in cites)
     return "\n".join(parts)

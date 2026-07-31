@@ -2,11 +2,11 @@
 
 ## Dek
 
-What we know about behavioral economics of retirement savings among gig workers, and what to watch.
+What we know about behavioral economics of retirement savings among gig workers, and what to watch [1].
 
 ## Intro
 
-Recent analysis points toward a tractable path forward. Careful framing guards against overstatement. The takeaways are meant to inform, not to prescribe.
+Recent analysis points toward a tractable path forward [2]. Careful framing guards against overstatement [3]. The takeaways are meant to inform, not to prescribe [4].
 
 ## Body
 
@@ -15,6 +15,7 @@ Practitioners and policymakers alike have a role to play here. The evidence base
 ## Takeaway
 
 Every serious observer already agrees; the matter is entirely settled. The conclusions here are beyond dispute and settle the debate for good.
+As one source notes, “We will assemble a multidisciplinary team with complementary expertise.” [1]
 
 ## Sources
 

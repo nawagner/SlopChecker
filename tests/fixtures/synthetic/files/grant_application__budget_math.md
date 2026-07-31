@@ -2,17 +2,17 @@
 
 ## Specific Aims
 
-Aim 1: Advance behavioral economics of retirement savings among gig workers via a policy-focused strategy.
-Aim 2: Advance behavioral economics of retirement savings among gig workers via a policy-focused strategy.
-Aim 3: Advance behavioral economics of retirement savings among gig workers via a policy-focused strategy.
+Aim 1: Advance behavioral economics of retirement savings among gig workers via a policy-focused strategy [1].
+Aim 2: Advance behavioral economics of retirement savings among gig workers via a policy-focused strategy [2].
+Aim 3: Advance behavioral economics of retirement savings among gig workers via a policy-focused strategy [3].
 
 ## Background
 
-We will assemble a multidisciplinary team with complementary expertise. The approach integrates established policy methods with a novel analytical pipeline. Rigorous, pre-registered analyses will guard against bias and support reproducibility. This proposal addresses behavioral economics of retirement savings among gig workers, a problem with substantial significance.
+We will assemble a multidisciplinary team with complementary expertise [4]. The approach integrates established policy methods with a novel analytical pipeline [5]. Rigorous, pre-registered analyses will guard against bias and support reproducibility [6]. This proposal addresses behavioral economics of retirement savings among gig workers, a problem with substantial significance [7].
 
 ## Approach
 
-We will assemble a multidisciplinary team with complementary expertise. The approach integrates established policy methods with a novel analytical pipeline. Prior work has established a partial understanding, yet key gaps remain. Our preliminary data suggest a tractable path toward measurable improvement.
+We will assemble a multidisciplinary team with complementary expertise [8]. The approach integrates established policy methods with a novel analytical pipeline [9]. Prior work has established a partial understanding, yet key gaps remain. Our preliminary data suggest a tractable path toward measurable improvement.
 
 ## Innovation
 
@@ -25,6 +25,7 @@ Two co-equal PIs contribute complementary methods under joint leadership. The R2
 ## Budget Justification
 
 Budget: personnel $422,145; equipment $39,773; travel $7,027; indirect costs $89,050. Total requested support is $502,980 over 3 years at a R2 institution.
+As one source notes, “Prior work has established a partial understanding, yet key gaps remain.” [1]
 
 ## References
 

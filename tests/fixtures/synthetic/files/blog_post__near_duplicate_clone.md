@@ -2,19 +2,20 @@
 
 ## Dek
 
-What we know about early detection of pancreatic cancer using circulating tumor DNA, and what to watch.
+What we know about early detection of pancreatic cancer using circulating tumor DNA, and what to watch [1].
 
 ## Intro
 
-The takeaways are meant to inform, not to prescribe. The evidence base is partial, and important gaps remain. Practitioners and policymakers alike have a role to play here.
+The takeaways are meant to inform, not to prescribe [2]. The evidence base is partial, and important gaps remain [3]. Practitioners and policymakers alike have a role to play here [4].
 
 ## Body
 
-Practitioners and policymakers alike have a role to play here. The present article considers early detection of pancreatic cancer using circulating tumor DNA, a question of growing public interest. Recent analysis points toward a tractable path forward.
+Practitioners and policymakers alike have a role to play here [5]. The present article considers early detection of pancreatic cancer using circulating tumor DNA, a question of growing public interest [6]. Recent analysis points toward a tractable path forward [7].
 
 ## Takeaway
 
-Careful framing guards against overstatement.
+Careful framing guards against overstatement [8].
+As one source notes, “The approach integrates established core methods with a novel analytical pipeline.” [1]
 
 ## Sources
 

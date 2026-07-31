@@ -2,19 +2,20 @@
 
 ## Executive Summary
 
-The evidence base is partial, and important gaps remain. Recent analysis points toward a tractable path forward.
+The evidence base is partial, and important gaps remain [1]. Recent analysis points toward a tractable path forward [2].
 
 ## Background
 
-This piece examines early detection of pancreatic cancer using circulating tumor DNA, a question of growing public interest. Practitioners and policymakers alike have a role to play here. Recent analysis points toward a tractable path forward.
+This piece examines early detection of pancreatic cancer using circulating tumor DNA, a question of growing public interest [3]. Practitioners and policymakers alike have a role to play here [4]. Recent analysis points toward a tractable path forward [5].
 
 ## Findings
 
-The takeaways are meant to inform, not to prescribe. The discussion draws on established mechanistic methods and current data. Practitioners and policymakers alike have a role to play here.
+The takeaways are meant to inform, not to prescribe [6]. The discussion draws on established mechanistic methods and current data [7]. Practitioners and policymakers alike have a role to play here.
 
 ## Recommendations
 
 The takeaways are meant to inform, not to prescribe. Recent analysis points toward a tractable path forward.
+As one source notes, “Our preliminary data suggest a tractable path toward measurable improvement.” [1]
 
 ## Endnotes
 

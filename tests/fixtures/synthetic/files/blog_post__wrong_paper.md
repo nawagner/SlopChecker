@@ -2,19 +2,20 @@
 
 ## Dek
 
-What we know about scalable desalination membranes for arid regions, and what to watch.
+What we know about scalable desalination membranes for arid regions, and what to watch [1].
 
 ## Intro
 
-Practitioners and policymakers alike have a role to play here. Recent analysis points toward a tractable path forward. Careful framing guards against overstatement.
+Practitioners and policymakers alike have a role to play here [2]. Recent analysis points toward a tractable path forward [3]. Careful framing guards against overstatement [4].
 
 ## Body
 
-Practitioners and policymakers alike have a role to play here. The evidence base is partial, and important gaps remain. Careful framing guards against overstatement.
+Practitioners and policymakers alike have a role to play here [5]. The evidence base is partial, and important gaps remain [6]. Careful framing guards against overstatement [7].
 
 ## Takeaway
 
-These findings will transform policy overnight, guaranteed. Every serious observer already agrees; the matter is entirely settled.
+These findings will transform policy overnight, guaranteed [8]. Every serious observer already agrees; the matter is entirely settled [9].
+As one source notes, “Our preliminary data suggest a tractable path toward measurable improvement.” [1]
 
 ## Sources
 
