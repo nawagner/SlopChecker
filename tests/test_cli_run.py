@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 import pytest
 from typer.testing import CliRunner
@@ -15,6 +16,15 @@ from slopchecker.pipeline import registry as registry_mod
 runner = CliRunner()
 
 SAMPLE = "Prebunking achieves durable inoculation [1].\n\n[1] Doe, J. (2025)."
+
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def plain(result) -> str:
+    """result.output with ANSI style codes stripped. On CI rich emits color
+    codes that split tokens mid-word ("--dry" + "-run", "$" + "1.2500"), so
+    every substring assertion goes through this."""
+    return _ANSI.sub("", result.output)
 
 
 @pytest.fixture
@@ -35,8 +45,8 @@ def test_run_writes_json_report_and_summary(sample_md, tmp_path):
     result = runner.invoke(app, ["run", str(sample_md), "--out", str(out)])
 
     assert result.exit_code == 0, result.output
-    assert "Recommendation" in result.output
-    assert "human_review" in result.output
+    assert "Recommendation" in plain(result)
+    assert "human_review" in plain(result)
 
     report_path = out / "sample.report.json"
     report = EvidenceReport.model_validate_json(report_path.read_text())
@@ -88,10 +98,10 @@ def test_dry_run_lists_checks_and_calls_nothing(sample_md, tmp_path, scratch_reg
     result = runner.invoke(app, ["run", str(sample_md), "--out", str(out), "--dry-run"])
 
     assert result.exit_code == 0, result.output
-    assert "has_text" in result.output
-    assert "pangram_document" in result.output
-    assert "$1.2500" in result.output  # total estimated spend, 1 doc
-    assert "No checks were run" in result.output
+    assert "has_text" in plain(result)
+    assert "pangram_document" in plain(result)
+    assert "$1.2500" in plain(result)  # total estimated spend, 1 doc
+    assert "No checks were run" in plain(result)
     assert not out.exists()  # nothing written
 
 
@@ -118,7 +128,7 @@ def test_tier_and_skip_selection(sample_md, tmp_path):
 def test_unknown_check_id_is_tool_failure(sample_md):
     result = runner.invoke(app, ["run", str(sample_md), "--only", "nope"])
     assert result.exit_code == 2
-    assert "unknown check id" in result.output
+    assert "unknown check id" in plain(result)
 
 
 def test_bad_format_is_tool_failure(sample_md):
@@ -131,7 +141,7 @@ def test_unsupported_extension_points_at_ingestion(tmp_path):
     pdf.write_bytes(b"%PDF-1.4 not really")
     result = runner.invoke(app, ["run", str(pdf)])
     assert result.exit_code == 1
-    assert "#4" in result.output
+    assert "#4" in plain(result)
 
 
 def test_batch_ranks_by_concerns(tmp_path):
@@ -146,7 +156,7 @@ def test_batch_ranks_by_concerns(tmp_path):
     result = runner.invoke(app, ["run", str(docs), "--out", str(out)])
 
     assert result.exit_code == 0, result.output
-    assert "Batch summary" in result.output
+    assert "Batch summary" in plain(result)
     for stem in ("clean", "empty", "also_clean"):
         assert (out / f"{stem}.report.json").exists()
     assert not (out / "notes.report.json").exists()
@@ -177,7 +187,7 @@ def test_help_is_readable(sample_md):
     result = runner.invoke(app, ["run", "--help"])
     assert result.exit_code == 0
     for phrase in ("proposal", "--dry-run", "--tier", "human"):
-        assert phrase in result.output
+        assert phrase in plain(result)
 
 
 def test_solicitation_recorded(sample_md, tmp_path):
