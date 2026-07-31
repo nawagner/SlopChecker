@@ -91,6 +91,22 @@ Append-only. Newest entry on top. One line per entry:
 
 - 14:55 Emerson (fable) — rubric plumbing landed (#90): `CheckContext.rubric` (pre-ingested FlattenedDoc; heads-up @danparshall — one field + registry package entry in pipeline/), `slopcheck run --rubric <path>` (fail-fast on bad path; rubric filename stamps `report.solicitation` when no explicit label), and first consumer `rubric_budget_ceiling` (deterministic: conservative cap-phrase parse of rubric text vs proposal budget-total line, every extraction miss → skipped gap row, never a guess; findings quote-anchor the proposal's total line with exact spans). Ground-truth tests catch both planted budget violations (climate $90k>$75k, edu $97k>$85k) using the committed fixtures. 484 passed, ruff clean / next: web `rubric` upload slot, then spec-drafting bridge to #16 / blocked on nothing
 
+- 18:44 Dan (air) — #30 transcript upload fix landed on
+  `danparshall/30-transcript-branch`: SessionEnd's `--push` now targets a
+  dedicated `ai-log-uploads` branch instead of the working checkout's
+  branch (usually `main`, which mainsaver rejects — hence the silent
+  break). Built with git plumbing (`hash-object` + `read-tree` +
+  `commit-tree`) so the current HEAD/index/working tree are never touched,
+  meaning any session on any branch (main, feature, other worktree) can
+  push without stepping on the user's edits or each other. Retries up to
+  3× on push race; on persistent failure writes `ai-log/UPLOAD_FAILED.txt`
+  with the last error so future breaks are visible even with the hook's
+  `2>/dev/null` stderr swallow (fix #2 folded in). Fix #3 (drop the
+  `2>/dev/null`) deliberately skipped — separate scope, touches everyone's
+  hook UX. 7 new tests over a bare-repo fixture (RED-first: 6 failed under
+  old script, Stop-copy passed unchanged); 431 total green, ruff clean /
+  next: open PR / blocked on nothing.
+
 - 14:40 Emerson (claude-code) — PDF prose now reflows in the report (#19, second pass): extracted PDF text carries one `\n` per visual line, so even after the page-split fix prose rendered as fragment columns; mid-sentence breaks now render as spaces while headings/`Key: value`/list lines keep hard breaks (NIH R01: 0.97 → 0.6 breaks per 100 chars, remainder is real structure). Trap worth knowing: v1 tested the char immediately before `\n`, which is a *space* on nearly every PDF line — heuristic never fired on real documents while synthetic tests passed / also merged #96 (citations+Pangram registered; live report now 13 ledger rows, real Pangram 1.0 on the fabricated fixture) and #115 (Railway llm extra — claims lens was erroring `ModuleNotFoundError: anthropic` on every live upload) / next: #20 batch summary (claimed, sequenced behind this) / blocked on nothing
 
 - 14:23 Dan (fable) — #14 corpus similarity landed on
