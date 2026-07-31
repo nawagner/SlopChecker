@@ -1,0 +1,33 @@
+Bridgewater Resilience Initiative
+
+A research proposal submitted to the Halden Foundation
+(fabricated fixture document — every person, work, and finding is invented)
+
+1. Background
+
+Community-scale clean energy can lower household costs: households in one
+community solar program saw average monthly electricity bills fall by about
+12 percent (Hensley & Ortiz, 2024). Urban greening delivers measurable
+cooling, and planting street trees lowered peak summer surface temperatures
+on the treated blocks (Underhill, 2022).
+
+2. Health and Environment
+
+Care-transitions work has shown promise; one program reduced 30-day hospital
+readmissions by 20 percent (Marsh et al., 2023). Environmental pressures are
+mounting as well, and coastal erosion rates along the Vasquez shoreline
+accelerated over the past decade (Ferreira, 2022).
+
+References
+
+Hensley, T., & Ortiz, R. (2024). Community solar and household energy burden.
+Journal of Applied Energy Policy, 11(3), 200-224.
+
+Underhill, S. (2022). Street trees and summer surface temperature. Urban
+Climate Reports, 7(1), 44-61.
+
+Marsh, K., Devi, A., & Cole, P. (2023). A care-transitions intervention for
+older adults. Journal of Care Coordination, 5(2), 88-109.
+
+Ferreira, L. (2022). Shoreline change on the Vasquez coast. Coastal Systems
+Review, 18(4), 300-319.

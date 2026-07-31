@@ -1,0 +1,5 @@
+Using fixed sidewalk sensors, we compared 22 blocks that received street
+trees against 22 untreated control blocks over two summers. On the hottest
+afternoons, treated blocks recorded peak surface temperatures an average of
+1.8 degrees Celsius lower than controls (p < 0.01). The cooling gap was widest
+between 2 and 5 p.m. and negligible overnight.

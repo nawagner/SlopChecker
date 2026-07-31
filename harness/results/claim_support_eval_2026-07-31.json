@@ -1,0 +1,309 @@
+{
+  "predictions": [
+    {
+      "id": "sup-01",
+      "gt": "supported",
+      "pred": "supported",
+      "confidence": 0.95,
+      "passage_verified": true,
+      "error": null
+    },
+    {
+      "id": "sup-02",
+      "gt": "supported",
+      "pred": "supported",
+      "confidence": 0.93,
+      "passage_verified": true,
+      "error": null
+    },
+    {
+      "id": "sup-03",
+      "gt": "supported",
+      "pred": "supported",
+      "confidence": 0.93,
+      "passage_verified": true,
+      "error": null
+    },
+    {
+      "id": "sup-04",
+      "gt": "supported",
+      "pred": "supported",
+      "confidence": 0.85,
+      "passage_verified": true,
+      "error": null
+    },
+    {
+      "id": "ov-01",
+      "gt": "overstated",
+      "pred": "contradicted",
+      "confidence": 0.95,
+      "passage_verified": true,
+      "error": null
+    },
+    {
+      "id": "ov-02",
+      "gt": "overstated",
+      "pred": "overstated",
+      "confidence": 0.95,
+      "passage_verified": true,
+      "error": null
+    },
+    {
+      "id": "ov-03",
+      "gt": "overstated",
+      "pred": "contradicted",
+      "confidence": 0.98,
+      "passage_verified": true,
+      "error": null
+    },
+    {
+      "id": "ov-04",
+      "gt": "overstated",
+      "pred": "contradicted",
+      "confidence": 0.97,
+      "passage_verified": true,
+      "error": null
+    },
+    {
+      "id": "un-01",
+      "gt": "unsupported",
+      "pred": "unsupported",
+      "confidence": 0.95,
+      "passage_verified": false,
+      "error": null
+    },
+    {
+      "id": "un-02",
+      "gt": "unsupported",
+      "pred": "unsupported",
+      "confidence": 0.95,
+      "passage_verified": true,
+      "error": null
+    },
+    {
+      "id": "un-03",
+      "gt": "unsupported",
+      "pred": "unsupported",
+      "confidence": 0.95,
+      "passage_verified": false,
+      "error": null
+    },
+    {
+      "id": "un-04",
+      "gt": "unsupported",
+      "pred": "unsupported",
+      "confidence": 0.9,
+      "passage_verified": false,
+      "error": null
+    },
+    {
+      "id": "con-01",
+      "gt": "contradicted",
+      "pred": "contradicted",
+      "confidence": 0.97,
+      "passage_verified": true,
+      "error": null
+    },
+    {
+      "id": "con-02",
+      "gt": "contradicted",
+      "pred": "contradicted",
+      "confidence": 0.97,
+      "passage_verified": true,
+      "error": null
+    },
+    {
+      "id": "con-03",
+      "gt": "contradicted",
+      "pred": "contradicted",
+      "confidence": 0.98,
+      "passage_verified": true,
+      "error": null
+    },
+    {
+      "id": "con-04",
+      "gt": "contradicted",
+      "pred": "contradicted",
+      "confidence": 0.95,
+      "passage_verified": true,
+      "error": null
+    },
+    {
+      "id": "unv-01",
+      "gt": "unverifiable",
+      "pred": "unverifiable",
+      "confidence": 0.9,
+      "passage_verified": false,
+      "error": null
+    },
+    {
+      "id": "unv-02",
+      "gt": "unverifiable",
+      "pred": "unverifiable",
+      "confidence": 0.9,
+      "passage_verified": false,
+      "error": null
+    },
+    {
+      "id": "unv-03",
+      "gt": "unverifiable",
+      "pred": "unverifiable",
+      "confidence": 0.9,
+      "passage_verified": false,
+      "error": null
+    },
+    {
+      "id": "unv-04",
+      "gt": "unverifiable",
+      "pred": "unverifiable",
+      "confidence": 0.85,
+      "passage_verified": false,
+      "error": null
+    }
+  ],
+  "confusion_matrix": {
+    "supported": {
+      "supported": 4
+    },
+    "overstated": {
+      "contradicted": 3,
+      "overstated": 1
+    },
+    "unsupported": {
+      "unsupported": 4
+    },
+    "contradicted": {
+      "contradicted": 4
+    },
+    "unverifiable": {
+      "unverifiable": 4
+    }
+  },
+  "per_category": {
+    "supported": {
+      "support": 4,
+      "predicted": 4,
+      "tp": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "overstated": {
+      "support": 4,
+      "predicted": 1,
+      "tp": 1,
+      "precision": 1.0,
+      "recall": 0.25,
+      "f1": 0.4
+    },
+    "unsupported": {
+      "support": 4,
+      "predicted": 4,
+      "tp": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "contradicted": {
+      "support": 4,
+      "predicted": 7,
+      "tp": 4,
+      "precision": 0.5714285714285714,
+      "recall": 1.0,
+      "f1": 0.7272727272727273
+    },
+    "unverifiable": {
+      "support": 4,
+      "predicted": 4,
+      "tp": 4,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    }
+  },
+  "threshold_sweep": [
+    {
+      "threshold": 0.5,
+      "good_flags_retained": 12,
+      "good_flags_total": 12,
+      "false_alarms_retained": 0,
+      "false_alarms_total": 0,
+      "exact_label_retained": 9
+    },
+    {
+      "threshold": 0.55,
+      "good_flags_retained": 12,
+      "good_flags_total": 12,
+      "false_alarms_retained": 0,
+      "false_alarms_total": 0,
+      "exact_label_retained": 9
+    },
+    {
+      "threshold": 0.6,
+      "good_flags_retained": 12,
+      "good_flags_total": 12,
+      "false_alarms_retained": 0,
+      "false_alarms_total": 0,
+      "exact_label_retained": 9
+    },
+    {
+      "threshold": 0.65,
+      "good_flags_retained": 12,
+      "good_flags_total": 12,
+      "false_alarms_retained": 0,
+      "false_alarms_total": 0,
+      "exact_label_retained": 9
+    },
+    {
+      "threshold": 0.7,
+      "good_flags_retained": 12,
+      "good_flags_total": 12,
+      "false_alarms_retained": 0,
+      "false_alarms_total": 0,
+      "exact_label_retained": 9
+    },
+    {
+      "threshold": 0.75,
+      "good_flags_retained": 12,
+      "good_flags_total": 12,
+      "false_alarms_retained": 0,
+      "false_alarms_total": 0,
+      "exact_label_retained": 9
+    },
+    {
+      "threshold": 0.8,
+      "good_flags_retained": 12,
+      "good_flags_total": 12,
+      "false_alarms_retained": 0,
+      "false_alarms_total": 0,
+      "exact_label_retained": 9
+    },
+    {
+      "threshold": 0.85,
+      "good_flags_retained": 12,
+      "good_flags_total": 12,
+      "false_alarms_retained": 0,
+      "false_alarms_total": 0,
+      "exact_label_retained": 9
+    },
+    {
+      "threshold": 0.9,
+      "good_flags_retained": 12,
+      "good_flags_total": 12,
+      "false_alarms_retained": 0,
+      "false_alarms_total": 0,
+      "exact_label_retained": 9
+    },
+    {
+      "threshold": 0.95,
+      "good_flags_retained": 11,
+      "good_flags_total": 12,
+      "false_alarms_retained": 0,
+      "false_alarms_total": 0,
+      "exact_label_retained": 8
+    }
+  ],
+  "recommended_min_confidence": 0.6,
+  "recommendation_rationale": "no false alarms at any threshold in this corpus \u2014 the judge did not flag a single clean claim as a concern. Keep the current default and re-evaluate on a larger corpus; this run gives no evidence to raise it.",
+  "silence_findings": 0
+}
