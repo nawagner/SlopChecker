@@ -1,16 +1,21 @@
-"""`slopcheck run` (#6). Offline: built-in checks only, plus fake registrations."""
+"""`slopcheck run` (#6). Offline: built-in checks only, plus fake registrations.
+
+PDF-format tests build fixtures in-test via pymupdf (importorskip pattern
+from tests/test_ingest.py) so no binary blobs live in the repo.
+"""
 
 from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
 from slopchecker.cli import app
-from slopchecker.models import Check, EvidenceReport
-from slopchecker.pipeline import RegisteredCheck
+from slopchecker.models import Check, EvidenceReport, LedgerRow
+from slopchecker.pipeline import CheckOutput, RegisteredCheck
 from slopchecker.pipeline import registry as registry_mod
 
 runner = CliRunner()
@@ -40,6 +45,17 @@ def scratch_registry(monkeypatch):
     monkeypatch.setattr(registry_mod, "_REGISTRY", dict(registry_mod._REGISTRY))
 
 
+def make_pdf(path: Path, pages: list[str]) -> None:
+    """Fabricated PDF fixture (same pattern as tests/test_ingest.py::make_pdf)."""
+    pymupdf = pytest.importorskip("pymupdf")
+    doc = pymupdf.open()
+    for content in pages:
+        page = doc.new_page()
+        page.insert_text((72, 72), content)
+    doc.save(str(path))
+    doc.close()
+
+
 def test_run_writes_json_report_and_summary(sample_md, tmp_path):
     out = tmp_path / "reports"
     result = runner.invoke(app, ["run", str(sample_md), "--out", str(out)])
@@ -67,17 +83,31 @@ def test_run_html_format(sample_md, tmp_path):
     assert "Prebunking" in html
 
 
-def test_findings_never_fail_the_exit_code(tmp_path):
-    """An empty doc fails has_text — that's evidence, not a tool failure."""
-    blank = tmp_path / "blank.md"
-    blank.write_text("   ")
+def test_findings_never_fail_the_exit_code(sample_md, tmp_path, scratch_registry):
+    """A failing check is evidence, not a tool failure — exit stays 0.
+
+    (Empty-document scenarios are now caught at the ingest layer per #4/#58,
+    so we register a fake always-fails check to still exercise the invariant.)
+    """
+
+    def always_fails(doc, ctx):
+        return CheckOutput(
+            ledger=[
+                LedgerRow(check="always_fails", label="Contrived failure", result=False)
+            ]
+        )
+
+    registry_mod._REGISTRY["always_fails"] = RegisteredCheck(
+        meta=Check(id="always_fails", name="Contrived failure", tier="deterministic"),
+        fn=always_fails,
+    )
     out = tmp_path / "reports"
-    result = runner.invoke(app, ["run", str(blank), "--out", str(out)])
+    result = runner.invoke(app, ["run", str(sample_md), "--out", str(out)])
 
     assert result.exit_code == 0, result.output
-    report = EvidenceReport.model_validate_json((out / "blank.report.json").read_text())
+    report = EvidenceReport.model_validate_json((out / "sample.report.json").read_text())
     rows = {row.check: row for row in report.ledger}
-    assert rows["has_text"].result is False
+    assert rows["always_fails"].result is False
 
 
 def test_dry_run_lists_checks_and_calls_nothing(sample_md, tmp_path, scratch_registry):
@@ -136,35 +166,120 @@ def test_bad_format_is_tool_failure(sample_md):
     assert result.exit_code == 2
 
 
-def test_unsupported_extension_points_at_ingestion(tmp_path):
-    pdf = tmp_path / "proposal.pdf"
-    pdf.write_bytes(b"%PDF-1.4 not really")
+def test_unsupported_extension_reports_ingest_error(tmp_path):
+    """A file whose suffix isn't in LOADERS gets an actionable ingest error."""
+    rst = tmp_path / "notes.rst"
+    rst.write_text("Content is fine, but .rst isn't a supported proposal format.")
+    result = runner.invoke(app, ["run", str(rst)])
+    assert result.exit_code == 1
+    out = plain(result)
+    assert "notes.rst" in out
+    assert "unsupported format" in out
+
+
+def test_corrupt_pdf_reports_ingest_error(tmp_path):
+    """A .pdf whose bytes don't parse: ingest catches it, CLI surfaces the gap."""
+    pytest.importorskip("pymupdf")
+    pdf = tmp_path / "corrupt.pdf"
+    pdf.write_bytes(b"%PDF-1.7 this is not really a pdf")
     result = runner.invoke(app, ["run", str(pdf)])
     assert result.exit_code == 1
-    assert "#4" in plain(result)
+    out = plain(result)
+    assert "corrupt.pdf" in out
+    assert "could not open as PDF" in out
 
 
-def test_batch_ranks_by_concerns(tmp_path):
+def test_run_reads_pdf_end_to_end(tmp_path):
+    """PDF ingest -> checks -> report.json, with page count preserved (#58)."""
+    pdf = tmp_path / "proposal.pdf"
+    make_pdf(
+        pdf,
+        [
+            "Fabricated proposal about llamas.\nInvented for testing.",
+            "References\n[1] Doe, J. (2025). Fabricated Llama Studies.",
+        ],
+    )
+    out = tmp_path / "reports"
+    result = runner.invoke(app, ["run", str(pdf), "--out", str(out)])
+
+    assert result.exit_code == 0, result.output
+    report_path = out / "proposal.report.json"
+    assert report_path.exists()
+    report = EvidenceReport.model_validate_json(report_path.read_text())
+    assert report.document.file == "proposal.pdf"
+    assert report.document.media_type == "application/pdf"
+    assert report.document.pages == 2
+    rows = {row.check: row for row in report.ledger}
+    assert rows["has_text"].result is True
+
+
+def test_batch_ranks_by_concerns(tmp_path, scratch_registry):
+    """Batch mode ranks by concerns descending; unsupported suffixes are filtered."""
+
+    def flag_bad(doc, ctx):
+        ok = "bad" not in doc.text.lower()
+        return CheckOutput(
+            ledger=[LedgerRow(check="flag_bad", label="No bad phrases", result=ok)]
+        )
+
+    registry_mod._REGISTRY["flag_bad"] = RegisteredCheck(
+        meta=Check(id="flag_bad", name="No bad phrases", tier="deterministic"),
+        fn=flag_bad,
+    )
+
     docs = tmp_path / "docs"
     docs.mkdir()
-    (docs / "clean.md").write_text(SAMPLE)
-    (docs / "empty.md").write_text("  ")  # has_text fails -> 1 concern
-    (docs / "also_clean.txt").write_text(SAMPLE)
-    (docs / "notes.rst").write_text("ignored suffix")
+    (docs / "high_concern.md").write_text("This is bad.\n\n" + SAMPLE)
+    (docs / "low_concern.txt").write_text(SAMPLE)
+    (docs / "notes.rst").write_text("ignored suffix — not in LOADERS")
 
     out = tmp_path / "reports"
     result = runner.invoke(app, ["run", str(docs), "--out", str(out)])
 
     assert result.exit_code == 0, result.output
     assert "Batch summary" in plain(result)
-    for stem in ("clean", "empty", "also_clean"):
+    for stem in ("high_concern", "low_concern"):
         assert (out / f"{stem}.report.json").exists()
     assert not (out / "notes.report.json").exists()
 
     csv_lines = (out / "summary.csv").read_text().strip().splitlines()
+    assert len(csv_lines) == 3  # header + 2 readable docs (.rst filtered pre-ingest)
+    # high_concern.md fails flag_bad -> 1 concern; low_concern has 0 -> high first
+    assert csv_lines[1].startswith("high_concern.md,1")
+    assert csv_lines[2].startswith("low_concern.txt,0")
+
+
+def test_batch_records_ingest_gaps_alongside_reports(tmp_path):
+    """A batch with a mix of readable and unreadable files: readable ones get
+    reports, unreadable ones show up as 'not read' gap rows in the summary."""
+    pytest.importorskip("pymupdf")
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    (docs / "clean.md").write_text(SAMPLE)
+    (docs / "empty.md").write_text("   ")  # ingest -> errored (no text)
+    (docs / "corrupt.pdf").write_bytes(b"%PDF-1.7 nope")
+
+    out = tmp_path / "reports"
+    result = runner.invoke(app, ["run", str(docs), "--out", str(out)])
+
+    assert result.exit_code == 0, result.output
+    assert "Batch summary" in plain(result)
+    # readable file got a report
+    assert (out / "clean.report.json").exists()
+    # unreadable ones did NOT
+    assert not (out / "empty.report.json").exists()
+    assert not (out / "corrupt.report.json").exists()
+    # both gaps are surfaced in the on-screen summary
+    out_text = plain(result)
+    assert "empty.md" in out_text and "not read" in out_text
+    assert "corrupt.pdf" in out_text
+
+    csv_lines = (out / "summary.csv").read_text().strip().splitlines()
     assert len(csv_lines) == 4  # header + 3 docs
-    # empty.md has the most concerns -> ranked first
-    assert csv_lines[1].startswith("empty.md,1")
+    # every gap row has its 'error' column populated with the ingest reason
+    joined = "\n".join(csv_lines[1:])
+    assert "no text" in joined
+    assert "could not open as PDF" in joined
 
 
 def test_batch_empty_dir_is_tool_failure(tmp_path):
