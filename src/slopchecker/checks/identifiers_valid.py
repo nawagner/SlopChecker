@@ -29,7 +29,7 @@ _KIND_LABEL = {"doi": "DOI", "arxiv": "arXiv id", "isbn": "ISBN", "url": "URL"}
 def citation_identifiers_valid(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
     """Every DOI, arXiv id, ISBN, and URL in the reference list, pattern-checked."""
     if not references_for(doc):
-        return CheckOutput(ledger=[no_references_row(CHECK_ID, LABEL)])
+        return CheckOutput(ledger=[no_references_row(CHECK_ID, LABEL, doc)])
 
     pairs = identifiers_for(doc)
     total = sum(len(idents) for _, idents in pairs)

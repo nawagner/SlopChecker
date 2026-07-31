@@ -61,7 +61,7 @@ _MAX_WORKERS = 4
 def metadata_match(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
     """Compare each cited reference against the canonical record for its DOI."""
     if not references_for(doc):
-        return CheckOutput(ledger=[no_references_row(CHECK_ID, LABEL)])
+        return CheckOutput(ledger=[no_references_row(CHECK_ID, LABEL, doc)])
 
     targets = [
         (ref, ident)

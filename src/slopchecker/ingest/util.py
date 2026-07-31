@@ -12,8 +12,12 @@ from slopchecker.models import FlattenedDoc, Span
 
 # Headings that mark a reference/bibliography section. Anchored to the whole
 # (stripped) title/line so a sentence mentioning "references" doesn't match.
+# Kept in sync with _HEADING_RE in pipeline/citations/references.py — the
+# non-academic names ("sources", "citations") matter because blog posts and
+# think-tank reports rarely say "References".
 REFERENCE_HEADING = re.compile(
-    r"^(?:references|bibliography|works\s+cited|literature\s+cited|references\s+cited)\s*[:.]?\s*$",
+    r"^(?:references|bibliography|works\s+cited|literature\s+cited|references\s+cited"
+    r"|sources|citations|endnotes|works\s+consulted)\s*[:.]?\s*$",
     re.IGNORECASE,
 )
 
