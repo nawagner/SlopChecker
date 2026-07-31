@@ -30,6 +30,17 @@ DEFAULT_TIMEOUT_S = 15.0
 # flaky endpoint doesn't read as a bad citation.
 MAX_ATTEMPTS = 3
 BACKOFF_S = (0.5, 1.5)
+# Content negotiation formats offered to doi.org, in preference order. The
+# resolver answers with the metadata itself when it recognises the Accept —
+# no redirect to the publisher, so we sidestep the ACS/NEJM/Wiley bot walls
+# that were reporting every DOI as "blocked" from the Railway datacenter IP.
+# 406 on one format means "wrong registry, try the next" (Crossref DOIs
+# don't have DataCite payloads and vice-versa).
+_DOI_ACCEPT_FORMATS: tuple[str, ...] = (
+    "application/vnd.citationstyles.csl+json",
+    "application/vnd.crossref.unixref+xml",
+    "application/vnd.datacite.datacite+json",
+)
 # arXiv's export API rate-limits bursts hard and 503s freely — their own docs
 # ask clients to wait ~3s between calls and retry. A resolution-length ladder
 # left an available record reading as "no record" whenever a run touched arXiv
@@ -123,12 +134,24 @@ def _transient(response: httpx.Response | None) -> bool:
 
 
 def fetch_status(client: httpx.Client, url: str) -> Resolution:
-    """HEAD the URL, falling back to GET, and classify what came back.
+    """Classify whether ``url`` resolves.
 
-    Plenty of publishers answer HEAD with 403 or 405 while serving GET fine,
-    so a non-2xx HEAD is re-tried as a GET before it's believed. The GET body
-    is never read — we want the status line, not the paper.
+    Two paths:
+
+    * DOI resolver URLs (``https://doi.org/...``) go through content
+      negotiation. doi.org answers metadata requests itself, so we never
+      touch the publisher and never hit ACS/NEJM/Wiley bot walls.
+    * Everything else (URLs, arXiv abstract pages) goes through HEAD-then-GET.
+      Publishers commonly 403 or 405 a HEAD while serving GET fine, so a
+      non-2xx HEAD is retried as a GET before it's believed. The GET body
+      is never read — we want the status line, not the paper.
     """
+    if url.startswith(DOI_RESOLVER):
+        return _fetch_via_content_negotiation(client, url)
+    return _fetch_via_head_then_get(client, url)
+
+
+def _fetch_via_head_then_get(client: httpx.Client, url: str) -> Resolution:
     response: httpx.Response | None = None
     error: str | None = None
 
@@ -138,6 +161,53 @@ def fetch_status(client: httpx.Client, url: str) -> Resolution:
             break
         if attempt < len(BACKOFF_S):
             time.sleep(BACKOFF_S[attempt])
+
+    if response is None:
+        return Resolution(url=url, outcome=Outcome.unreachable, error=error, transport_error=True)
+    return Resolution(
+        url=url,
+        outcome=classify(response.status_code),
+        http_status=response.status_code,
+        final_url=str(response.url),
+    )
+
+
+def _fetch_via_content_negotiation(client: httpx.Client, url: str) -> Resolution:
+    """Ask doi.org for the DOI's metadata directly via Accept headers.
+
+    Walks the format list until one comes back without a 406, retrying only
+    on transient failures. 200 means the DOI is registered (conclusive
+    ``resolves``); 404 means no such DOI at any registry (conclusive
+    ``not_found``); 406 across every format means the resolver can't answer
+    in a shape we asked for (rare; treat as ``blocked`` — a coverage gap,
+    not a citation defect).
+    """
+    response: httpx.Response | None = None
+    error: str | None = None
+
+    for accept in _DOI_ACCEPT_FORMATS:
+        for attempt in range(MAX_ATTEMPTS):
+            try:
+                response = client.get(url, headers={"Accept": accept})
+                error = None
+            except httpx.HTTPError as exc:
+                response = None
+                error = f"{type(exc).__name__}: {exc}"
+            except Exception as exc:  # noqa: BLE001 — a check must not take the run down
+                response = None
+                error = f"{type(exc).__name__}: {exc}"
+
+            if not _transient(response):
+                break
+            if attempt < len(BACKOFF_S):
+                time.sleep(BACKOFF_S[attempt])
+
+        # 406 means "wrong Accept for this DOI's registry" — try the next
+        # format. Anything else (200 / 404 / transient-exhausted / transport
+        # error) is our answer, and we stop.
+        if response is not None and response.status_code == 406:
+            continue
+        break
 
     if response is None:
         return Resolution(url=url, outcome=Outcome.unreachable, error=error, transport_error=True)
