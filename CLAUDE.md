@@ -44,6 +44,7 @@ enough — this is a hackathon).
 |---|---|---|
 | `src/slopchecker/pipeline/` | Dan (+ Fable) | pat-helper engine port, loaders, quotecheck |
 | `src/slopchecker/lenses/` | Dan (+ anyone) | lens prompt packs (markdown — low conflict risk, edit away) |
+| `src/slopchecker/detect/` | Dan | AI-detection providers behind a `Detector` protocol (currently Pangram) |
 | `src/slopchecker/checks/` | Nick | deterministic tier: DOI resolution, metadata, dedup |
 | `src/slopchecker/report/` | Emerson (→ Dominique) | evidence report: HTML + PDF rendering, in-line annotation. Emerson built it and owns it; further iteration hands off to Dominique |
 | `harness/` | Dan (+ Fable) | planted-defect validation, recall scoring |
