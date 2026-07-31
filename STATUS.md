@@ -91,6 +91,7 @@ Append-only. Newest entry on top. One line per entry:
   next: #123 is the demo-critical one — PDF is what funders upload / blocked on
   nothing. Note: README is Emerson+Dominique's per the ownership table —
   flagging rather than assuming.
+- 15:08 Emerson (claude-code) — PDF presentation, third pass (#19): extracted PDF text has no markup, so a whole page rendered as one same-weight block; headings are now detected by shape (≤72 chars, ≤8 words, capitalized, no terminal punctuation, not a form field or wrapped line) and rendered bold. Detection self-disables above a 25% heading share — calibrated on measurements, not taste (grant application 0.21, RFPs 0.12/0.07, real NIH R01 face page 0.32, which correctly gets zero). 8 headings on the grant app, 15 on the RFP, 0 on the NIH form / also merged #131 (reference-entry parsing — DOI checks now fire on the grant application and catch all three planted fabricated DOIs) / next: #20 batch summary / blocked on nothing
 
 - 14:53 Nick (claude-code) — #119 shared KV cache landed on
   `nick/119-kv-cache`. Motivation was a comment in `checks_detect.py`: *"no
