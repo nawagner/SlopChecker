@@ -35,24 +35,49 @@ unreachable. The reservation is the `WORKER_OWNED` list in `worker/src/index.ts`
 
 ## Setup
 
-The database must be created out-of-band (dashboard or a logged-in shell), then
-its id pasted into `worker/wrangler.toml`:
+The database is created out-of-band — from a logged-in shell or the dashboard —
+and its id pasted into `worker/wrangler.toml`. From the repo root:
 
 ```bash
-npx wrangler d1 create slopchecker
+cd worker && npx wrangler d1 create slopchecker --location enam
 ```
 
-Copy the printed `database_id` over the `local-dev-placeholder` value in
-`worker/wrangler.toml`, then apply the migrations to the remote database:
+`wrangler d1 create` "provides the binding and UUID that you will put in your
+config file" — it prints a ready-made `[[d1_databases]]` block. Take only the
+`database_id` line from it and paste that UUID over `local-dev-placeholder` in
+`worker/wrangler.toml`; the rest of the block is already there.
+
+`--location enam` is a hint, not a guarantee, and matches the R2 bucket's region
+(`docs/data-storage.md`) so the two stores sit together. Drop it if you don't
+care. Do **not** pass `--jurisdiction` unless there's a compliance reason — it
+overrides the location hint and can't be changed later.
+
+Then apply the migrations to the remote database:
 
 ```bash
 cd worker && npm run db:migrate:remote
 ```
 
-**You do not need any of that to develop.** `wrangler` hands `database_id`
-straight to Miniflare as a local SQLite filename without validating it, so the
-placeholder is enough for local dev, the test suite, and CI. Only
-`db:migrate:remote` and production reads need the real UUID.
+That prompts for confirmation and captures a backup before applying. Verify with:
+
+```bash
+cd worker && npx wrangler d1 migrations list DB --remote
+```
+
+### The placeholder does not survive a deploy
+
+`database_id = "local-dev-placeholder"` is enough for **local dev, the test
+suite, and GitHub Actions** — all of those hand the value to Miniflare as a
+plain SQLite filename and never validate it.
+
+It is **not** enough for `wrangler deploy`, which resolves the id against the
+Cloudflare account. Cloudflare's Git integration runs a deploy on every branch
+push, so a placeholder makes the Workers build fail, and on `main` that breaks
+production Worker deploys.
+
+`wrangler deploy --dry-run` will not catch this — dry-run never contacts the
+API. If you are working on this without a real database, expect the Workers
+build check to be red and don't merge on it.
 
 ## Local development
 

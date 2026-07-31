@@ -86,11 +86,15 @@ unmerged branch migrate production. D1 also has no `migrations rollback`.
   swallowed and the rest of the file merges into one statement. `SUM(<predicate>)`
   does the same job since SQLite comparisons yield 0/1. There's a test
   asserting no `CASE` appears in migrations.
-- **A placeholder `database_id` is enough for everything except
-  `--remote`.** wrangler hands the value to Miniflare as a plain SQLite
-  filename without validating it. Local dev, the whole test suite, and CI run
-  on `"local-dev-placeholder"`. Worth knowing before anyone blocks on
-  provisioning.
+- **A placeholder `database_id` runs local dev, the tests and CI — but breaks
+  `wrangler deploy`.** wrangler hands the value to Miniflare as a plain SQLite
+  filename without validating it, so everything local is happy. A real deploy
+  resolves it against the account and fails. I asserted twice that the
+  placeholder blocked nothing but `--remote`, and only found out when the
+  Workers build went red on the PR; `wrangler deploy --dry-run` passes because
+  dry-run never contacts the API, which is exactly why local checks missed it.
+  Cloudflare's Git integration deploys on every branch push, so the database
+  has to exist before this can merge.
 - `@cloudflare/workers-types` was referenced in `worker/tsconfig.json` but had
   never been installed, so `tsc --noEmit` on `worker/` failed before any of
   this work. Now installed, along with `typescript` itself.
