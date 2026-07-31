@@ -36,16 +36,31 @@ machine with no network access.
 
 ## Does any provider train on submitted content?
 
-This is the question that matters most for unpublished applicant material, and
-it must be answered before real submissions are sent to any provider.
+This is the question that matters most for unpublished applicant material. The
+answers below are taken from each provider's published policy as of
+**2026-07-31**; provider terms change, so re-check before relying on them.
 
-- **Pangram** — `[CONFIRM]` Does Pangram store submitted text, and does it use
-  submitted text to train or improve its models? Get this in writing (ToS/DPA or
-  direct confirmation) before sending real applicant data.
-- **Anthropic** — `[CONFIRM]` Anthropic's commercial API terms state that API
-  inputs and outputs are not used to train its models by default; confirm the
-  current terms and that this deployment is under a standard commercial
-  agreement (not a consumer product) before the LLM tier is enabled.
+- **Pangram** — Per Pangram's published data-privacy commitment, it does **not**
+  retain submitted data beyond what is needed to return a result and states it
+  will never use submitted data to train an AI system of any kind; enterprise
+  zero-data-retention options exist, and handling is described as FERPA- and
+  GDPR-aligned. Their public statements do not separate the API from other
+  products (the API page defers to a Data Privacy FAQ), so `[CONFIRM]` get a
+  one-line written confirmation for the **API path specifically**
+  (privacy@pangram.com) before the first real submission. Sources:
+  [privacy commitment](https://www.pangram.com/blog/pangram-s-commitment-to-data-privacy),
+  [privacy policy](https://www.pangram.com/privacy-policy),
+  [API](https://www.pangram.com/solutions/api).
+- **Anthropic** (LLM tier, default `claude-opus-5`) — Per Anthropic's API
+  data-retention docs, on the **commercial API** prompts and outputs are not
+  retained by default and retained data is never used for model training without
+  express permission; zero-data-retention is available on request, and flagged
+  content may be held up to two years. `claude-opus-5` is not a "Covered Model"
+  (only Fable 5 / Mythos 5 require mandatory 30-day retention), so it is
+  ZDR-eligible. `[CONFIRM]` that this deployment is under Anthropic's Commercial
+  Terms (not a consumer plan) before the LLM tier is enabled. Sources:
+  [API and data retention](https://platform.claude.com/docs/en/manage-claude/api-and-data-retention),
+  [is my data used for training](https://privacy.claude.com/en/articles/7996868-is-my-data-used-for-model-training).
 - **Crossref / Candid** — receive citation metadata and lookup queries rather
   than the submission body; lower sensitivity, but note their terms when those
   checks land.
@@ -82,13 +97,20 @@ did not do rather than silently passing.
 
 ## Team policy decisions still open
 
-- `[DECISION]` Default mode: offline-by-default, or online-by-default once keys
-  are present?
-- `[DECISION]` Is fetching cited source URLs from the open web acceptable for
-  unpublished submissions (#10), or should it be restricted to allow-listed
-  open-access repositories?
-- `[DECISION]` Cache retention period (above).
-- `[CONFIRM]` Provider training/retention answers (above).
+Each carries a recommended default; the team makes the final call.
+
+- `[DECISION]` **Default mode** — offline-by-default, or online-by-default once
+  keys are present? _Recommended: offline-by-default_, so network tiers are
+  opt-in and unpublished submissions never leave the machine by accident.
+- `[DECISION]` **Open-web source fetch (#10)** — acceptable for unpublished
+  submissions, or restricted to allow-listed open-access repositories?
+  _Recommended: allow-listed open-access repositories only._
+- `[DECISION]` **Cache retention period** (above) — _Recommended: caching off by
+  default; if enabled, a short TTL (e.g., seven days) plus the purge command._
+
+Provider training and retention answers are filled in above from each provider's
+published policy (2026-07-31); the two `[CONFIRM]` items there are the only
+provider-side questions that still warrant confirmation in writing.
 
 ## Per-report disclosure
 
