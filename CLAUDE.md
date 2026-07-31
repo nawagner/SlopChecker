@@ -147,8 +147,9 @@ beat a page of prose. Write it before your final commit of the session.
 
 `.claude/settings.json` (checked in) runs `scripts/upload_transcript.py` on
 every Stop and SessionEnd: it copies your session transcript to
-`ai-log/transcripts/` (Stop) and commits/pushes it (SessionEnd).
-Best-effort — it never blocks your session on failure.
+`ai-log/transcripts/` (Stop) and pushes it to a dedicated
+`ai-log-uploads` branch (SessionEnd) — never to your working branch or
+`main`. Best-effort — it never blocks your session on failure.
 
 - **Opt-in, asked in-session.** On your first session in this repo, a
   SessionStart hook tells Claude to ask you once whether to enable upload;
@@ -166,9 +167,11 @@ Best-effort — it never blocks your session on failure.
 - Transcripts are `.jsonl`, named `<date>-<git-user>-<session8>.jsonl`.
 - Session logs in `ai-log/` (above) stay mandatory either way — that's the
   work trail; transcripts are the raw feed for whoever wants it.
-- **Known broken under protected main** (tracked on #30): the `--push`
-  mode pushes directly to `main`, which is rejected. Local copy on Stop
-  still works either way.
+- **On persistent push failure**, the script drops
+  `ai-log/UPLOAD_FAILED.txt` in the working tree with the last error, so
+  breakage is visible even though the hook wrapper swallows stderr
+  (`2>/dev/null` in `settings.json`). Delete the marker once you've
+  looked; a successful push also clears it.
 
 ## Degrade to gaps, never crash
 
