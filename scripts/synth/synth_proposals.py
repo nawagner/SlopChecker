@@ -851,6 +851,11 @@ def add_near_duplicates(records, k, rng):
     clones = []
     for i in range(k):
         orig = rng.choice(records)
+        # Paraphrase at the section level so the clone is a near-duplicate however
+        # it's rendered (from sections OR from text), not just in the text blob.
+        sections = {key: _launder(val, rng) for key, val in orig.sections.items()}
+        cites = [Citation(**c) for c in orig.citations]
+        dt = orig.dimensions["document_type"]
         clones.append(
             Record(
                 id=f"synth_{base_n + i:05d}",
@@ -858,8 +863,8 @@ def add_near_duplicates(records, k, rng):
                 dimensions=dict(orig.dimensions),
                 title=orig.title,
                 topic=orig.topic,
-                sections=dict(orig.sections),
-                text=_launder(orig.text, rng),  # light paraphrase -> near, not exact
+                sections=sections,
+                text=_assemble(orig.title, sections, cites, dt),
                 citations=[dict(c) for c in orig.citations],
                 ground_truth={**orig.ground_truth, "is_near_duplicate": True},
                 provenance=dict(orig.provenance),

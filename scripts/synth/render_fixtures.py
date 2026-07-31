@@ -59,6 +59,7 @@ GROUND_TRUTH_FIELDS = [
     "budget_inflated",
     "budget_math",
     "missing_methods",
+    "is_near_duplicate",
 ]
 
 
@@ -83,7 +84,20 @@ def select_fixtures(records):
             if hit:
                 chosen.append((case, hit))
                 seen.add(hit["id"])
-    return chosen
+    return chosen + _near_dup_pair(records)
+
+
+def _near_dup_pair(records):
+    """One near-duplicate pair: an original and its clone, rendered as files so the
+    similarity case is visible on disk (not only in corpus.jsonl)."""
+    by_id = {r["id"]: r for r in records}
+    clone = next((r for r in records if r["ground_truth"].get("is_near_duplicate")), None)
+    if not clone:
+        return []
+    orig = by_id.get(clone["meta"].get("duplicate_of"))
+    if not orig:
+        return []
+    return [("near_duplicate_original", orig), ("near_duplicate_clone", clone)]
 
 
 # --------------------------------------------------------------------------- #
@@ -272,12 +286,23 @@ def main():
                     case,
                 ]
                 + [g[f] for f in GROUND_TRUTH_FIELDS]
+                + [record["meta"].get("duplicate_of") or ""]
             )
 
     index_path = out_dir / "files_index.csv"
     with open(index_path, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["file", "corpus_id", "document_type", "label", "case", *GROUND_TRUTH_FIELDS])
+        w.writerow(
+            [
+                "file",
+                "corpus_id",
+                "document_type",
+                "label",
+                "case",
+                *GROUND_TRUTH_FIELDS,
+                "duplicate_of",
+            ]
+        )
         w.writerows(index_rows)
 
     print(f"Rendered {len(chosen)} fixtures x {len(args.formats)} formats -> {out_dir}/")

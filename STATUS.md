@@ -5,6 +5,13 @@ Append-only. Newest entry on top. One line per entry:
 
 ## Log
 
+- 13:39 Alex (claude-code) — #22 fixtures: rendered the near-duplicate pair into
+  `files/` (original + clone, ~0.9 similar, not identical). Fixed a latent bug —
+  clones copied sections verbatim, so a rendered clone was byte-identical; now
+  paraphrased at the section level. 18 docs × 4 formats. Stacked branch
+  `alex/22-neardup-files` on #84 (7th in the stack) / next: none — corpus fully
+  done / blocked on nothing (awaiting stack merge).
+
 - 13:22 Alex (claude-code) — #22 fixtures: added `budget_math` (grant budgets now
   itemized; stated total ≠ sum of line items) — the last corpus case. Unlike
   wrong-paper/near-dup, it's deterministically checkable: label-aware demo hits

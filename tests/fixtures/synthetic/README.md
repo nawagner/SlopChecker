@@ -22,11 +22,13 @@ Tooling lives in `scripts/synth/` (`synth_proposals.py`, `score.py`, `render_fix
 
 `files/` holds a representative subset rendered into **real document formats** —
 `.md`, `.html`, `.docx`, `.pdf` — so the ingestion module (#4) and downstream
-checks can be exercised on actual files, not text-in-JSON. 16 fixtures span the
-three document types and the key cases (clean, fabricated citations, wrong paper,
-overclaims, plus budget-inflated, budget-math, and missing-methods for grants).
-`files/files_index.csv` maps each file back to its `corpus_id` and ground-truth
-flags.
+checks can be exercised on actual files, not text-in-JSON. 18 documents: 16 case
+fixtures spanning the three document types and the key cases (clean, fabricated
+citations, wrong paper, overclaims, plus budget-inflated, budget-math, and
+missing-methods for grants), plus one **near-duplicate pair**
+(`*__near_duplicate_original.*` and `*__near_duplicate_clone.*` — ~0.9 similar,
+not identical). `files/files_index.csv` maps each file back to its `corpus_id`,
+ground-truth flags, and `duplicate_of`.
 
 Regenerate with `scripts/synth/render_fixtures.py` (see its header). MD/HTML are
 stdlib; DOCX needs `python-docx` (the `[docx]` extra); PDF is a **local build

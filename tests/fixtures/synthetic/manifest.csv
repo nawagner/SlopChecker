@@ -120,8 +120,8 @@ synth_00117,human,blog_post,R1,biomedical,established_pi,none,False,False,False,
 synth_00118,human,grant_application,R2,social_science,established_pi,none,False,False,False,False,False,False,False,False,False,3,0,0,,template,builtin
 synth_00119,human,blog_post,R2,public_health,small_nonprofit,none,False,False,False,False,False,False,False,False,False,4,0,0,,template,builtin
 synth_00120,human,blog_post,R2,biomedical,early_stage_investigator,none,False,False,False,False,False,False,False,False,True,8,0,0,synth_00011,template,builtin
-synth_00121,ai_clean,grant_application,R2,social_science,established_pi,none,True,False,False,False,False,False,False,False,True,6,0,0,synth_00029,template,builtin
-synth_00122,human,blog_post,R1,engineering,multi_pi_team,none,False,False,False,False,False,False,False,False,True,3,0,0,synth_00069,template,builtin
-synth_00123,slop,grant_application,R2,social_science,early_stage_investigator,budget_math,True,False,False,False,False,False,True,False,True,5,0,0,synth_00035,template,builtin
-synth_00124,ai_laundered,think_tank_report,R1,physical_science,multi_pi_team,none,True,True,False,False,False,False,False,False,True,7,0,0,synth_00113,template,builtin
-synth_00125,ai_clean,blog_post,R2,biomedical,small_nonprofit,none,True,False,False,False,False,False,False,False,True,5,0,0,synth_00098,template,builtin
+synth_00121,ai_clean,grant_application,R1,biomedical,small_nonprofit,none,True,False,False,False,False,False,False,False,True,8,0,0,synth_00007,template,builtin
+synth_00122,ai_clean,think_tank_report,R2,engineering,established_pi,none,True,False,False,False,False,False,False,False,True,4,0,0,synth_00103,template,builtin
+synth_00123,ai_clean,blog_post,R2,engineering,established_pi,none,True,False,False,False,False,False,False,False,True,4,0,0,synth_00092,template,builtin
+synth_00124,ai_clean,blog_post,R2,public_health,multi_pi_team,none,True,False,False,False,False,False,False,False,True,6,0,0,synth_00090,template,builtin
+synth_00125,slop,blog_post,R1,engineering,established_pi,fabricated_citations,True,False,True,False,False,False,False,False,True,8,5,0,synth_00024,template,builtin
