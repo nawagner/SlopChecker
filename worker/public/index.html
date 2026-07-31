@@ -39,7 +39,9 @@
   body { margin: 0; background: var(--bg); color: var(--ink);
          font-family: var(--sans); line-height: 1.55; }
   a { color: var(--accent); }
-  .wrap { max-width: 62rem; margin: 0 auto; padding: 0 1.25rem; }
+  /* 72rem matches report.css's .wrap — the landing page and the evidence
+     report should hold the same measure, not two different page widths. */
+  .wrap { max-width: 72rem; margin: 0 auto; padding: 0 1.25rem; }
 
   /* Icons carry no meaning on their own — every one sits beside its label, so
      the page still reads with images off, in a screen reader, or in print. */
@@ -59,28 +61,48 @@
      about the reader's own proposal rather than showing what comes back. */
   .heroband { background: linear-gradient(180deg, var(--bg-tint), var(--bg));
               border-bottom: 1px solid var(--rule); }
-  .hero { padding: 3.4rem 0 3.2rem; }
-  .hero h1 { font-family: var(--serif); font-weight: 400; letter-spacing: -.01em;
-             font-size: clamp(1.6rem, 3.6vw, 2.3rem); line-height: 1.3;
-             max-width: 36rem; margin: 0; }
-  .sub { color: var(--soft); font-size: 1.02rem; max-width: 38rem; margin: 1.1rem 0 0; }
-  .cta { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1.1rem;
-         margin: 1.7rem 0 0; }
-  a.gobtn { font-size: .9rem; font-weight: 600; background: var(--accent);
-            color: var(--on-accent); text-decoration: none; border-radius: 4px;
-            padding: .62rem 1.15rem; }
-  a.gobtn:hover { filter: brightness(1.1); }
-  a.gobtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* Two columns from 62rem up: copy left, the worked example right. Stacked,
+     the example sat below the fold and its ink-in animation never played. */
+  .hero { padding: 4.2rem 0 3.8rem; display: grid; gap: 2.4rem 3rem;
+          align-items: start; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); }
+  /* the headline runs the full measure — at half width it capped around 40%
+     of the viewport and left the page looking unbalanced on wide screens */
+  .hero h1 { grid-column: 1 / -1; font-family: var(--serif); font-weight: 400;
+             letter-spacing: -.02em; font-size: clamp(2rem, 5vw, 3.5rem);
+             line-height: 1.12; margin: 0; text-wrap: balance; }
+  .sub { color: var(--soft); font-size: 1.02rem; max-width: 34rem; margin: 1.2rem 0 0; }
+  .cta { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1.2rem;
+         margin: 1.9rem 0 0; }
+  a.gobtn { font-size: 1.05rem; font-weight: 600; background: var(--accent);
+            color: var(--on-accent); text-decoration: none; border-radius: 6px;
+            padding: .9rem 1.75rem; display: inline-flex; align-items: center;
+            gap: .55rem; box-shadow: 0 1px 2px rgba(16,22,29,.13), 0 3px 10px rgba(16,22,29,.08);
+            transition: filter .15s, box-shadow .15s, transform .15s; }
+  a.gobtn .arrow { transition: transform .15s; }
+  a.gobtn:hover { filter: brightness(1.08);
+                  box-shadow: 0 2px 4px rgba(16,22,29,.16), 0 6px 18px rgba(16,22,29,.12); }
+  a.gobtn:hover .arrow { transform: translateX(3px); }
+  a.gobtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  @media (prefers-reduced-motion: reduce) {
+    a.gobtn, a.gobtn .arrow { transition: none; }
+    a.gobtn:hover .arrow { transform: none; }
+  }
   .cta .alt { font-size: .87rem; color: var(--soft); }
 
+  @media (max-width: 62rem) {
+    .hero { grid-template-columns: minmax(0, 1fr); padding: 3.2rem 0 3rem; }
+  }
+
   /* the specimen, demoted to an example and visually marked as one */
-  .example { max-width: 44rem; margin: 2.8rem 0 0; background: var(--bg);
+  /* margin/width come from the hero grid now; the gap handles the stacked case */
+  .example { margin: 0; background: var(--bg);
              border: 1px solid var(--rule); border-left: 3px solid var(--accent);
              border-radius: 6px; padding: 1.1rem 1.3rem 1.3rem; }
   .example figcaption { font-family: var(--mono); font-size: .7rem; letter-spacing: .1em;
                         text-transform: uppercase; color: var(--soft); margin-bottom: .75rem; }
-  .specimen { font-family: var(--serif); font-size: clamp(1.12rem, 2.2vw, 1.42rem);
-              line-height: 1.5; margin: 0; font-weight: 400; }
+  /* sized for the hero's right column, not the full measure it used to span */
+  .specimen { font-family: var(--serif); font-size: clamp(1.05rem, 1.45vw, 1.2rem);
+              line-height: 1.55; margin: 0; font-weight: 400; }
   /* A mark that wraps needs its background and rule on every line fragment;
      without clone the inset shadow draws once and the underline is severed
      mid-phrase. (A nowrap/normal pair used to fight over this — normal won,
@@ -271,16 +293,18 @@
 <div class="heroband">
   <div class="wrap">
     <section class="hero">
-      <h1>Check whether a proposal's sources are real, before you spend an hour
-      reading it.</h1>
-      <p class="sub">Upload a grant application. SlopChecker checks its citations
-      against the published record, compares it with submissions you've already
-      received, and gives you back one page of evidence. It doesn't score the proposal
-      and it doesn't reject anything — that stays with you.</p>
-      <div class="cta">
-        <a class="gobtn" href="#check">Check a proposal</a>
-        <span class="alt">or <a href="/demo-report.html">look at a finished report</a>
-        first.</span>
+      <h1>A fabricated citation looks exactly like a real one — until
+      someone checks.</h1>
+      <div class="hero-copy">
+        <p class="sub">Upload a grant application. SlopChecker checks its citations
+        against the published record, compares it with submissions you've already
+        received, and gives you back one page of evidence. It doesn't score the proposal
+        and it doesn't reject anything — that stays with you.</p>
+        <div class="cta">
+          <a class="gobtn" href="#check">Check a proposal <span class="arrow" aria-hidden="true">→</span></a>
+          <span class="alt">or <a href="/demo-report.html">look at a finished report</a>
+          first.</span>
+        </div>
       </div>
 
       <figure class="example">
