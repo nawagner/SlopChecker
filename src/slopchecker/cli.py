@@ -118,6 +118,14 @@ def run(
         bool,
         typer.Option("--batch", help="Treat PATH as a folder (implied when PATH is a folder)"),
     ] = False,
+    no_cache: Annotated[
+        bool,
+        typer.Option("--no-cache", help="Re-fetch every DOI/URL instead of using the disk cache"),
+    ] = False,
+    cache_dir: Annotated[
+        Path | None,
+        typer.Option("--cache-dir", help="Where to cache lookups (default: ~/.cache/slopchecker)"),
+    ] = None,
 ) -> None:
     """Check one proposal (or a folder of them) and write an evidence report.
 
@@ -164,7 +172,7 @@ def run(
 
     out_dir = out or Path("slopcheck-reports")
     out_dir.mkdir(parents=True, exist_ok=True)
-    ctx = CheckContext(solicitation=solicitation)
+    ctx = CheckContext(solicitation=solicitation, no_cache=no_cache, cache_dir=cache_dir)
 
     rows: list[dict] = []
     for target in targets:

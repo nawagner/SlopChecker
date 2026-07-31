@@ -66,6 +66,56 @@ Append-only. Newest entry on top. One line per entry:
   size-stable artifact then reap the browser; stderr to file not pipe
   (same deadlock family as #49). 156 passed, 0 skipped / next: handoff for
   formal e2e integration harness / blocked on nothing.
+- 18:06 Nick (claude-code) — CORRECTION to 17:52 on the #7 CRLF bug: I called
+  it high-impact ("all four checks report no reference list on anything
+  authored on Windows") and that was wrong — `ingest.normalize()` strips CRLF
+  and all five loaders call it, so the CLI and web paths were never affected;
+  verified a CRLF file end-to-end through `ingest()` parses fine. Real defect
+  is narrower: `extract_citations()` returns zero references silently for raw
+  CRLF text, which is a trap for a direct caller, not a live product bug. I
+  checked the loaders after filing rather than before. Fixed it on the #80
+  branch anyway with Dan's module in mind — `\r` added to the trailing
+  classes in `_HEADING_RE` and the paragraph-split patterns, deliberately NOT
+  normalizing inside the parser since that would shift offsets out from under
+  the caller's spans; `intext.py` needed nothing; tests in test_citations.py,
+  322 green / next: still needs a human to kick CI on #80 / blocked on that.
+
+- 17:52 Nick (claude-code) — ran an independent red-green pass over #8/#9
+  before merge: four subagents given only the acceptance criteria + CLAUDE.md
+  invariants (not my implementation's reasoning) wrote failing tests from the
+  spec. Found 8 real defects in code I'd already called done — worst was a
+  **vacuous pass** (five paywalled DOIs → `result=True` "All DOIs resolve"
+  beside a detail reading "0 / 5 resolved"; one 403 among four network
+  failures suppressed the `errored` path), plus anchor spans sliding on
+  indented bibliographies, a valid ISBN reported malformed when a year
+  followed it, a malformed arXiv id silently rewritten into a *different real
+  paper's* id, coverage gaps cached as fact, negated titles ("…Is Not All You
+  Need") grading as clean matches, and "van der Berg" cited as "Berg" reading
+  as a different author. All fixed, 25 regression tests (17 verified failing
+  pre-fix), 320 green / two cross-module bugs flagged not fixed: #7's
+  `_HEADING_RE` misses CRLF documents so all four of my checks report "no
+  reference list" on anything authored on Windows; #15's tagging emits ledger
+  rows whose `check` ids aren't its registered id / next: PR #80 has no CI run
+  at all — agent-pushed branches don't seem to trigger it, needs a human kick
+  before the required `test` check can pass / blocked on that.
+
+- 17:05 Nick (claude-code) — did the deterministic tier, first code in
+  `src/slopchecker/checks/` (#8 + #9): four registered checks —
+  `citation_identifiers_valid` (offline: DOI/arXiv/ISBN/URL well-formedness),
+  `all_dois_resolve` (doi.org, all registries not just Crossref),
+  `all_urls_resolve`, `metadata_match` (Crossref → OpenAlex → arXiv behind one
+  interface, fuzzy title/author/year/venue grading, reverse title lookup that
+  separates "wrong DOI" from "no such paper") / key call: only a 404/410 flips
+  a row false — paywalls, timeouts and 5xx are per-item coverage gaps, and a
+  run where nothing answered is `errored`, never "the citations are fake" /
+  ledger ids match the mock so Emerson's renderer needed no change / small
+  cross-module edits flagged on #8: `--no-cache`/`--cache-dir` on
+  `slopcheck run` plus two optional `CheckContext` fields (Alex's #15 had
+  already loosened the over-specified CLI ledger assertion we both hit —
+  took theirs on rebase) / 261 tests green; `test_checks_live.py` really hits
+  doi.org/Crossref/OpenAlex/arXiv per Nick's call — flagging that a provider
+  outage can redden required CI for everyone, escape hatch documented in the
+  file / next: dedup (#14) is deliberately NOT in this PR / blocked on nothing.
 
 - 13:08 Nick — did mint a bucket-scoped R2 API token for `slopchecker-docs`
   (Object Read & Write, scoped to that bucket only, not account-wide) and

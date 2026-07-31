@@ -15,7 +15,14 @@ from slopchecker.pipeline.citations.models import ReferenceEntry
 _HEADING_RE = re.compile(
     r"^[ \t]*(?:\d+\.?\s+)?"
     r"(?:references|bibliography|works cited|reference list|literature cited)"
-    r"[ \t]*:?[ \t]*$",
+    # \r is in the trailing class because re.MULTILINE's $ matches before \n
+    # but does not consume a preceding \r, so a CRLF heading line never
+    # matched and the document read as having no bibliography at all.
+    # ingest.normalize() strips CRLF before any loader builds a FlattenedDoc,
+    # so this only bites callers passing raw text straight to
+    # extract_citations() — but silently returning zero references is a bad
+    # way to find that out.
+    r"[ \t]*:?[ \t\r]*$",
     re.IGNORECASE | re.MULTILINE,
 )
 
@@ -70,8 +77,11 @@ def _split_entries(block: str, base: int) -> list[tuple[int, str, int | None]]:
             raw = block[m.start() : end].rstrip()
             out.append((base + m.start(), raw, int(m.group(1))))
         return out
-    if re.search(r"\n[ \t]*\n", block.strip()):
-        for m in re.finditer(r"(?s)\S.*?(?=\n[ \t]*\n|\Z)", block):
+    # Same reason \r is allowed here: a CRLF blank line is "\r\n\r\n", so a
+    # separator class of [ \t] alone saw no paragraph break and fell through
+    # to the one-entry-per-line branch.
+    if re.search(r"\n[ \t\r]*\n", block.strip()):
+        for m in re.finditer(r"(?s)\S.*?(?=\n[ \t\r]*\n|\Z)", block):
             out.append((base + m.start(), m.group(0).rstrip(), None))
         return out
     # One entry per line; indented or lowercase-led lines continue the previous entry.
