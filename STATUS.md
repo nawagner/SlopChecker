@@ -5,6 +5,23 @@ Append-only. Newest entry on top. One line per entry:
 
 ## Log
 
+- 13:02 Alex (claude-code) — #22 fixtures: added the `wrong_paper` defect — a
+  citation with a real, *resolving* DOI attributed to the wrong paper
+  (`metadata_match=false`, new `has_mismatched_citations` ground truth). It's the
+  useful one: DOI-resolution alone passes it (naive demo recall 0.0 on it vs 1.0
+  on fabricated), only a metadata/quote check catches it → `verdict`
+  overstated/unsupported. Corpus + 15×4 rendered files regenerated. Stacked branch
+  `alex/22-wrong-paper` on #68 / next: near-dup pairs / blocked on nothing.
+
+- 12:52 Alex (claude-code) — #22 fixtures: rendered a representative subset into
+  real files (`.md`/`.html`/`.docx`/`.pdf`, `scripts/synth/render_fixtures.py`,
+  12 docs × 4 formats in `tests/fixtures/synthetic/files/`) so ingestion (#4) and
+  checks run on actual documents. Round-tripped all four through `ingest()`:
+  status=ok, DOIs preserved; PDF keeps text but loses heading structure (0
+  sections) — a real gap to test for. PDF is a local browser build step, never
+  CI. Stacked branch `alex/22-fixture-files` on top of #54 / next: "valid DOI →
+  wrong paper" case / blocked on nothing.
+
 - 13:42 Emerson (fable) — "rubrics" named and scoped as the term for funder reference docs, filed + claimed #90 (arrival/storage/ingest; #16 keeps spec + compliance checks); 3 fabricated rubric fixtures landed in `fixtures/rubrics/` (Aldergrove RFP + scoring rubric pairing proposal_climate, Hartwell RFP pairing proposal_edu; 5 planted, verified compliance violations documented in the README) and mirrored md+pdf to R2 `rubrics/synthetic/`; ingest verified on all six files — md gives full section structure, PDF text layer intact but sections=0 (PDF loader does no heading detection — noted on #90 for the spec-drafting path) / next: `--rubric` CLI plumbing, web slot with #27 / blocked on nothing
 
 - 13:21 Dan (fable) — #37 design conversation, no code: brainstormed retry-ladder shape, concluded it's post-MVP (Pangram already has an inline loop; no chat-model check exists yet to hit the refusal problem); captured two shape decisions as a comment on #37 (check-invoked `LadderExecutor`, `Finding.evidence["rung"]` for provenance) so the fork is settled when someone picks it up post-#13; also posted correction on #13 resolving a mutual-block loop (Dan's earlier "LLM client lives with #37" was wrong under new scoping); ticket parked / next: return to happy-path work / blocked on nothing.

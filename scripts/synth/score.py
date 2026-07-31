@@ -27,6 +27,7 @@ import os
 FIELDS = [
     "ai_generated",
     "has_fabricated_citations",
+    "has_mismatched_citations",
     "overclaims",
     "budget_inflated",
     "missing_methods",
@@ -86,6 +87,9 @@ def demo_checker(corpus_dir):
         preds[r["id"]] = {
             "ai_generated": ("**" in r["text"] or "specific aims" in text),  # toy format tell
             "has_fabricated_citations": n_unresolvable > 0,  # a real deterministic check
+            # wrong-paper needs DOI resolution + metadata compare; the naive
+            # baseline can't see it from text -> always misses (recall 0).
+            "has_mismatched_citations": False,
             "overclaims": any(m in text for m in OVERCLAIM_MARKERS),
             "budget_inflated": budget > BUDGET_INFLATED_THRESHOLD,
             "missing_methods": "appropriate methods to achieve the aims" in text,

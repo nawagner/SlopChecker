@@ -15,8 +15,9 @@ DIMENSIONS
                       | physical_science
     applicant_type    early_stage_investigator | established_pi | multi_pi_team
                       | small_nonprofit
-    defect            (slop only) fabricated_citations | overclaims | all, plus
-                      budget_inflated | missing_methods for grant_application.
+    defect            (slop only) fabricated_citations | wrong_paper | overclaims
+                      | all, plus budget_inflated | missing_methods (grants only).
+                      wrong_paper = a real, resolving DOI cited as the wrong paper.
 
 SEED PULLS
     Human grant seeds come from *multiple* NIH RePORTER pulls -- one per Carnegie
@@ -69,8 +70,15 @@ APPLICANT_TYPES = ["early_stage_investigator", "established_pi", "multi_pi_team"
 
 # Which slop defects are meaningful for which document type. Budget and methods
 # are grant-specific; fabricated citations and overclaims apply everywhere.
-GRANT_DEFECTS = ["fabricated_citations", "overclaims", "budget_inflated", "missing_methods", "all"]
-TEXT_DEFECTS = ["fabricated_citations", "overclaims", "all"]
+GRANT_DEFECTS = [
+    "fabricated_citations",
+    "wrong_paper",
+    "overclaims",
+    "budget_inflated",
+    "missing_methods",
+    "all",
+]
+TEXT_DEFECTS = ["fabricated_citations", "wrong_paper", "overclaims", "all"]
 DEFECTS_BY_DOCTYPE = {
     "grant_application": GRANT_DEFECTS,
     "blog_post": TEXT_DEFECTS,
@@ -280,6 +288,10 @@ class Citation:
     doi: str
     resolves: bool
     claim: str
+    # metadata_match is False for the "wrong paper" case: the DOI resolves, but
+    # to a different paper than the one cited (cited_source names the claimed one).
+    metadata_match: bool = True
+    cited_source: str = ""
 
 
 @dataclass
@@ -433,19 +445,22 @@ def _prompt_for(dims, topic):
 
 
 def _slop_inject(dt, defect):
+    wrong_paper = "cite real, resolvable DOIs but attribute them to the wrong paper/authors"
     if dt == "grant_application":
         inject = {
             "fabricated_citations": "cite sources that sound real but are fabricated",
+            "wrong_paper": wrong_paper,
             "overclaims": "include grandiose, unsupported guarantees of success",
             "budget_inflated": "request an implausibly large budget for the scope",
             "missing_methods": "keep the methods vague and hand-wavy",
-            "all": "do all of: fake citations, overclaims, padded budget, vague methods",
+            "all": "do all of: fake citations, wrong-paper citations, overclaims, padded budget",
         }
     else:
         inject = {
             "fabricated_citations": "cite sources that sound real but are fabricated",
+            "wrong_paper": wrong_paper,
             "overclaims": "state sweeping, unsupported claims as settled fact",
-            "all": "do both: fabricated sources and sweeping unsupported claims",
+            "all": "do all of: fabricated sources, wrong-paper citations, unsupported claims",
         }
     return f"Make it subtly low-quality: {inject.get(defect, inject['all'])}."
 
@@ -484,28 +499,52 @@ def _defect_flags(dims):
         "ai_generated": dims["authorship"] != "human",
         "laundered": dims["authorship"] == "ai_laundered",
         "has_fabricated_citations": d == "fabricated_citations" or is_all,
+        "has_mismatched_citations": d == "wrong_paper" or is_all,
         "overclaims": d == "overclaims" or is_all,
         "budget_inflated": (d == "budget_inflated" or is_all) and grant,
         "missing_methods": (d == "missing_methods" or is_all) and grant,
     }
 
 
-def _make_citations(rng, n, fabricate):
+def _make_citations(rng, n, fabricate, mismatch=False):
     cites = []
     for i in range(n):
-        if fabricate and rng.random() < 0.6:
-            doi, resolves = f"10.{rng.randint(1000, 9999)}/{_rand_token(rng)}", False
+        roll = rng.random()
+        # Three failure modes, mixed per citation:
+        #   broken       DOI does not resolve (fabricated_citations)
+        #   wrong_paper  DOI resolves, but to a different paper than cited
+        #   clean        DOI resolves and matches the cited source
+        if fabricate and roll < 0.5:
+            doi, resolves, meta_ok = (
+                f"10.{rng.randint(1000, 9999)}/{_rand_token(rng)}",
+                False,
+                False,
+            )
+            cited = ""
+        elif mismatch and roll < (0.5 if not fabricate else 0.8):
+            doi, resolves, meta_ok = rng.choice(REAL_DOIS), True, False
+            cited = _fake_source(rng)  # what the doc claims the DOI is
         else:
-            doi, resolves = rng.choice(REAL_DOIS), True
+            doi, resolves, meta_ok = rng.choice(REAL_DOIS), True, True
+            cited = ""
         cites.append(
             Citation(
-                f"[{i + 1}]",
-                doi,
-                resolves,
-                rng.choice(CLEAN_SENTENCES).format(topic="the target problem", flavor="core"),
+                marker=f"[{i + 1}]",
+                doi=doi,
+                resolves=resolves,
+                claim=rng.choice(CLEAN_SENTENCES).format(topic="the target problem", flavor="core"),
+                metadata_match=meta_ok,
+                cited_source=cited,
             )
         )
     return cites
+
+
+def _fake_source(rng):
+    author = rng.choice(["Nguyen", "Okafor", "Petrova", "Alvarez", "Kim", "Rossi"])
+    year = rng.randint(2016, 2024)
+    venue = rng.choice(["J. of Applied Analysis", "Nature Communications", "PNAS", "Cell Reports"])
+    return f"{author} et al. ({year}), {venue}"
 
 
 def _rand_token(rng):
@@ -658,10 +697,16 @@ def build_record(idx, dims, seed, backend, model, rng):
         sections, body, used_model = _generate_body(topic, dims, backend, model, rng)
         if dims["authorship"] == "ai_laundered":
             body = _launder(body, rng)
-        cites = _make_citations(rng, rng.randint(4, 10), fabricate=gt["has_fabricated_citations"])
+        cites = _make_citations(
+            rng,
+            rng.randint(4, 10),
+            fabricate=gt["has_fabricated_citations"],
+            mismatch=gt["has_mismatched_citations"],
+        )
         full = _assemble(title, sections, cites, dt, human_text=None, override_body=body)
 
     n_unresolvable = sum(1 for c in cites if not c.resolves)
+    n_mismatched = sum(1 for c in cites if c.resolves and not c.metadata_match)
     prov = {
         "backend": backend if used_model else "template",
         "seed_source": seed["seed_source"],
@@ -672,6 +717,7 @@ def build_record(idx, dims, seed, backend, model, rng):
         "requested_budget_usd": _extract_budget(sections),
         "n_citations": len(cites),
         "n_unresolvable_citations": n_unresolvable,
+        "n_mismatched_citations": n_mismatched,
     }
     return Record(
         id=f"synth_{idx:05d}",
@@ -852,11 +898,13 @@ def _write_outputs(args, records, tiers):
                 "ai_generated",
                 "laundered",
                 "has_fabricated_citations",
+                "has_mismatched_citations",
                 "overclaims",
                 "budget_inflated",
                 "missing_methods",
                 "n_citations",
                 "n_unresolvable_citations",
+                "n_mismatched_citations",
                 "backend",
                 "seed_source",
             ]
@@ -875,11 +923,13 @@ def _write_outputs(args, records, tiers):
                     g["ai_generated"],
                     g["laundered"],
                     g["has_fabricated_citations"],
+                    g["has_mismatched_citations"],
                     g["overclaims"],
                     g["budget_inflated"],
                     g["missing_methods"],
                     r.meta["n_citations"],
                     r.meta["n_unresolvable_citations"],
+                    r.meta["n_mismatched_citations"],
                     r.provenance["backend"],
                     r.provenance["seed_source"],
                 ]
