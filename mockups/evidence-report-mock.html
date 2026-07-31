@@ -63,11 +63,14 @@
   mark.active { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   .rail { position: relative; min-height: 100%; }
-  .rail .placeholder { font-size: .8rem; color: var(--soft); border: 1px dashed var(--rule);
-                       border-radius: 4px; padding: .8rem 1rem; }
-  .anno { display: none; background: var(--panel); border: 1px solid var(--rule);
-          border-radius: 4px; padding: .7rem .9rem; font-size: .82rem; }
-  .anno.open { display: block; }
+  .anno { background: var(--panel); border: 1px solid var(--rule);
+          border-radius: 4px; padding: .7rem .9rem; font-size: .82rem; cursor: pointer; }
+  .a-sum { display: none; font-family: var(--mono); font-size: .76rem; line-height: 1.5; }
+  .rail.condensed .anno:not(.expanded) { padding: .45rem .9rem; }
+  .rail.condensed .anno:not(.expanded) .kv,
+  .rail.condensed .anno:not(.expanded) .a-note { display: none; }
+  .rail.condensed .anno:not(.expanded) .a-sum { display: block; }
+  .rail.condensed .anno:not(.expanded) .a-head { margin-bottom: .15rem; }
   .a-head { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .45rem; }
   .a-id { font-family: var(--mono); font-size: .7rem; font-weight: 700; color: #fff;
           border-radius: 3px; padding: .1rem .35rem; }
@@ -86,8 +89,7 @@
 
   @media (max-width: 900px) {
     .layout { grid-template-columns: 1fr; }
-    .rail .placeholder { display: none; }
-    .anno { display: block; position: static !important; margin-bottom: .75rem; }
+    .anno { position: static !important; margin-bottom: .75rem; }
   }
 
   h2 { font-size: .78rem; letter-spacing: .13em; text-transform: uppercase;
@@ -127,7 +129,7 @@
   <span class="docid">proposal.pdf — “Resilient Information Ecosystems Initiative” (Meridian Policy Group)</span>
   <span class="facts">OSF-2026-CIV-014 · 2026-07-31 · 9 checks · 41s</span>
 </header>
-<p class="hint">Click a highlight to see its check. Red = failed a check · green = passed · purple = detector score.</p>
+<p class="hint">Checks appear beside the passages they refer to — click a card or highlight to expand/collapse. Red = failed a check · green = passed · purple = detector score.</p>
 
 <div class="layout">
 <div class="doc">
@@ -168,10 +170,10 @@
 </div>
 
 <div class="rail">
-  <div class="placeholder">Click a highlighted passage to inspect its check.</div>
 
   <div class="anno" id="anno-c1">
     <div class="a-head"><span class="a-id yes">C1</span><span class="a-name">Citation [1]</span></div>
+    <div class="a-sum">resolves <span class="v-yes">YES</span> · metadata <span class="v-yes">YES</span></div>
     <table class="kv">
       <tr><td>DOI resolves</td><td class="v-yes">YES</td></tr>
       <tr><td>Metadata match</td><td class="v-yes">YES</td></tr>
@@ -180,6 +182,7 @@
 
   <div class="anno" id="anno-q1">
     <div class="a-head"><span class="a-id no">Q1</span><span class="a-name">Quote → citation [2]</span></div>
+    <div class="a-sum">resolves <span class="v-yes">YES</span> · quote found <span class="v-no">NO</span></div>
     <table class="kv">
       <tr><td>DOI resolves</td><td class="v-yes">YES</td></tr>
       <tr><td>Metadata match</td><td class="v-yes">YES</td></tr>
@@ -190,6 +193,7 @@
 
   <div class="anno" id="anno-d1">
     <div class="a-head"><span class="a-id score">D1</span><span class="a-name">AI detection (Pangram)</span></div>
+    <div class="a-sum">span <span class="v-score">0.98</span> · doc <span class="v-score">0.96</span></div>
     <table class="kv">
       <tr><td>Span score</td><td class="v-score">0.98</td></tr>
       <tr><td>Document score</td><td class="v-score">0.96</td></tr>
@@ -199,6 +203,7 @@
 
   <div class="anno" id="anno-c3">
     <div class="a-head"><span class="a-id no">C3</span><span class="a-name">Citation [3]</span></div>
+    <div class="a-sum">resolves <span class="v-no">NO</span> · OpenAlex <span class="v-no">NO</span></div>
     <table class="kv">
       <tr><td>DOI resolves</td><td class="v-no">NO</td></tr>
       <tr><td>Found in OpenAlex</td><td class="v-no">NO</td></tr>
@@ -208,6 +213,7 @@
 
   <div class="anno" id="anno-c4">
     <div class="a-head"><span class="a-id no">C4</span><span class="a-name">Claimed number → citation [4]</span></div>
+    <div class="a-sum">resolves <span class="v-yes">YES</span> · “64%” in source <span class="v-no">NO</span></div>
     <table class="kv">
       <tr><td>DOI resolves</td><td class="v-yes">YES</td></tr>
       <tr><td>Metadata match</td><td class="v-yes">YES</td></tr>
@@ -270,32 +276,71 @@ mock is illustrative.</p>
 
 <script>
 (function () {
-  var marks = document.querySelectorAll("mark[data-anno]");
-  var placeholder = document.querySelector(".rail .placeholder");
   var rail = document.querySelector(".rail");
-  var layout = document.querySelector(".layout");
-  var current = null;
+  var layoutEl = document.querySelector(".layout");
+  var docEl = document.querySelector(".doc");
+  var annos = Array.prototype.slice.call(document.querySelectorAll(".anno"));
+  function wide() { return window.matchMedia("(min-width: 901px)").matches; }
+  function markFor(a) {
+    return document.querySelector('mark[data-anno="' + a.id.replace("anno-", "") + '"]');
+  }
 
-  function open(mark) {
-    var anno = document.getElementById("anno-" + mark.dataset.anno);
-    if (!anno) return;
-    document.querySelectorAll(".anno.open").forEach(function (a) { a.classList.remove("open"); });
-    document.querySelectorAll("mark.active").forEach(function (m) { m.classList.remove("active"); });
-    if (current === anno) { current = null; placeholder.style.display = ""; return; }
-    current = anno;
-    anno.classList.add("open");
-    mark.classList.add("active");
-    placeholder.style.display = "none";
-    if (window.matchMedia("(min-width: 901px)").matches) {
-      var top = mark.getBoundingClientRect().top - layout.getBoundingClientRect().top;
-      anno.style.position = "absolute";
-      anno.style.left = "0"; anno.style.right = "0";
-      anno.style.top = Math.max(0, top) + "px";
-    } else {
-      anno.style.position = "static";
-      anno.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  // Place every card at its passage's height, pushing down to avoid overlap.
+  // Returns the bottom of the stack so the caller can detect overflow.
+  function place() {
+    var items = annos.map(function (a) {
+      var m = markFor(a);
+      return { a: a, top: m ? m.getBoundingClientRect().top - layoutEl.getBoundingClientRect().top : 0 };
+    }).sort(function (x, y) { return x.top - y.top; });
+    var prev = 0;
+    items.forEach(function (it) {
+      it.a.style.position = "absolute";
+      it.a.style.left = "0";
+      it.a.style.right = "0";
+      var t = Math.max(it.top, prev);
+      it.a.style.top = t + "px";
+      prev = t + it.a.offsetHeight + 10;
+    });
+    return prev;
+  }
+
+  function layout() {
+    if (!wide()) {
+      rail.classList.remove("condensed");
+      annos.forEach(function (a) { a.style.position = "static"; });
+      return;
+    }
+    rail.classList.remove("condensed");
+    var bottom = place();
+    if (bottom > docEl.offsetHeight + 60) {  // too many at once: condense to one-liners
+      rail.classList.add("condensed");
+      place();
     }
   }
-  marks.forEach(function (m) { m.addEventListener("click", function () { open(m); }); });
+
+  function toggle(a) {
+    a.classList.toggle("expanded");
+    var m = markFor(a);
+    if (m) m.classList.toggle("active", a.classList.contains("expanded") && rail.classList.contains("condensed"));
+    var wasCondensed = rail.classList.contains("condensed");
+    layout();
+    if (wasCondensed && a.classList.contains("expanded")) {
+      rail.classList.add("condensed");  // keep condensed mode sticky once triggered
+      place();
+    }
+  }
+
+  annos.forEach(function (a) {
+    a.addEventListener("click", function () { toggle(a); });
+    var m = markFor(a);
+    if (m) m.addEventListener("click", function () {
+      toggle(a);
+      if (!wide()) a.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+  });
+
+  window.addEventListener("resize", layout);
+  window.addEventListener("load", layout);
+  layout();
 })();
 </script>
