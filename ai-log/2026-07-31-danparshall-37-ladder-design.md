@@ -14,6 +14,9 @@ forcing function.
 
 - New comment on #37:
   <https://github.com/nawagner/SlopChecker/issues/37#issuecomment-5145628698>
+- New correction comment on #13:
+  <https://github.com/nawagner/SlopChecker/issues/13#issuecomment-5145699654>
+  (resolves a mutual-block loop — see "Follow-up" section below).
 - This session log.
 - STATUS.md entry.
 
@@ -80,3 +83,31 @@ No `src/` changes. No tests. No `models.py` change.
   ticket has one canonical thread.
 - Nothing about this ticket is time-sensitive for hackathon. Do NOT let
   it distract from demo-path work.
+
+## Follow-up: #13↔#37 mutual-block loop
+
+After posting the #37 summary, checked whether #10 / #13 needed updating
+in light of the new design decisions. Findings:
+
+- **#10 (quotecheck)**: no update needed. Mechanical check, no LLM, no
+  ladder applies. The `SourceFetcher` fetchers when built will need HTTP
+  retries but that's a normal transient-error problem in a different
+  taxonomy from #37.
+- **#13 (claims extraction)**: real conflict found. Dan's 15:51 comment
+  on #13 said "the LLM client lives with the pipeline engine (#37), not
+  here." Our new #37 scoping says #37 is *just* the ladder and is
+  blocked on #13 landing first with an inline retry loop. Reading both
+  tickets in isolation, anyone concludes each is prerequisite to the
+  other → deadlock.
+
+Posted a correction on #13 that:
+1. Explicitly retracts the "LLM client lives with #37" phrasing.
+2. Points to Pangram (`detect/pangram.py`) as the concrete pattern to
+   follow for the inline client.
+3. Cross-links the #37 design comment.
+4. Restates the "keep the door open" hints from the #37 comment
+   (separated prompt assembly, `evidence["provider"]`/`["model"]`) in
+   context for the #13 implementer.
+
+Net effect: the runtime half of #13 (the part not landed in PR #46) can
+now proceed without waiting on #37.
