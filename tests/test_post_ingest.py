@@ -72,9 +72,7 @@ def test_mutate_missing_original_is_hard_error():
     recall for a reason unrelated to check quality."""
     result = _ingest_result("hello world")
     with pytest.raises(ValueError, match="original text not found"):
-        mutate_ingest_result(
-            result, [{"id": "phantom", "original": "not here", "mutated": "x"}]
-        )
+        mutate_ingest_result(result, [{"id": "phantom", "original": "not here", "mutated": "x"}])
 
 
 def test_mutate_records_line_number_of_original():
