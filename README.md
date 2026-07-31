@@ -33,6 +33,48 @@ slopcheck config          # shows which API keys are set, without printing them
 paginated PDF evidence report — the actual shipping artifact; HTML is the
 design-fidelity preview.
 
+## Demo document
+
+To see the tool actually working — for a demo, or a first real look at the
+output — run it on this one:
+
+```bash
+slopcheck run tests/fixtures/synthetic/files/grant_application__fabricated_citations.docx \
+  --format json,html
+```
+
+Nine DOIs, all nine correctly formatted, three of which do not exist:
+`citation_identifiers_valid` passes 9/9 while `all_dois_resolve` fails with
+3 not found. "Looks perfect, isn't real" in one screen, quote-anchored, with
+no spurious findings alongside it.
+
+**Use the DOCX or HTML copy — not the PDF or Markdown.** Reference-list
+parsing is format-dependent (#123). The same document, same checks:
+
+| format | `citation_identifiers_valid` | `all_dois_resolve` |
+|---|---|---|
+| `.docx` | **true — 9/9 well-formed** | **false — 3/9 resolved, 3 not found** |
+| `.html` | **true — 9/9 well-formed** | **false — 3/9 resolved, 3 not found** |
+| `.md` | skipped — no reference list found | skipped — same |
+| `.pdf` | skipped — no reference list found | skipped — same |
+
+As a PDF, all four citation checks skip and the planted defect is invisible.
+Markdown skips them too, and additionally emits nine spurious "unlinked
+citation" findings, because the reference-list markers get counted as in-text
+ones. PDF is the format funders actually upload, which is what makes #123
+demo-critical rather than cosmetic.
+
+Three of the six remaining DOIs are real but return 403, so they render as
+gray coverage-gap chips rather than failures — worth knowing before it's on a
+screen. `metadata_match` is a coverage gap on every identifier, and the
+Pangram score only appears if `PANGRAM_API_KEY` is set.
+
+The proposals in `harness/fixtures/` (`proposal_climate.md`,
+`proposal_edu.md`) read much more like real submissions, but every DOI in
+them is a fabricated `10.9999/fake-*`, so even in a format that parses they
+resolve 0/3 — no real-vs-invented contrast to point at. Scenario selection
+is tracked on #25.
+
 ## API keys
 
 Every key in `.env.example` is optional. A check whose key is missing
@@ -81,14 +123,17 @@ plus a `skipped`/`errored` status — never free text, never a verdict. See
 | `src/slopchecker/ingest/` | PDF/DOCX/MD/HTML → normalized `FlattenedDoc` |
 | `worker/` | Cloudflare Worker: proxy, landing page, D1 report store |
 | `harness/` | planted-defect validation, recall scoring |
-| `fixtures/`, `tests/fixtures/` | fabricated test documents — never real applicant material (#22) |
+| `fixtures/`, `tests/fixtures/` | fabricated test documents — never real applicant material (#22). The case library is `tests/fixtures/synthetic/` (18 cases x 4 formats, planted defects, `files_index.csv` is the ground truth) |
 
 `report.json` is the contract between checks and the renderer — see
 [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) for the schema, a worked
 example, and how to run the tests. Shared bulk data (corpora, fixtures too
 big for git) lives in Cloudflare R2 — see
 [`docs/data-storage.md`](docs/data-storage.md) for what's there and how to
-get access. Reports can additionally be stored in Cloudflare D1 to make
+get access. R2 is a file drop, not a case library: it holds one proposal
+(`fixtures/proposal_climate.pdf`), the funder rubrics, and the UniMelb
+dataset — test documents live in `tests/fixtures/synthetic/`. Reports can
+additionally be stored in Cloudflare D1 to make
 results queryable across submissions — see
 [`docs/d1-database.md`](docs/d1-database.md).
 
