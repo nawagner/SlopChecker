@@ -301,3 +301,18 @@ def test_estimate_cost_does_not_touch_transport(doc: FlattenedDoc, api_key: str)
     estimated = detector.estimate_cost(doc)
     assert estimated == pytest.approx(0.05)
     assert transport.calls == []
+
+
+def test_model_defaults_to_pangram_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Unpinned config sends "default" — Pangram resolves the current model
+    for the key. Pinning rots: on 2026-07-31 a pinned model was rewritten
+    key-side to a retired id and 422'd in production (#142)."""
+    monkeypatch.delenv("PANGRAM_MODEL", raising=False)
+    assert PangramConfig().model == "default"
+
+
+def test_model_env_pin_wins(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PANGRAM_MODEL", "pangram-4")
+    assert PangramConfig().model == "pangram-4"
+    monkeypatch.setenv("PANGRAM_MODEL", "  ")  # blank reads as unset (config.get)
+    assert PangramConfig().model == "default"

@@ -5,6 +5,22 @@ Append-only. Newest entry on top. One line per entry:
 
 ## Log
 
+- 20:40 Dan (fable) — #142 smoke script pays for itself an hour after merging:
+  post-deploy production run caught `pangram_document` 422ing on every live
+  upload — `unknown model 'pangram-3.3'; expected one of: default, pangram-4`.
+  We've pinned `pangram-4` since #64; direct API probe shows the pin works on
+  one key (200) while production's key gets rewritten to the retired
+  `pangram-3.3` (422) — **Pangram resolves model aliases per key and churned
+  it mid-hackathon**. Hotfix PR #169: send `"default"` (accepted explicit
+  value, live-verified through our detector), `$PANGRAM_MODEL` re-pins for
+  reproducibility, `.env.example` documents it; smoke script learns
+  `rubric_budget_ceiling` is an expected single-upload skip. 593 passed, ruff
+  clean. Meanwhile the rest of the post-deploy smoke is HEALTHY: tagging row
+  live, topic_classification live (0.85), claims 9 extracted via real
+  Anthropic in a 42s round trip, 6/9 DOIs resolving post-#161 / next: merge
+  #169 on green, rerun smoke — expect first clean strict-mode green / blocked
+  on nothing.
+
 - 16:35 Emerson (claude-code) — rail alignment balance pass (#19): dense card clusters (nine citation-metadata cards anchored in one references section) accumulated displacement downward, so tail cards sat far below their passages; place() now shifts each contiguous cluster up by its mean displacement (bounded by the cluster above) so runs straddle their passages. Also renamed the ambiguous finding label 'Metadata could not be checked' -> 'Citation metadata could not be checked' (checks/metadata_match.py, Nick's module, noted on #9) — it confused the first real reviewer into asking whether it meant document metadata / next: nothing queued / blocked on nothing
 
 - 16:06 Emerson (fable) — two last-minute demo changes: (1) `topic_classification` LLM check (new `pipeline/checks_topics.py`): Claude classifies the doc into the FIXED taxonomy topic set (single source: `checks.tagging.load_taxonomy()` — model can't invent topics, off-list → errored row, "other" allowed); primary + ≤2 secondary with confidence and verbatim evidence quotes (quote fails quotecheck → anchor dropped, topic kept); deterministic `tagging` stays as the no-LLM fallback lane. (2) Pangram findings now RANKED: top-5 most AI-like passages by window score, labels "Most AI-like passage #N", note carries score + original Pangram label, doc ledger row keeps fraction_ai as result with top scores + any cap in detail ("showing top 5 of 8" — never silent). Dan's detector untouched, all in my mapping layer. 584 passed (+12 new), ruff clean / next: PR + merge / blocked on nothing
