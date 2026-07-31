@@ -1,0 +1,18 @@
+{
+  "style": "Chicago author-date",
+  "mentions": [
+    {"marker": "Whitfield 2020", "occurrence": 1, "links": ["whitfield-2020"]},
+    {"marker": "Reyes and Calloway 2018", "occurrence": 1, "links": ["reyes-2018"]},
+    {"marker": "Whitfield (2020)", "occurrence": 1, "links": ["whitfield-2020"]},
+    {"marker": "Bellweather 2017", "occurrence": 1, "links": [null]},
+    {"marker": "Nakamura (2019a)", "occurrence": 1, "links": ["nakamura-2019a"]},
+    {"marker": "Nakamura 2019b", "occurrence": 1, "links": ["nakamura-2019b"]}
+  ],
+  "references": [
+    {"key": "nakamura-2019a", "first_author": "Nakamura", "year": 2019,
+     "doi": "10.2345/ap.2019.312"},
+    {"key": "nakamura-2019b", "first_author": "Nakamura", "year": 2019},
+    {"key": "reyes-2018", "first_author": "Reyes", "year": 2018},
+    {"key": "whitfield-2020", "first_author": "Whitfield", "year": 2020}
+  ]
+}
