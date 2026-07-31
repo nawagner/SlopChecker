@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import json
 from pathlib import Path
 from typing import Annotated
 
@@ -145,7 +146,7 @@ def run(
     are evidence, not errors.
     """
     from slopchecker.pipeline import all_checks, build_context, discover, run_checks, select_checks
-    from slopchecker.report import render_report
+    from slopchecker.report import render_report, summarize_for_batch
 
     config.load()
     discover()
@@ -242,16 +243,17 @@ def run(
             html_path.write_text(render_report(report.to_report_dict()), "utf-8")
             written.append(html_path)
 
-        counts = report.counts()
-        rows.append(
-            {
-                "file": target.name,
-                "concerns": counts["failed"] + counts["errored"],
-                **counts,
-                "findings": len(report.findings),
-                "report": str(written[0]) if written else "",
-            }
-        )
+        # The triage row (#20): counts plus the derived columns the batch
+        # table sorts on. `link` is the relative href summary.html uses —
+        # the rendered report when there is one, else the json (a link to
+        # raw evidence beats a dead cell). `report` keeps the full path
+        # for the CSV, as before.
+        html_written = next((p for p in written if p.suffix == ".html"), None)
+        linked = html_written or (written[0] if written else None)
+        row = summarize_for_batch(report.to_report_dict(), link=linked.name if linked else "")
+        row["file"] = target.name
+        row["report"] = str(written[0]) if written else ""
+        rows.append(row)
         if len(targets) == 1:
             _print_summary(report, written)
 
@@ -260,7 +262,9 @@ def run(
 
 
 def _print_batch_summary(rows: list[dict], out_dir: Path) -> None:
-    """Ranked table + summary.csv: most concerning (failed + errored) first."""
+    """Ranked table + summary.csv/.json/.html: most concerns first (#20)."""
+    from slopchecker.report import render_batch
+
     rows.sort(key=lambda r: r.get("concerns", -1), reverse=True)
 
     table = Table(title=f"Batch summary — {len(rows)} document(s), most concerns first")
@@ -292,14 +296,26 @@ def _print_batch_summary(rows: list[dict], out_dir: Path) -> None:
         "skipped",
         "errored",
         "findings",
+        "doc_type",
+        "pangram",
+        "citation_flags",
+        "similarity",
         "report",
         "error",
     ]
     with csv_path.open("w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=fields)
+        writer = csv.DictWriter(fh, fieldnames=fields, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
-    console.print(f"Wrote [green]{csv_path}[/green]")
+
+    json_path = out_dir / "summary.json"
+    json_path.write_text(json.dumps(rows, ensure_ascii=False, indent=2), "utf-8")
+
+    html_path = out_dir / "summary.html"
+    html_path.write_text(render_batch(rows), "utf-8")
+    console.print(
+        f"Wrote [green]{csv_path}[/green], [green]{json_path}[/green], [green]{html_path}[/green]"
+    )
 
 
 # Named explicitly: the function can't be `config` (that's the imported module),
