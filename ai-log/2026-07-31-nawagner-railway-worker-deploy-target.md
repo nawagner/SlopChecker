@@ -93,6 +93,41 @@ This fix needs to land on `main` separately (PR, since main is protected) —
 `railway up` deploys whatever's on disk, not what's in git, so the live
 deploy and the repo were briefly out of sync until this PR.
 
+## Follow-up: actually deploying the Worker, and a real bug it surfaced
+
+Nick set most Railway variables himself (Anthropic, Pangram — Crossref
+contact and Candid still open) and ran `wrangler login` in his own terminal.
+With that done:
+
+- Realized `RAILWAY_API_URL` was never actually a secret — it's just
+  Railway's public service URL, not credential material. Set it as a plain
+  `[vars]` entry in `worker/wrangler.toml` instead of the `wrangler secret
+  put` dance originally planned; simpler, and it can live in the repo.
+- `wrangler deploy` — live at slopchecker-web.nwagner.workers.dev.
+  `cf deploy` (Cloudflare's newer unified CLI, also available) wanted a
+  `cloudflare.config.ts` in its experimental config format rather than
+  `wrangler.toml`; fell back to plain `wrangler`, which was already verified
+  against this exact config.
+- First few `/api/health` proxy requests intermittently returned Cloudflare
+  error 1042 (~50% failure). Stayed with it rather than shrugging off an
+  intermittent error: retried, confirmed it wasn't a same-zone subrequest
+  block (Railway's response headers show no `cf-ray` — not Cloudflare-fronted),
+  then watched it self-resolve within a few seconds and stay stable across
+  20/20 follow-up requests on all three routes. Read as edge-propagation
+  lag on a freshly deployed Worker version, not a code bug. Worth knowing if
+  it recurs: don't start debugging proxy code for the first ~10 seconds
+  after a fresh `wrangler deploy`.
+- **Real bug, not a fluke:** `/config` called `config.load()` on every
+  request. Once real values landed in the local `.env`, a test that
+  `monkeypatch.delenv`'d a key to assert the "unset" path started failing —
+  the endpoint's own `.env` reload was silently restoring the value the test
+  had just removed. Also just wrong for a long-running server regardless of
+  the test: `.env` should load once at process startup, not per-request.
+  Moved `config.load()` to module level in `web.py`. No-op on Railway (no
+  `.env` file there), fixes local test isolation, and is simply the correct
+  place for it. Redeployed; verified `/config` still correct in production
+  after the fix.
+
 ## Left to do
 
 - `railway init`/`railway up` to actually create the Railway project and get
