@@ -18,6 +18,8 @@ Append-only. Newest entry on top. One line per entry:
   CI gains an explicit `pytest -m integration` step / next: PR review + merge /
   blocked on nothing.
 
+- 13:26 Dominique (claude-code) — picked up #74 (landing/index design-copy-UX lane, handed off from Emerson's #27 first pass); audited slop-checker.com and landed the two structural fixes: hero `mark` had a `nowrap`/`normal` pair fighting each other so a wrapped highlight painted its underline once and split mid-phrase (fixed with `box-decoration-break: clone`), and the page had no `h1` at all — the specimen sentence is now the `h1`, computed styles identical. Measured 4 WCAG AA contrast failures on the shared tokens (worst: white-on-`--accent` at 2.50:1 for the primary CTA in dark mode) and found the `data-theme` blocks in `report.css` are dead — nothing sets the attribute; both written up in the ai-log / next: contrast + focus pass across `index.html` and `report.css` together, then a decision on the theme toggle / blocked on nothing
+
 - 13:20 Dan (fable) — #29 harness landed: pat-helper pattern ported to SlopChecker's data model, MVP corpus of 3 catchable + 2 pending_lens:claims defects, current recall 3/3 on runnable tier, ~0.15s canary test in pytest; direct calls to `extract_citations` / `check_quotes` until #7/#10's registry wiring lands (MATCHERS vocabulary stays either way); DOI-resolution defects deferred to Nick's #8; also filed #71 (post-ingest mutation + Task Exp real-fixture path — the follow-up B path) and landed #72 (Alex → `990991A` in team map) / next: nothing critical, could wire DOI defects once #8 lands / blocked on nothing.
 
 - 13:19 Nick (claude-code) — did diagnose + close out #27's last gap: Railway
