@@ -20,6 +20,10 @@ jobs:
       # this PR — widen once someone reformats those with their owner's nod.
       - run: ruff format --check src tests
       - run: pytest
+      # Full CLI chain on fabricated fixtures (#81). Deselected from the
+      # default run by addopts; without this step it never runs anywhere.
+      # Browser leg: ubuntu runners ship google-chrome on PATH (see #49).
+      - run: pytest -m integration
       # Non-blocking to start (#2).
       - run: mypy
         continue-on-error: true

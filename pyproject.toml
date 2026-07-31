@@ -43,6 +43,12 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Default run = fast unit suite. Integration (full CLI chain, #81) is opt-in:
+# `pytest -m integration`. CI runs both as separate steps.
+addopts = "-m 'not integration'"
+markers = [
+    "integration: full CLI chain in real subprocesses (opt in: pytest -m integration)",
+]
 
 [tool.mypy]
 python_version = "3.11"
