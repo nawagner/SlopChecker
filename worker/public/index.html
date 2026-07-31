@@ -1,12 +1,304 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>SlopChecker</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SlopChecker — screen proposals before you read them</title>
+<meta name="description" content="SlopChecker screens grant proposals for fabricated citations, misquoted sources, and AI-generation signals — and shows the evidence inline.">
+<style>
+  :root {
+    --bg: #FCFCFA; --panel: #F3F2EE; --ink: #22262C; --soft: #6B7280;
+    --rule: #DDDAD2; --accent: #33608C;
+    --no: #B3352E; --no-bg: #F8E7E5;
+    --yes: #2F7D52; --yes-bg: #E3F0E8;
+    --score: #6E4FA3; --score-bg: #EDE7F6;
+    --serif: "Charter", "Sitka Text", Cambria, Georgia, serif;
+    --sans: -apple-system, "Segoe UI", system-ui, Roboto, sans-serif;
+    --mono: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181D; --panel: #1E2127; --ink: #E6E3DC; --soft: #98A0AB;
+      --rule: #33373E; --accent: #7FA8CF;
+      --no: #E2756E; --no-bg: #3A2422;
+      --yes: #6FBE93; --yes-bg: #1E3328;
+      --score: #A98FD6; --score-bg: #2C2438;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font-family: var(--sans); line-height: 1.55; }
+  a { color: var(--accent); }
+  .wrap { max-width: 62rem; margin: 0 auto; padding: 0 1.25rem; }
+
+  header { border-bottom: 1px solid var(--rule); }
+  header .wrap { display: flex; align-items: baseline; gap: 1.5rem; padding: 1.1rem 1.25rem; }
+  .wordmark { font-family: var(--mono); font-size: .85rem; font-weight: 700;
+              letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+  header nav { margin-left: auto; display: flex; gap: 1.4rem; font-size: .82rem; }
+  header nav a { color: var(--soft); text-decoration: none; }
+  header nav a:hover, header nav a:focus-visible { color: var(--accent); }
+
+  /* hero: an annotated specimen — the product demonstrated on its own copy */
+  .hero { padding: 4rem 0 3rem; }
+  .specimen { font-family: var(--serif); font-size: clamp(1.5rem, 3.4vw, 2.4rem);
+              line-height: 1.5; max-width: 44rem; margin: 0; font-weight: 400; }
+  .specimen mark { background: transparent; color: inherit; padding: 0 .1em;
+                   border-radius: 2px; white-space: nowrap; }
+  .specimen mark.no { background: var(--no-bg); box-shadow: inset 0 -3px 0 var(--no); }
+  .specimen mark.score { background: var(--score-bg); box-shadow: inset 0 -3px 0 var(--score); }
+  .specimen mark { white-space: normal; }
+  .chips { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: 1.2rem 0 0;
+           font-family: var(--mono); font-size: .78rem; color: var(--soft); }
+  .chips .chip { display: inline-flex; align-items: baseline; gap: .45rem; }
+  .chip b { font-size: .68rem; font-weight: 700; color: #fff; border-radius: 3px;
+            padding: .1rem .35rem; }
+  .chip b.no { background: var(--no); } .chip b.score { background: var(--score); }
+  .chip .v-no { color: var(--no); font-weight: 700; }
+  .chip .v-score { color: var(--score); font-weight: 700; }
+  .sub { color: var(--soft); font-size: 1.02rem; max-width: 40rem; margin: 1.6rem 0 0; }
+
+  /* upload */
+  .uploader { margin: 2.4rem 0 0; max-width: 40rem; }
+  .drop { border: 1.5px dashed var(--rule); border-radius: 6px; background: var(--panel);
+          padding: 1.6rem 1.5rem; display: flex; flex-wrap: wrap; align-items: center;
+          gap: 1rem; transition: border-color .15s; }
+  .drop.armed { border-color: var(--accent); }
+  .drop p { margin: 0; font-size: .9rem; color: var(--soft); flex: 1 1 14rem; }
+  .drop p strong { color: var(--ink); font-weight: 600; display: block; margin-bottom: .15rem; }
+  button.check { font-family: var(--sans); font-size: .9rem; font-weight: 600;
+                 background: var(--accent); color: #fff; border: none; border-radius: 4px;
+                 padding: .65rem 1.2rem; cursor: pointer; }
+  button.check:disabled { opacity: .55; cursor: default; }
+  button.check:focus-visible, .drop:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .status { font-family: var(--mono); font-size: .78rem; margin: .8rem 0 0; min-height: 1.2em; }
+  .status.err { color: var(--no); }
+  .status.busy { color: var(--accent); }
+  .demolink { font-size: .85rem; margin-top: .9rem; }
+
+  h2 { font-size: .78rem; letter-spacing: .13em; text-transform: uppercase;
+       color: var(--soft); font-weight: 600; border-bottom: 1px solid var(--rule);
+       padding-bottom: .35rem; margin: 3.5rem 0 1.2rem; }
+
+  /* three lanes */
+  .lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+           gap: 1rem; }
+  .lane { border: 1px solid var(--rule); border-radius: 6px; padding: 1rem 1.1rem;
+          background: var(--panel); }
+  .lane .tag { font-family: var(--mono); font-weight: 700; font-size: .8rem; }
+  .lane.l-no .tag { color: var(--no); } .lane.l-yes .tag { color: var(--yes); }
+  .lane.l-score .tag { color: var(--score); }
+  .lane h3 { font-size: .95rem; margin: .35rem 0 .3rem; }
+  .lane p { margin: 0; font-size: .84rem; color: var(--soft); }
+
+  /* how it works */
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+           gap: 1.6rem; }
+  .step h3 { font-size: .95rem; margin: 0 0 .3rem; }
+  .step p { margin: 0; font-size: .86rem; color: var(--soft); }
+
+  /* api status strip */
+  .apistrip { font-family: var(--mono); font-size: .76rem; color: var(--soft);
+              border: 1px solid var(--rule); border-radius: 4px; padding: .55rem .9rem;
+              display: none; margin-top: 3.5rem; }
+  .apistrip .dot { display: inline-block; width: .55em; height: .55em; border-radius: 50%;
+                   background: var(--yes); margin-right: .5em; }
+
+  footer { margin-top: 3.5rem; border-top: 1px solid var(--rule); }
+  footer .wrap { padding: 1.4rem 1.25rem 2.5rem; font-size: .78rem; color: var(--soft);
+                 max-width: 62rem; }
+  footer p { max-width: 60ch; margin: 0 0 .5rem; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .specimen mark { animation: inkin .9s ease-out backwards; }
+    .specimen mark:nth-of-type(2) { animation-delay: .35s; }
+    .specimen mark:nth-of-type(3) { animation-delay: .7s; }
+    .chips .chip { animation: inkin .6s ease-out backwards; }
+    .chips .chip:nth-child(1) { animation-delay: .25s; }
+    .chips .chip:nth-child(2) { animation-delay: .6s; }
+    .chips .chip:nth-child(3) { animation-delay: .95s; }
+    @keyframes inkin { from { opacity: 0; } to { opacity: 1; } }
+  }
+</style>
 </head>
 <body>
-  <h1>SlopChecker</h1>
-  <p>Deploy placeholder. The real frontend lands with #27.</p>
+
+<header>
+  <div class="wrap">
+    <span class="wordmark">SlopChecker</span>
+    <nav>
+      <a href="/demo-report.html">Sample report</a>
+      <a href="https://github.com/nawagner/SlopChecker">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section class="hero">
+  <p class="specimen">This proposal cites a study that
+    <mark class="no">does not exist</mark>, quotes a paper that
+    <mark class="no">never said it</mark>, and scores
+    <mark class="score">0.96 on an AI detector</mark>.</p>
+  <div class="chips" aria-hidden="true">
+    <span class="chip"><b class="no">C3</b> doi_resolves <span class="v-no">NO</span></span>
+    <span class="chip"><b class="no">Q1</b> quote_in_source <span class="v-no">NO</span></span>
+    <span class="chip"><b class="score">D1</b> pangram_document <span class="v-score">0.96</span></span>
+  </div>
+  <p class="sub">SlopChecker screens grant proposals for fabricated citations, misquoted
+  sources, and AI-generation signals, then puts the evidence beside the passage it
+  refers to. Built for funding-org reviewers drowning in machine-written submissions.</p>
+
+  <div class="uploader">
+    <form id="checkform" class="drop" tabindex="-1">
+      <p><strong>Check a proposal</strong>
+        Drop a PDF here or choose a file. It runs the deterministic checks first;
+        nothing is auto-rejected.</p>
+      <input type="file" id="file" accept=".pdf,.docx,.md,.html,.txt" style="position:absolute;width:1px;height:1px;opacity:0" aria-label="Choose a proposal file">
+      <button type="button" class="check" id="choose">Choose file</button>
+      <button type="submit" class="check" id="run" disabled>Run checks</button>
+    </form>
+    <p class="status" id="status" role="status"></p>
+    <p class="demolink">No file handy? <a href="/demo-report.html">Open the sample evidence report</a>.</p>
+  </div>
+</section>
+
+<h2>How to read a result</h2>
+<section class="lanes">
+  <div class="lane l-no">
+    <span class="tag">NO</span>
+    <h3>Failed a verifiable check</h3>
+    <p>The DOI didn't resolve. The quote isn't in the paper. You can check it yourself
+    without trusting this tool.</p>
+  </div>
+  <div class="lane l-yes">
+    <span class="tag">YES</span>
+    <h3>Passed a verifiable check</h3>
+    <p>The reference exists and its metadata matches. Passing isn't an endorsement of
+    the argument, only of the citation.</p>
+  </div>
+  <div class="lane l-score">
+    <span class="tag">0.96</span>
+    <h3>A score, not a verdict</h3>
+    <p>Detector and similarity scores render in their own lane. They are context for a
+    human reviewer, never grounds for rejection.</p>
+  </div>
+</section>
+
+<h2>How it works</h2>
+<section class="steps">
+  <div class="step">
+    <h3>1 · Upload</h3>
+    <p>PDF, DOCX, Markdown, or HTML. The document is flattened to plain text with its
+    page structure kept for anchoring.</p>
+  </div>
+  <div class="step">
+    <h3>2 · Checks run</h3>
+    <p>Cheap deterministic checks first: DOI resolution, metadata match, quote
+    verification, section compliance. Detector scores where keys are configured. A
+    check that can't run reports as skipped, never silently.</p>
+  </div>
+  <div class="step">
+    <h3>3 · Evidence report</h3>
+    <p>One self-contained page — every finding highlighted in the document with its
+    evidence beside it, plus a full check ledger. Exportable to PDF.
+    <a href="/demo-report.html">See a sample</a>.</p>
+  </div>
+</section>
+
+<div class="apistrip" id="apistrip"><span class="dot"></span><span id="apitext"></span></div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>SlopChecker is a screening aid, not a determination. It recommends passages for
+    human review; it never auto-rejects. Boolean findings are independently verifiable.
+    Scores are probabilistic and never sufficient on their own.</p>
+    <p>Open source, built at the Hacking the Think Tank hackathon, 2026.
+    <a href="https://github.com/nawagner/SlopChecker">Code and issues</a>.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var fileInput = document.getElementById("file");
+  var choose = document.getElementById("choose");
+  var run = document.getElementById("run");
+  var form = document.getElementById("checkform");
+  var drop = form;
+  var status = document.getElementById("status");
+
+  function setStatus(msg, cls) { status.textContent = msg; status.className = "status " + (cls || ""); }
+
+  choose.addEventListener("click", function () { fileInput.click(); });
+  fileInput.addEventListener("change", function () {
+    if (fileInput.files.length) {
+      run.disabled = false;
+      setStatus(fileInput.files[0].name + " ready.", "");
+    }
+  });
+
+  ["dragover", "dragenter"].forEach(function (ev) {
+    drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("armed"); });
+  });
+  ["dragleave", "drop"].forEach(function (ev) {
+    drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove("armed"); });
+  });
+  drop.addEventListener("drop", function (e) {
+    if (e.dataTransfer.files.length) {
+      fileInput.files = e.dataTransfer.files;
+      run.disabled = false;
+      setStatus(e.dataTransfer.files[0].name + " ready.", "");
+    }
+  });
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!fileInput.files.length) return;
+    var data = new FormData();
+    data.append("file", fileInput.files[0]);
+    run.disabled = true;
+    setStatus("Running checks…", "busy");
+
+    fetch("/api/check", { method: "POST", body: data })
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        var type = res.headers.get("content-type") || "";
+        if (type.indexOf("text/html") !== -1) {
+          return res.text().then(function (html) {
+            document.open(); document.write(html); document.close();
+          });
+        }
+        return res.blob().then(function (blob) {
+          var a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = "report.json";
+          a.click();
+          setStatus("Checks complete — report.json downloaded.", "");
+          run.disabled = false;
+        });
+      })
+      .catch(function () {
+        // Pipeline endpoint not wired yet (or offline): show the sample so the
+        // flow is demonstrable end to end.
+        setStatus("The check pipeline isn't connected yet — showing the sample report.", "err");
+        setTimeout(function () { window.location.href = "/demo-report.html"; }, 1400);
+      });
+  });
+
+  // Live API strip: only shown when the health endpoint answers.
+  fetch("/api/health").then(function (r) { return r.json(); }).then(function (h) {
+    return fetch("/api/config").then(function (r) { return r.json(); }).then(function (c) {
+      var armed = c.credentials.filter(function (x) { return x.set; }).length;
+      document.getElementById("apitext").textContent =
+        "API live · v" + h.version + " · " + armed + "/" + c.credentials.length +
+        " credentialed checks armed";
+      document.getElementById("apistrip").style.display = "block";
+    });
+  }).catch(function () { /* offline or local file — leave the strip hidden */ });
+})();
+</script>
 </body>
 </html>
