@@ -58,6 +58,7 @@ mark { background: transparent; color: inherit; padding: 0 .08em; cursor: pointe
 mark.no    { background: var(--no-bg);    box-shadow: inset 0 -2px 0 var(--no); }
 mark.yes   { background: var(--yes-bg);   box-shadow: inset 0 -2px 0 var(--yes); }
 mark.score { background: var(--score-bg); box-shadow: inset 0 -2px 0 var(--score); }
+mark.skip  { background: var(--panel);    box-shadow: inset 0 -2px 0 var(--soft); }
 mark.active { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .rail { position: relative; min-height: 100%; }
@@ -74,6 +75,7 @@ mark.active { outline: 2px solid var(--accent); outline-offset: 1px; }
         border-radius: 3px; padding: .1rem .35rem; }
 .a-id.no { background: var(--no); } .a-id.yes { background: var(--yes); }
 .a-id.score { background: var(--score); }
+.a-id.skip { background: var(--soft); }
 .a-name { font-weight: 600; }
 .kv { font-family: var(--mono); font-size: .78rem; line-height: 1.7;
       border-collapse: collapse; width: 100%; }
@@ -83,6 +85,8 @@ mark.active { outline: 2px solid var(--accent); outline-offset: 1px; }
 .v-yes { color: var(--yes); font-weight: 700; }
 .v-no { color: var(--no); font-weight: 700; }
 .v-score { color: var(--score); font-weight: 700; }
+.v-skip { color: var(--soft); font-weight: 700; }
+.why { color: var(--soft); font-weight: 400; }
 .a-note { font-size: .76rem; color: var(--soft); margin: .45rem 0 0; }
 
 @media (max-width: 900px) {
@@ -104,6 +108,7 @@ table.ledger { border-collapse: collapse; width: 100%; font-size: .84rem; min-wi
 .ledger td.r { font-family: var(--mono); font-weight: 700; }
 .ledger td.r.yes { color: var(--yes); } .ledger td.r.no { color: var(--no); }
 .ledger td.r.score { color: var(--score); }
+.ledger td.r.skip { color: var(--soft); }
 .ledger td.d { color: var(--soft); font-size: .8rem; }
 
 .verdict { border: 1px solid var(--no); border-left: 5px solid var(--no);

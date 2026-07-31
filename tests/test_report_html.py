@@ -151,6 +151,50 @@ def test_missing_anchor_quote_still_renders_card():
     assert "<mark" not in out.split('<div class="rail">')[0].split('<div class="doc">')[1]
 
 
+def test_skipped_check_renders_as_gap_not_pass(html):
+    # The fixture's plagiarism_scan row didn't run: muted chip, reason in the
+    # detail column, excluded from result tallies, called out as a gap.
+    assert '<td class="r skip">SKIPPED</td>' in html
+    assert "no API key configured" in html
+    assert "NO ×5 · YES ×2 · scores ×2 · not run ×1" in html
+    assert "1 check could not run" in html
+
+
+def test_errored_check_gets_muted_lane_not_red():
+    rep = {
+        "document": {"file": "t.txt", "text": "alpha beta"},
+        "findings": [
+            {
+                "id": "A1",
+                "anchor": {"quote": "alpha"},
+                "checks": [{"name": "x", "status": "errored", "reason": "timeout"}],
+            }
+        ],
+        "ledger": [{"check": "x", "label": "X", "status": "errored", "reason": "timeout"}],
+    }
+    out = render_report(rep)
+    # A check that failed to RUN must not look like the document failed a check.
+    assert '<mark class="skip" data-anno="a1"' in out
+    assert '<td class="r skip">ERROR</td>' in out
+    assert "timeout" in out
+    assert '<mark class="no"' not in out
+
+
+def test_clean_report_with_gaps_says_so():
+    rep = {
+        "document": {"file": "t.txt", "text": "fine"},
+        "findings": [],
+        "ledger": [
+            {"check": "x", "label": "X", "result": True},
+            {"check": "y", "label": "Y", "status": "skipped", "reason": "offline"},
+        ],
+    }
+    out = render_report(rep)
+    assert "No checks failed" in out
+    assert "1 check could not run" in out
+    assert "NO ×0 · YES ×1 · scores ×0 · not run ×1" in out
+
+
 def test_clean_report_gets_ok_verdict():
     rep = {
         "document": {"file": "t.txt", "text": "fine"},

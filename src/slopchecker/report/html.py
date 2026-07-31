@@ -27,7 +27,7 @@ CHECK_LABELS = {
     "pangram_document": ("Document score", "doc"),
 }
 
-_LANE_RANK = {"no": 0, "score": 1, "yes": 2}  # strongest wins on overlap
+_LANE_RANK = {"no": 0, "score": 1, "yes": 2, "skip": 3}  # strongest wins on overlap
 
 
 def _check_label(name: str, short: bool = False) -> str:
@@ -36,20 +36,28 @@ def _check_label(name: str, short: bool = False) -> str:
     return name.replace("_", " ")
 
 
-def _result_class(result: object) -> str:
+def _result_class(result: object, status: str = "ok") -> str:
+    # skipped and errored share one muted lane: neither is a statement about
+    # the document, so neither may look like a pass or a fail.
+    if status != "ok":
+        return "skip"
     if isinstance(result, bool):
         return "yes" if result else "no"
     return "score"
 
 
-def _result_text(result: object) -> str:
+def _result_text(result: object, status: str = "ok") -> str:
+    if status != "ok":
+        return "SKIPPED" if status == "skipped" else "ERROR"
     if isinstance(result, bool):
         return "YES" if result else "NO"
     return f"{result:g}" if isinstance(result, float) else str(result)
 
 
 def _finding_lane(finding: dict) -> str:
-    results = [c.get("result") for c in finding.get("checks", [])]
+    results = [c.get("result") for c in finding.get("checks", []) if c.get("status", "ok") == "ok"]
+    if not results:
+        return "skip"
     if any(r is False for r in results):
         return "no"
     if any(not isinstance(r, bool) for r in results):
@@ -142,12 +150,20 @@ def _render_card(finding: dict) -> str:
 
     summary = " · ".join(
         f"{escape(_check_label(c.get('name', ''), short=True))} "
-        f'<span class="v-{_result_class(c.get("result"))}">{_result_text(c.get("result"))}</span>'
+        f'<span class="v-{_result_class(c.get("result"), c.get("status", "ok"))}">'
+        f"{_result_text(c.get('result'), c.get('status', 'ok'))}</span>"
         for c in checks
     )
     rows = "\n".join(
         f"      <tr><td>{escape(_check_label(c.get('name', '')))}</td>"
-        f'<td class="v-{_result_class(c.get("result"))}">{_result_text(c.get("result"))}</td></tr>'
+        f'<td class="v-{_result_class(c.get("result"), c.get("status", "ok"))}">'
+        f"{_result_text(c.get('result'), c.get('status', 'ok'))}"
+        + (
+            f' <span class="why">({escape(c["reason"])})</span>'
+            if c.get("status", "ok") != "ok" and c.get("reason")
+            else ""
+        )
+        + "</td></tr>"
         for c in checks
     )
     note = ""
@@ -167,10 +183,13 @@ def _render_card(finding: dict) -> str:
 
 
 def _render_ledger(ledger: list[dict]) -> str:
+    # A row that didn't run keeps its place in the table: SKIPPED/ERROR chip,
+    # reason in the detail column. Coverage gaps are findings too.
     rows = "\n".join(
         f"    <tr><td>{escape(row.get('label') or _check_label(row.get('check', '')))}</td>"
-        f'<td class="r {_result_class(row.get("result"))}">{_result_text(row.get("result"))}</td>'
-        f'<td class="d">{escape(str(row.get("detail", "")))}</td></tr>'
+        f'<td class="r {_result_class(row.get("result"), row.get("status", "ok"))}">'
+        f"{_result_text(row.get('result'), row.get('status', 'ok'))}</td>"
+        f'<td class="d">{escape(str(row.get("detail") or row.get("reason") or ""))}</td></tr>'
         for row in ledger
     )
     return f"""<div class="ledgerwrap">
@@ -184,10 +203,13 @@ def _render_ledger(ledger: list[dict]) -> str:
 
 
 def _render_summary(ledger: list[dict], summary: dict) -> str:
-    results = [row.get("result") for row in ledger]
+    # Only rows that actually ran count as results; skipped/errored rows are
+    # coverage gaps, tallied separately and said out loud.
+    results = [row.get("result") for row in ledger if row.get("status", "ok") == "ok"]
     failed = sum(1 for r in results if r is False)
     passed = sum(1 for r in results if r is True)
     scores = sum(1 for r in results if not isinstance(r, bool))
+    not_run = sum(1 for row in ledger if row.get("status", "ok") != "ok")
 
     def _failed_line(row: dict) -> str:
         label = row.get("label") or _check_label(row.get("check", ""))
@@ -197,17 +219,30 @@ def _render_summary(ledger: list[dict], summary: dict) -> str:
         cls = ""
         plural = "s" if failed != 1 else ""
         headline = f"{failed} check{plural} failed — flag for human review"
-        failed_lines = "; ".join(_failed_line(row) for row in ledger if row.get("result") is False)
+        failed_lines = "; ".join(
+            _failed_line(row)
+            for row in ledger
+            if row.get("status", "ok") == "ok" and row.get("result") is False
+        )
         detail = f"Failed: {failed_lines}."
     else:
         cls, headline = " ok", "No checks failed"
         detail = "All boolean checks passed."
+    if not_run:
+        plural = "s" if not_run != 1 else ""
+        detail += (
+            f" {not_run} check{plural} could not run (see ledger) — "
+            "reported as coverage gaps, not passes."
+        )
     detail += " Detector and similarity scores are context, not grounds."
 
+    counts = f"NO ×{failed} · YES ×{passed} · scores ×{scores}"
+    if not_run:
+        counts += f" · not run ×{not_run}"
     return f"""<div class="verdict{cls}">
   <p class="headline">{escape(headline)}</p>
   <p>{escape(detail)}</p>
-  <p class="counts">NO ×{failed} · YES ×{passed} · scores ×{scores}</p>
+  <p class="counts">{counts}</p>
 </div>"""
 
 
@@ -242,7 +277,8 @@ def render_report(report: dict) -> str:
     report_json = escape(json.dumps(report, indent=2, ensure_ascii=False))
     hint = (
         "Checks appear beside the passages they refer to — click a card or highlight "
-        "to expand/collapse. Red = failed a check · green = passed · purple = detector score."
+        "to expand/collapse. Red = failed a check · green = passed · purple = detector score · "
+        "gray = could not run."
     )
     schema_note = (
         '<span class="c">// results are true | false | number. '
