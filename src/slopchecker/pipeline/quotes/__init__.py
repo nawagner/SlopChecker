@@ -1,4 +1,4 @@
-"""Quote checking (#10): matching engine + stubbed retrieval interface."""
+"""Quote checking (#10): matching engine + OA source fetchers."""
 
 from slopchecker.pipeline.quotes.check import (
     QuotedPassage,
@@ -12,6 +12,14 @@ from slopchecker.pipeline.quotes.fetch import (
     SourceFetcher,
     source_keys,
 )
+from slopchecker.pipeline.quotes.fetchers import (
+    ArxivFetcher,
+    ChainFetcher,
+    DoajFetcher,
+    PmcOAFetcher,
+    UrlFetcher,
+    build_default_fetcher,
+)
 from slopchecker.pipeline.quotes.matching import (
     FUZZY_THRESHOLD,
     FragmentMatch,
@@ -23,13 +31,19 @@ from slopchecker.pipeline.quotes.matching import (
 
 __all__ = [
     "FUZZY_THRESHOLD",
+    "ArxivFetcher",
     "CachingFetcher",
+    "ChainFetcher",
+    "DoajFetcher",
     "FragmentMatch",
     "LocalFileFetcher",
+    "PmcOAFetcher",
     "QuoteMatch",
     "QuoteStatus",
     "QuotedPassage",
     "SourceFetcher",
+    "UrlFetcher",
+    "build_default_fetcher",
     "check_quotes",
     "find_quoted_passages",
     "match_quote",
