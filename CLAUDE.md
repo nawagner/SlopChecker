@@ -13,7 +13,7 @@ several exist specifically because agents are committing here.
 
 GitHub handle → name (for decoding the git log, issues, and PRs):
 
-- `nwagner` — Nick Wagner
+- `nawagner` — Nick Wagner
 - `etbrooking` — Emerson Brooking
 - `danparshall` — Dan Parshall
 - (Alex, Dominique — handles to be added)
