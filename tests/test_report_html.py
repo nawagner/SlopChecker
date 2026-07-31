@@ -149,6 +149,28 @@ def test_missing_anchor_quote_still_renders_card():
     out = render_report(rep)
     assert 'id="anno-a1"' in out
     assert "<mark" not in out.split('<div class="rail">')[0].split('<div class="doc">')[1]
+    # And it says so, instead of silently floating at the top of the rail.
+    assert 'class="anno unanchored"' in out
+    assert "Quote not found in the extracted text" in out
+
+
+def test_anchored_cards_are_not_marked_unanchored():
+    rep = {
+        "document": {"file": "t.txt", "text": "alpha beta gamma"},
+        "findings": [
+            {
+                "id": "A1",
+                "anchor": {"quote": "beta"},
+                "checks": [{"name": "x", "result": False}],
+            }
+        ],
+        "ledger": [],
+    }
+    out = render_report(rep)
+    # (the inlined stylesheet always mentions .anno.unanchored; the class must
+    # not appear on any card)
+    assert 'class="anno unanchored"' not in out
+    assert "Quote not found" not in out
 
 
 def test_pdf_style_text_splits_into_pages_not_one_wall():

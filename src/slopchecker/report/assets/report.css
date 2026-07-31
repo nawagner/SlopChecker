@@ -93,6 +93,14 @@ mark.active { outline: 2px solid var(--accent); outline-offset: 1px; }
 .why { color: var(--soft); font-weight: 400; }
 .a-note { font-size: .76rem; color: var(--soft); margin: .45rem 0 0; }
 
+/* Card <-> passage connection: hovering either side lights the other. */
+.anno.linked { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* A card whose quote wasn't found in the extracted text has no highlight to
+   sit beside; it stacks after the anchored cards, dashed so the difference
+   is visible at a glance. */
+.anno.unanchored { border-style: dashed; }
+.a-loose { font-size: .72rem; color: var(--soft); font-style: italic; margin: .35rem 0 0; }
+
 @media (max-width: 900px) {
   .layout { grid-template-columns: 1fr; }
   .anno { position: static !important; margin-bottom: .75rem; }
