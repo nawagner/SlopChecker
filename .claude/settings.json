@@ -1,0 +1,34 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/transcript_prompt.py 2>/dev/null || python scripts/transcript_prompt.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/upload_transcript.py 2>/dev/null || python scripts/upload_transcript.py"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/upload_transcript.py --push 2>/dev/null || python scripts/upload_transcript.py --push"
+          }
+        ]
+      }
+    ]
+  }
+}

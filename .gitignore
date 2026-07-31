@@ -3,9 +3,13 @@
 .env.*
 !.env.example
 
+# per-machine transcript-upload preference (written by the session after asking)
+.slopcheck-transcript
+
 # Python
 __pycache__/
 *.py[cod]
+*.pyc
 .venv/
 venv/
 *.egg-info/
