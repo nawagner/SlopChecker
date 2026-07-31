@@ -1,0 +1,295 @@
+# Claim-support evaluation corpus (#104)
+#
+# Fabricated (claim, source, verdict) triples for scoring the judge stage of
+# ClaimSupportCheck (#11). EVERY person, institution, dataset, finding, and
+# citation below is INVENTED. No real applicant material, no real papers — per
+# CLAUDE.md ("Fixtures are fabricated documents. Keep them that way, ever.").
+#
+# Each triple is one judge call: the judge reads `claim` + `source` and must
+# return one of five verdicts. `verdict` here is the ground-truth label.
+#
+# Ground-truth labelling rules (mirroring the judge system prompt):
+#   supported     - source clearly supports the claim as written.
+#   overstated    - source supports a weaker version; claim is directionally
+#                   right but stronger/broader/more definitive than justified.
+#   unsupported   - source is on-topic and substantive but does not address
+#                   what the claim asserts (no support, no contradiction).
+#   contradicted  - source states the opposite or a materially different result.
+#   unverifiable  - retrieved source text is insufficient to judge (boilerplate,
+#                   references only, truncated before results, off-topic stub).
+#
+# The unsupported/unverifiable line is deliberate: unsupported sources contain
+# real, relevant content that simply misses the claim; unverifiable sources
+# don't contain judgeable content at all.
+
+# ---------------------------------------------------------------------------
+# supported (4)
+# ---------------------------------------------------------------------------
+
+- id: sup-01
+  verdict: supported
+  citation_marker: "(Hensley & Ortiz, 2024)"
+  claim: >-
+    Households enrolled in the Larkfield community solar program saw their
+    average monthly electricity bills fall by about 12 percent.
+  source: >-
+    We evaluated 1,410 households enrolled in the Larkfield community solar
+    program between 2021 and 2023. Relative to a matched comparison group,
+    enrolled households saw average monthly electricity bills fall by 12.3
+    percent (95% CI: 10.1 to 14.5 percent). The effect was stable across the
+    three income tiers we examined, and did not attenuate over the two-year
+    follow-up window.
+
+- id: sup-02
+  verdict: supported
+  citation_marker: "(Ramos et al., 2023)"
+  claim: >-
+    A four-week classroom mindfulness curriculum modestly improved
+    self-reported focus among ninth-grade students.
+  source: >-
+    In a cluster-randomized trial across eight schools, ninth-grade students
+    who received the four-week mindfulness curriculum reported higher focus
+    on the validated Attentional Control Scale than students in the waitlist
+    condition (a 0.31-point gain on a 5-point scale, p = 0.02). We describe
+    the effect as modest but statistically reliable; teacher-rated focus
+    showed a smaller, non-significant change in the same direction.
+
+- id: sup-03
+  verdict: supported
+  citation_marker: "(Underhill, 2022)"
+  claim: >-
+    Planting street trees lowered peak summer surface temperatures on the
+    treated blocks.
+  source: >-
+    Using fixed sidewalk sensors, we compared 22 blocks that received street
+    trees against 22 untreated control blocks over two summers. On the
+    hottest afternoons, treated blocks recorded peak surface temperatures an
+    average of 1.8 degrees Celsius lower than controls (p < 0.01). The
+    cooling gap was widest between 2 and 5 p.m. and negligible overnight.
+
+- id: sup-04
+  verdict: supported
+  citation_marker: "(Adeyemi & Park, 2024)"
+  claim: >-
+    The Sunrise microloan pilot increased the share of women who owned a
+    registered business in the participating district.
+  source: >-
+    Two years after launch, the share of women in the Sunrise pilot district
+    who owned a formally registered business rose from 8.2 percent to 13.7
+    percent, a statistically significant increase (p = 0.004) relative to the
+    neighboring comparison district, where the share was flat. We attribute
+    the change primarily to the program's combination of microloans and
+    registration assistance.
+
+# ---------------------------------------------------------------------------
+# overstated (4)
+# ---------------------------------------------------------------------------
+
+- id: ov-01
+  verdict: overstated
+  citation_marker: "(Calloway et al., 2023)"
+  claim: >-
+    The food-box program eliminated food insecurity among the families it
+    served.
+  source: >-
+    Among 900 families receiving weekly food boxes, the share screening
+    positive for food insecurity fell from 41 percent to 23 percent over six
+    months. The decline was substantial and significant, but roughly one in
+    four families remained food insecure at endline, and the program did not
+    reach the deepest-poverty households in the catchment area.
+
+- id: ov-02
+  verdict: overstated
+  citation_marker: "(Brennan, 2022)"
+  claim: >-
+    Research proves that remote work raises productivity across every sector
+    of the economy.
+  source: >-
+    We studied 3,200 software engineers at a single large technology firm
+    during a shift to remote work. Self-reported and commit-based measures of
+    output rose by about 4 percent. We caution that these results come from
+    one knowledge-work firm and may not generalize to sectors with different
+    task structures; we make no claim about the economy as a whole.
+
+- id: ov-03
+  verdict: overstated
+  citation_marker: "(Nakamura & Boyd, 2023)"
+  claim: >-
+    The peer-tutoring program doubled high-school graduation rates.
+  source: >-
+    At the three participating high schools, four-year graduation rose from
+    71 percent before the peer-tutoring program to 76 percent after two
+    cohorts, a five-percentage-point improvement that was significant at
+    conventional levels. Graduation did not double, and the gain was
+    concentrated among students who attended at least half of the sessions.
+
+- id: ov-04
+  verdict: overstated
+  citation_marker: "(Villareal et al., 2024)"
+  claim: >-
+    The AI triage tool is safe to deploy autonomously in emergency rooms.
+  source: >-
+    In a retrospective analysis of 60,000 prior emergency-department visits,
+    the triage model's acuity predictions agreed with expert reviewers 88
+    percent of the time. This was an offline validation on historical records
+    only. We did not test the model prospectively, and we recommend it be
+    used strictly as a decision aid under clinician oversight rather than
+    autonomously.
+
+# ---------------------------------------------------------------------------
+# unsupported (4)  -- on-topic, substantive, but silent on the claim
+# ---------------------------------------------------------------------------
+
+- id: un-01
+  verdict: unsupported
+  citation_marker: "(Osei, 2022)"
+  claim: >-
+    The wetland restoration increased local bird biodiversity.
+  source: >-
+    We monitored the restored Halden wetland for two years, focusing on water
+    chemistry. Dissolved-nitrogen concentrations fell by 34 percent and
+    turbidity improved markedly relative to the pre-restoration baseline. Our
+    sampling protocol measured water-quality indicators only; we did not
+    survey birds, invertebrates, or other wildlife, which we leave to future
+    work.
+
+- id: un-02
+  verdict: unsupported
+  citation_marker: "(Feldman & Roe, 2021)"
+  claim: >-
+    The after-school program reduced juvenile arrests in the county.
+  source: >-
+    This evaluation of the Brightpath after-school program focused on
+    academic outcomes. Participating students posted higher year-end math and
+    reading scores than matched non-participants, and attendance improved. The
+    study did not collect any data on arrests, delinquency, or contact with
+    the justice system.
+
+- id: un-03
+  verdict: unsupported
+  citation_marker: "(Sato et al., 2023)"
+  claim: >-
+    The vaccine reduced hospitalizations among adults over 65.
+  source: >-
+    This phase-II immunogenicity study enrolled healthy adults aged 18 to 49.
+    The vaccine elicited robust neutralizing-antibody titers four weeks after
+    the second dose, with a favorable reactogenicity profile. The study was
+    not designed to measure clinical endpoints such as hospitalization, and it
+    enrolled no participants over 49.
+
+- id: un-04
+  verdict: unsupported
+  citation_marker: "(Lindgren, 2022)"
+  claim: >-
+    Carbon pricing lowered emissions in the manufacturing sector.
+  source: >-
+    We model how households adjust residential electricity consumption in
+    response to a carbon price, using an hourly demand system. Simulated
+    household demand falls by 6 to 9 percent at the prices we consider. The
+    model covers the residential sector only; industrial and manufacturing
+    demand are outside its scope and are held fixed as an exogenous input.
+
+# ---------------------------------------------------------------------------
+# contradicted (4)  -- source states the opposite / a materially different result
+# ---------------------------------------------------------------------------
+
+- id: con-01
+  verdict: contradicted
+  citation_marker: "(Whitmore & Cho, 2023)"
+  claim: >-
+    The new math curriculum raised test scores relative to the standard one.
+  source: >-
+    In a randomized rollout across 40 classrooms, students taught with the new
+    math curriculum scored slightly lower on the end-of-year assessment than
+    those taught with the standard curriculum (a difference of 3.5 points,
+    p = 0.03, favoring the standard curriculum). We found no subgroup for which
+    the new curriculum outperformed the existing one.
+
+- id: con-02
+  verdict: contradicted
+  citation_marker: "(Iverson, 2024)"
+  claim: >-
+    Congestion pricing reduced downtown traffic volumes.
+  source: >-
+    Twelve months after the downtown congestion charge took effect, cordon
+    traffic counts were statistically indistinguishable from the
+    pre-charge baseline, and average peak-hour travel times within the zone
+    increased by 7 percent. We find no evidence that the charge reduced
+    traffic volumes over the study period.
+
+- id: con-03
+  verdict: contradicted
+  citation_marker: "(Delgado et al., 2022)"
+  claim: >-
+    The supplement improved cognitive performance in older adults.
+  source: >-
+    In a double-blind randomized trial of 480 adults aged 65 and older, the
+    supplement group performed significantly worse than placebo on the primary
+    executive-function composite after 12 weeks (p = 0.01). No cognitive
+    domain favored the supplement. On the basis of these results we do not
+    recommend the supplement for cognitive support.
+
+- id: con-04
+  verdict: contradicted
+  citation_marker: "(Prentice & Amadi, 2023)"
+  claim: >-
+    Expanding telehealth improved health-care access in rural counties.
+  source: >-
+    Across 60 rural counties, telehealth visit rates fell over the study
+    window and the gap in overall visit rates between rural and urban counties
+    widened rather than narrowed. Broadband limitations and reimbursement
+    barriers appear to have concentrated telehealth uptake in already
+    better-served areas.
+
+# ---------------------------------------------------------------------------
+# unverifiable (4)  -- retrieved text is insufficient to judge
+# ---------------------------------------------------------------------------
+
+- id: unv-01
+  verdict: unverifiable
+  citation_marker: "(Marsh et al., 2023)"
+  claim: >-
+    The care-transitions intervention reduced 30-day hospital readmissions by
+    20 percent.
+  source: >-
+    Acknowledgments. The authors thank the nursing staff of the participating
+    units and the data-management team for their support. This work was funded
+    by the Halden Health Trust under grant HT-2291. The authors declare no
+    competing interests. Correspondence should be addressed to the first
+    author.
+
+- id: unv-02
+  verdict: unverifiable
+  citation_marker: "(Okonkwo, 2021)"
+  claim: >-
+    The antiviral shortened average time to symptom resolution by three days.
+  source: >-
+    References. 1. Aldous, P. Clinical endpoints in respiratory trials.
+    Journal of Trial Methodology, 2019. 2. Berg, S. and Tan, L. Adaptive
+    designs for antiviral studies. Trials Review, 2020. 3. Costa, M. Placebo
+    response in symptom-based endpoints. Applied Clinical Notes, 2018.
+
+- id: unv-03
+  verdict: unverifiable
+  citation_marker: "(Ferreira, 2022)"
+  claim: >-
+    Coastal erosion rates along the Vasquez shoreline accelerated over the
+    past decade.
+  source: >-
+    (c) 2022 Coastal Systems Press. All rights reserved. This article is
+    distributed under a standard license; reproduction requires written
+    permission. Author affiliations: Department of Earth Systems, Northreach
+    University. Received 3 March 2022; accepted 19 June 2022; published online
+    28 July 2022.
+
+- id: unv-04
+  verdict: unverifiable
+  citation_marker: "(Bauer & Nilsson, 2024)"
+  claim: >-
+    The housing-first program reduced chronic homelessness in the pilot city.
+  source: >-
+    Methods. Eligible participants were adults on the coordinated-entry list
+    with at least 12 months of unsheltered homelessness. We collected baseline
+    housing status through structured interviews and administrative records,
+    and defined the primary outcome as days stably housed. Outcome results and
+    discussion are presented in Section 4, below.
