@@ -219,6 +219,25 @@
                  border-radius: 4px; padding: .65rem 1.2rem; cursor: pointer; }
   button.check:disabled { opacity: .55; cursor: default; }
   button.check:focus-visible, .drop:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* Optional rubric slot: a full-width row under the proposal controls, not a
+     second box — attaching the RFP is part of one upload, not a second step. */
+  .rubricrow { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center;
+               gap: .5rem .8rem; border-top: 1px solid var(--rule);
+               margin: .3rem 0 0; padding: .95rem 0 0; }
+  button.ghost { font-family: var(--sans); font-size: .85rem; font-weight: 600;
+                 background: transparent; color: var(--accent);
+                 border: 1px solid var(--rule); border-radius: 4px;
+                 padding: .45rem .8rem; cursor: pointer;
+                 display: inline-flex; align-items: center; gap: .45rem; }
+  button.ghost:hover { border-color: var(--accent); background: var(--accent-soft); }
+  button.ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .opt { font-family: var(--mono); font-size: .68rem; font-weight: 700;
+         letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
+  .rubricname { font-size: .8rem; color: var(--soft); flex: 1 1 12rem; }
+  /* Attached is a state worth seeing at a glance — it changes what the report
+     can say about compliance. */
+  .rubricname.set { color: var(--ink); font-weight: 600; }
+  .rubrichelp { flex: 1 1 100%; font-size: .8rem; color: var(--soft); margin: 0; }
   .status { font-family: var(--mono); font-size: .78rem; margin: .8rem 0 0; min-height: 1.2em; }
   .status.err { color: var(--no); }
   .status.busy { color: var(--accent); }
@@ -384,7 +403,8 @@
     <span class="n">STEP 1</span>
     <h3>You upload</h3>
     <p>A grant application or blog post — PDF, Word, Markdown, or HTML. The text comes
-    out with its page positions kept.</p>
+    out with its page positions kept. Attach your own solicitation alongside it and the
+    submission is checked against your rules too.</p>
   </li>
   <li>
     <span class="fbadge"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg></span>
@@ -510,6 +530,21 @@ gap in coverage — never as a quiet pass.</p>
     <input type="file" id="file" accept=".pdf,.docx,.md,.html,.txt" style="position:absolute;width:1px;height:1px;opacity:0" aria-label="Choose a proposal file">
     <button type="button" class="check" id="choose">Choose file</button>
     <button type="submit" class="check" id="run" disabled>Run checks</button>
+
+    <!-- Optional second file: the funder's own solicitation. Without it the
+         compliance checks report themselves as unchecked, so the copy says
+         that here rather than letting a reader discover a gap row and read it
+         as a pass. -->
+    <div class="rubricrow">
+      <input type="file" id="rubric" accept=".pdf,.docx,.md,.html,.txt" style="position:absolute;width:1px;height:1px;opacity:0" aria-label="Attach your solicitation or scoring rubric (optional)">
+      <button type="button" class="ghost" id="chooserubric">
+        Attach your solicitation <span class="opt">optional</span>
+      </button>
+      <span class="rubricname" id="rubricname" aria-live="polite">Nothing attached — compliance is reported as unchecked, not passed.</span>
+      <p class="rubrichelp">Attach the RFP or scoring criteria and the proposal is checked
+      against your own rules — budget ceilings, required sections — with the funder's
+      line quoted beside the passage that breaks it.</p>
+    </div>
   </form>
   <p class="status" id="status" role="status"></p>
   <p class="demolink">Rather not upload anything yet?
@@ -538,8 +573,23 @@ gap in coverage — never as a quiet pass.</p>
   var form = document.getElementById("checkform");
   var drop = form;
   var status = document.getElementById("status");
+  var rubricInput = document.getElementById("rubric");
+  var chooseRubric = document.getElementById("chooserubric");
+  var rubricName = document.getElementById("rubricname");
+  var NO_RUBRIC = "Nothing attached — compliance is reported as unchecked, not passed.";
 
   function setStatus(msg, cls) { status.textContent = msg; status.className = "status " + (cls || ""); }
+
+  chooseRubric.addEventListener("click", function () { rubricInput.click(); });
+  rubricInput.addEventListener("change", function () {
+    if (rubricInput.files.length) {
+      rubricName.textContent = "Checking against " + rubricInput.files[0].name;
+      rubricName.className = "rubricname set";
+    } else {
+      rubricName.textContent = NO_RUBRIC;
+      rubricName.className = "rubricname";
+    }
+  });
 
   choose.addEventListener("click", function () { fileInput.click(); });
   fileInput.addEventListener("change", function () {
@@ -568,8 +618,14 @@ gap in coverage — never as a quiet pass.</p>
     if (!fileInput.files.length) return;
     var data = new FormData();
     data.append("file", fileInput.files[0]);
+    // Only send the field when there's a file for it: an empty `rubric` part
+    // is a 422 ("empty upload"), and no rubric is a legitimate run.
+    var withRubric = rubricInput.files.length > 0;
+    if (withRubric) data.append("rubric", rubricInput.files[0]);
     run.disabled = true;
-    setStatus("Running checks…", "busy");
+    setStatus(withRubric
+      ? "Running checks against " + rubricInput.files[0].name + "…"
+      : "Running checks…", "busy");
 
     fetch("/api/check", { method: "POST", body: data })
       .then(function (res) {
@@ -598,9 +654,13 @@ gap in coverage — never as a quiet pass.</p>
       })
       .catch(function (err) {
         if (err && err.detail) {
-          // The pipeline answered but couldn't read this file. Say why, let
-          // the human pick another file.
-          setStatus("Couldn't check that file: " + err.detail, "err");
+          // The pipeline answered but couldn't read one of the files. Say
+          // which one and why, then let the human swap it. The API prefixes
+          // the secondary field's errors with "rubric: ".
+          var badRubric = err.detail.indexOf("rubric: ") === 0;
+          setStatus(badRubric
+            ? "Couldn't read your solicitation: " + err.detail.slice(8)
+            : "Couldn't check that file: " + err.detail, "err");
           run.disabled = false;
           return;
         }

@@ -39,7 +39,10 @@ def test_no_rubric_is_a_skipped_gap():
     out = rubric_budget_ceiling(FlattenedDoc(file="p.md", text=DOC_OVER), CheckContext())
     row = out.ledger[0]
     assert row.status == "skipped"
-    assert "--rubric" in row.reason
+    # Surface-neutral wording: this row is read on the website too (#148), so
+    # it names the missing document, not the CLI flag that would supply it.
+    assert row.reason == "no solicitation or rubric supplied — compliance not checked"
+    assert "--rubric" not in row.reason
     assert out.findings == []
 
 
