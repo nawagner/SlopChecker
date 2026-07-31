@@ -54,10 +54,11 @@ testpaths = ["tests"]
 #                             red the required check
 # The live tests were 17.6s of a 20.1s default run — 88% of the suite was
 # network wait. Keeping them out of the edit-test loop is the whole point.
-addopts = "-m 'not integration and not live'"
+addopts = "-m 'not integration and not live and not live_llm'"
 markers = [
     "integration: full CLI chain in real subprocesses (opt in: pytest -m integration)",
     "live: really calls third-party APIs (opt in: pytest -m live)",
+    "live_llm: real-key Anthropic/Pangram plumbing smoke (opt in: pytest -m live_llm, #142)",
 ]
 
 [tool.mypy]

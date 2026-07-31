@@ -346,6 +346,16 @@ def tagging(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
     topics = tag_topics(doc, tax)
 
     ledger = [
+        # The registered-id row (#142): every registered check must be traceable
+        # to at least one ledger row bearing its own id — `--only tagging`,
+        # coverage audits, and the e2e roster invariant all key on it. The
+        # detailed rollups below keep their established ids for the renderer.
+        LedgerRow(
+            check="tagging",
+            label="Topic and document-type tags",
+            result=True,
+            detail=f"{doc_type.kind} · {len(topics)} topic tag(s)",
+        ),
         LedgerRow(
             check="doc_type_confidence",
             label="Document type",

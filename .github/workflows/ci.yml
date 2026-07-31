@@ -119,6 +119,38 @@ jobs:
       # runner.
       - run: pytest -m live
 
+  # Real-key smoke of the LLM/API tier plumbing (#142): claims lens, claim
+  # support, Pangram — the code Railway executes on every live upload, which
+  # (pre-#142) no CI job executed with a real client. #115 is the receipt:
+  # `ModuleNotFoundError: anthropic` on every live upload, shipped through
+  # green CI, found by a human clicking the website.
+  #
+  # Inert until a human sets the repo secrets (each test skips cleanly when
+  # its key is unset). Use a separate low-spend-limit Anthropic key, not the
+  # Railway production one — this runs on every push from five people.
+  #
+  # ⚠️ Advisory like `live`: do NOT add this job to the `mainsaver` ruleset.
+  # Its redness depends on two third-party APIs; as a merge gate, one
+  # Anthropic hiccup blocks the whole team.
+  live-llm:
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      PANGRAM_API_KEY: ${{ secrets.PANGRAM_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+      - run: uv pip install --system -e ".[web,dev,pdf,docx,similarity,harness,llm]"
+      # -rs so the skip reasons ("ANTHROPIC_API_KEY not set") are visible in
+      # the job log — a fully-skipped green run should look inert, not covered.
+      - run: pytest -m live_llm -rs
+
   # The D1 report store lives in worker/ and needs Node, so it gets its own
   # job rather than bolting onto `test`. Two things NOT to do here, both of
   # which would brick the repo:

@@ -84,7 +84,13 @@ def _map_claim_to_finding(
     tier="llm",
     est_cost_usd=0.05,
     needs_network=True,
-    timeout_s=60.0,
+    # 90s, not 60: a real opus call on a half-page doc measures ~40s (#142
+    # live e2e), so 60s errored on ordinary variance — one observed timeout
+    # on harness/fixtures/proposal_climate.md. Kept under ~100s because the
+    # Cloudflare proxy kills the whole /check request around there; a longer
+    # budget would trade "errored claims row in a partial report" for "user
+    # gets nothing". Long documents need an async story, not a bigger number.
+    timeout_s=90.0,
 )
 def claims(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
     """Extract load-bearing claims via the ``claims`` lens.

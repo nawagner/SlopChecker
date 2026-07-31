@@ -192,6 +192,17 @@ def test_check_emits_rollups_and_quote_anchored_findings():
             assert f.anchor.quote and f.anchor.quote in GRANT.text
 
 
+def test_check_emits_registered_id_row():
+    """Every registered check must emit at least one row under its own id
+    (#142; flagged as a gap in the #15 review) — `--only tagging` and the e2e
+    roster invariant key on it. The rollup rows keep their established ids."""
+    out = tagging(GRANT, _ctx())
+    rows = {row.check: row for row in out.ledger}
+    assert rows["tagging"].result is True
+    assert rows["tagging"].status == "ok"
+    assert "grant_application" in rows["tagging"].detail
+
+
 def test_check_survives_empty_document():
     out = tagging(FlattenedDoc(file="blank.pdf", text=""), _ctx())
     rows = {row.check: row for row in out.ledger}
