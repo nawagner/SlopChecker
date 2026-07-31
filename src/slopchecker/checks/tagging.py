@@ -352,9 +352,9 @@ def tagging(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
         # detailed rollups below keep their established ids for the renderer.
         LedgerRow(
             check="tagging",
-            label="Topic, document-type, and submitter-type tags",
+            label="Topic and document-type tags",
             result=True,
-            detail=f"{doc_type.kind} · {submitter.kind} · {len(topics)} topic tag(s)",
+            detail=f"{doc_type.kind} · {len(topics)} topic tag(s)",
         ),
         LedgerRow(
             check="doc_type_confidence",
