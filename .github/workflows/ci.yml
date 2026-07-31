@@ -5,6 +5,15 @@ on:
     branches: [main]
   pull_request:
 
+# Five people pushing rapid-fire during a hackathon leaves superseded runs
+# holding runner slots while the run that matters queues behind them (#114).
+# Checks are per-SHA and the merge gate reads the head SHA, so cancelling an
+# older commit's run costs nothing. Keyed on ref, and never on main — a push
+# to main should always finish and report.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -13,7 +22,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install -e ".[web,dev,pdf,docx,similarity]"
+      # uv over pip: same extras, measured 11s -> 2s on the runner (#114).
+      # Astral tooling is already in the stack via ruff. --system installs into
+      # the setup-python interpreter, so nothing downstream needs a venv prefix.
+      #
+      # `harness` is in the list because without pyyaml, tests/test_harness.py
+      # module-skips on importorskip and its 4 tests run in no CI job at all
+      # (#114 review).
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+      - run: uv pip install --system -e ".[web,dev,pdf,docx,similarity,harness]"
       - run: ruff check .
       # Format check is scoped to the package for now. Adopting a formatter
       # across files that predate it (scripts/) shouldn't be a side effect of
@@ -27,6 +47,40 @@ jobs:
       # Non-blocking to start (#2).
       - run: mypy
         continue-on-error: true
+
+  # tests/test_checks_live.py really calls doi.org, Crossref, OpenAlex and
+  # arXiv. That is deliberate and stays (a mocked resolver agrees with our
+  # idea of the outside world instead of the real one) — but it was 17.6s of
+  # a 20.1s unit run, essentially all network wait, so it's marked `live` and
+  # deselected from the default run. This job is where it actually runs (#114).
+  #
+  # ⚠️ Do NOT add this job to the `mainsaver` ruleset when #43 gets flipped.
+  # Its redness depends on four third-party hosts; as a merge gate, one
+  # Crossref rate limit blocks the whole team. Advisory on purpose.
+  #
+  # That only holds because `test` gates the same *decisions* offline. It very
+  # nearly didn't: `metadata_match` and `citation_identifiers_valid` were named
+  # in no test outside the live file, so breaking either one passed `test`
+  # green (#114 review caught it). tests/test_checks_registered.py now drives
+  # both against a stubbed provider chain, no network. If you add a registered
+  # check whose only coverage is a live test, you have quietly reopened that
+  # hole — put an offline test on it too.
+  #
+  # It runs in parallel with `test` rather than inside it, so the live calls
+  # cost wall clock only against the other jobs, not against the critical path.
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+      - run: uv pip install --system -e ".[web,dev,pdf,docx,similarity,harness]"
+      - run: pytest -m live
 
   # The D1 report store lives in worker/ and needs Node, so it gets its own
   # job rather than bolting onto `test`. Two things NOT to do here, both of
