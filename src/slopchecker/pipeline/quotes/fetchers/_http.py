@@ -24,14 +24,23 @@ DEFAULT_TIMEOUT = 10.0
 log = logging.getLogger(__name__)
 
 # Tags whose content we drop entirely (chrome, scripts, side-nav).
-_SKIP_TAGS = frozenset(
-    {"script", "style", "noscript", "head", "nav", "header", "footer", "aside"}
-)
+_SKIP_TAGS = frozenset({"script", "style", "noscript", "head", "nav", "header", "footer", "aside"})
 # Tags that force a line break in the extracted text (paragraph structure).
 _BLOCK_TAGS = frozenset(
     {
-        "p", "div", "section", "article", "li", "tr", "br",
-        "h1", "h2", "h3", "h4", "h5", "h6",
+        "p",
+        "div",
+        "section",
+        "article",
+        "li",
+        "tr",
+        "br",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
     }
 )
 

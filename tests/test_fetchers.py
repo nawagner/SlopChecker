@@ -66,15 +66,11 @@ def _ok_html(body: str) -> Handler:
 
 
 def _ok_json(body: str) -> Handler:
-    return lambda _: httpx.Response(
-        200, text=body, headers={"content-type": "application/json"}
-    )
+    return lambda _: httpx.Response(200, text=body, headers={"content-type": "application/json"})
 
 
 def _ok_xml(body: str) -> Handler:
-    return lambda _: httpx.Response(
-        200, text=body, headers={"content-type": "application/xml"}
-    )
+    return lambda _: httpx.Response(200, text=body, headers={"content-type": "application/xml"})
 
 
 def _ok_pdf(pdf_bytes: bytes) -> Handler:
@@ -213,9 +209,7 @@ def test_pmc_doi_to_pmcid_then_fetches_jats_body():
 
 def test_pmc_returns_none_when_doi_not_in_pmc():
     idconv = '{"records":[{"doi":"10.1/y","errmsg":"invalid article id"}]}'
-    client = _routed_client(
-        {"https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/": _ok_json(idconv)}
-    )
+    client = _routed_client({"https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/": _ok_json(idconv)})
     fetcher = PmcOAFetcher(client=client)
 
     assert fetcher.fetch(_ref(doi="10.1/y")) is None
@@ -309,12 +303,9 @@ def test_doaj_returns_none_when_doi_not_indexed():
 def test_doaj_returns_none_when_record_has_no_fulltext_link():
     # DOAJ record present but only a homepage link (no fulltext).
     search = (
-        '{"results":[{"bibjson":{"link":['
-        '{"type":"homepage","url":"https://journal.example/"}]}}]}'
+        '{"results":[{"bibjson":{"link":[{"type":"homepage","url":"https://journal.example/"}]}}]}'
     )
-    client = _routed_client(
-        {"https://doaj.org/api/search/articles/doi:": _ok_json(search)}
-    )
+    client = _routed_client({"https://doaj.org/api/search/articles/doi:": _ok_json(search)})
     fetcher = DoajFetcher(client=client)
 
     assert fetcher.fetch(_ref(doi="10.9999/xyz")) is None
@@ -469,9 +460,7 @@ def test_chain_returns_none_when_all_sources_miss():
     )
     fetcher = build_default_fetcher(client=client)
 
-    text = fetcher.fetch(
-        _ref(arxiv_id="2001.99999", doi="10.1/x", url="https://gone.example/x")
-    )
+    text = fetcher.fetch(_ref(arxiv_id="2001.99999", doi="10.1/x", url="https://gone.example/x"))
 
     assert text is None
 
@@ -493,9 +482,7 @@ def test_chain_skips_non_applicable_fetchers_entirely():
             "https://www.ncbi.nlm.nih.gov/": _tracking("pmc-idconv"),
             "https://eutils.ncbi.nlm.nih.gov/": _tracking("pmc-efetch"),
             "https://doaj.org/": _tracking("doaj"),
-            "https://plain.example/x": _ok_html(
-                "<html><body><p>plain text</p></body></html>"
-            ),
+            "https://plain.example/x": _ok_html("<html><body><p>plain text</p></body></html>"),
         }
     )
     fetcher = build_default_fetcher(client=client)
@@ -543,9 +530,7 @@ def test_chain_composes_with_caching_fetcher(tmp_path):
 def test_all_fetchers_conform_to_source_fetcher_protocol():
     from slopchecker.pipeline.quotes import SourceFetcher
 
-    dummy_client = httpx.Client(
-        transport=httpx.MockTransport(lambda _: httpx.Response(404))
-    )
+    dummy_client = httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(404)))
     for cls in (ArxivFetcher, PmcOAFetcher, DoajFetcher, UrlFetcher):
         instance = cls(client=dummy_client)
         assert isinstance(instance, SourceFetcher), f"{cls.__name__} not a SourceFetcher"
