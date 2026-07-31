@@ -183,6 +183,24 @@ report = EvidenceReport.model_validate_json(report_json)     # from disk
 html_input = report.to_report_dict()                         # for report/html.py
 ```
 
+## Where a report is stored
+
+`report.json` on disk is the contract and stays that way. A report can
+*additionally* be stored in Cloudflare D1 so that results become queryable
+across submissions — see [d1-database.md](d1-database.md).
+
+The D1 schema mirrors this document and is deliberately no stricter than it: a
+report pydantic accepts must be storable, or there would be two competing
+contracts. Two consequences to know about if you change anything here:
+
+- Every `CHECK` constraint in `worker/src/db/schema.ts` mirrors a rule on this
+  page (status/verdict vocabularies, `page >= 1`, `end >= start`). Changing a
+  vocabulary in `models.py` means regenerating the migration;
+  `tests/test_d1_schema_contract.py` fails if they drift apart.
+- `FlattenedDoc.text` is not stored in D1, so a report read back from it carries
+  every field *except* `text`, plus the `sha256` and length in the response
+  envelope. Splice the text back before validating.
+
 ## Running the tests
 
 From the repo root (after `uv venv` + `uv pip install -e ".[dev]"`; add

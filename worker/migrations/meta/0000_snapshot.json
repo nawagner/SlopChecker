@@ -1,0 +1,652 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "56a652f0-1c4f-4c05-8856-f3706d16b054",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "finding_checks": {
+      "name": "finding_checks",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "finding_id": {
+          "name": "finding_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ordinal": {
+          "name": "ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "check_name": {
+          "name": "check_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "result_kind": {
+          "name": "result_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "result_num": {
+          "name": "result_num",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'ok'"
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "finding_checks_finding_ordinal_key": {
+          "name": "finding_checks_finding_ordinal_key",
+          "columns": [
+            "finding_id",
+            "ordinal"
+          ],
+          "isUnique": true
+        },
+        "finding_checks_name_idx": {
+          "name": "finding_checks_name_idx",
+          "columns": [
+            "check_name"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "finding_checks_finding_id_findings_id_fk": {
+          "name": "finding_checks_finding_id_findings_id_fk",
+          "tableFrom": "finding_checks",
+          "tableTo": "findings",
+          "columnsFrom": [
+            "finding_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "finding_checks_status_enum": {
+          "name": "finding_checks_status_enum",
+          "value": "\"finding_checks\".\"status\" IN ('ok','skipped','errored')"
+        },
+        "finding_checks_result_kind_enum": {
+          "name": "finding_checks_result_kind_enum",
+          "value": "\"finding_checks\".\"result_kind\" IS NULL OR \"finding_checks\".\"result_kind\" IN ('bool','number')"
+        },
+        "finding_checks_result_paired": {
+          "name": "finding_checks_result_paired",
+          "value": "(\"finding_checks\".\"result_kind\" IS NULL) = (\"finding_checks\".\"result_num\" IS NULL)"
+        },
+        "finding_checks_bool_domain": {
+          "name": "finding_checks_bool_domain",
+          "value": "\"finding_checks\".\"result_kind\" <> 'bool' OR \"finding_checks\".\"result_num\" IN (0, 1)"
+        },
+        "finding_checks_status_consistent": {
+          "name": "finding_checks_status_consistent",
+          "value": "(\"finding_checks\".\"status\" = 'ok' AND \"finding_checks\".\"result_kind\" IS NOT NULL) OR (\"finding_checks\".\"status\" <> 'ok' AND \"finding_checks\".\"result_kind\" IS NULL AND \"finding_checks\".\"reason\" IS NOT NULL)"
+        }
+      }
+    },
+    "findings": {
+      "name": "findings",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ordinal": {
+          "name": "ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "finding_key": {
+          "name": "finding_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "target": {
+          "name": "target",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "anchor_quote": {
+          "name": "anchor_quote",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "anchor_page": {
+          "name": "anchor_page",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "span_start": {
+          "name": "span_start",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "span_end": {
+          "name": "span_end",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "verdict": {
+          "name": "verdict",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "evidence": {
+          "name": "evidence",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "findings_run_ordinal_key": {
+          "name": "findings_run_ordinal_key",
+          "columns": [
+            "run_id",
+            "ordinal"
+          ],
+          "isUnique": true
+        },
+        "findings_run_key_idx": {
+          "name": "findings_run_key_idx",
+          "columns": [
+            "run_id",
+            "finding_key"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "findings_run_id_runs_id_fk": {
+          "name": "findings_run_id_runs_id_fk",
+          "tableFrom": "findings",
+          "tableTo": "runs",
+          "columnsFrom": [
+            "run_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "findings_page_ge1": {
+          "name": "findings_page_ge1",
+          "value": "\"findings\".\"anchor_page\" IS NULL OR \"findings\".\"anchor_page\" >= 1"
+        },
+        "findings_span_valid": {
+          "name": "findings_span_valid",
+          "value": "(\"findings\".\"span_start\" IS NULL AND \"findings\".\"span_end\" IS NULL) OR (\"findings\".\"span_start\" >= 0 AND \"findings\".\"span_end\" >= \"findings\".\"span_start\")"
+        },
+        "findings_anchor_shape": {
+          "name": "findings_anchor_shape",
+          "value": "\"findings\".\"anchor_quote\" IS NOT NULL OR (\"findings\".\"anchor_page\" IS NULL AND \"findings\".\"span_start\" IS NULL AND \"findings\".\"span_end\" IS NULL)"
+        },
+        "findings_verdict_enum": {
+          "name": "findings_verdict_enum",
+          "value": "\"findings\".\"verdict\" IS NULL OR \"findings\".\"verdict\" IN ('supported','overstated','unsupported','contradicted','unverifiable')"
+        }
+      }
+    },
+    "ledger_rows": {
+      "name": "ledger_rows",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ordinal": {
+          "name": "ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "check_name": {
+          "name": "check_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "detail": {
+          "name": "detail",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "result_kind": {
+          "name": "result_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "result_num": {
+          "name": "result_num",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'ok'"
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "ledger_rows_run_ordinal_key": {
+          "name": "ledger_rows_run_ordinal_key",
+          "columns": [
+            "run_id",
+            "ordinal"
+          ],
+          "isUnique": true
+        },
+        "ledger_rows_check_kind_idx": {
+          "name": "ledger_rows_check_kind_idx",
+          "columns": [
+            "check_name",
+            "result_kind",
+            "result_num"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "ledger_rows_run_id_runs_id_fk": {
+          "name": "ledger_rows_run_id_runs_id_fk",
+          "tableFrom": "ledger_rows",
+          "tableTo": "runs",
+          "columnsFrom": [
+            "run_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ledger_rows_status_enum": {
+          "name": "ledger_rows_status_enum",
+          "value": "\"ledger_rows\".\"status\" IN ('ok','skipped','errored')"
+        },
+        "ledger_rows_result_kind_enum": {
+          "name": "ledger_rows_result_kind_enum",
+          "value": "\"ledger_rows\".\"result_kind\" IS NULL OR \"ledger_rows\".\"result_kind\" IN ('bool','number')"
+        },
+        "ledger_rows_result_paired": {
+          "name": "ledger_rows_result_paired",
+          "value": "(\"ledger_rows\".\"result_kind\" IS NULL) = (\"ledger_rows\".\"result_num\" IS NULL)"
+        },
+        "ledger_rows_bool_domain": {
+          "name": "ledger_rows_bool_domain",
+          "value": "\"ledger_rows\".\"result_kind\" <> 'bool' OR \"ledger_rows\".\"result_num\" IN (0, 1)"
+        },
+        "ledger_rows_status_consistent": {
+          "name": "ledger_rows_status_consistent",
+          "value": "(\"ledger_rows\".\"status\" = 'ok' AND \"ledger_rows\".\"result_kind\" IS NOT NULL) OR (\"ledger_rows\".\"status\" <> 'ok' AND \"ledger_rows\".\"result_kind\" IS NULL AND \"ledger_rows\".\"reason\" IS NOT NULL)"
+        }
+      }
+    },
+    "runs": {
+      "name": "runs",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "submission_id": {
+          "name": "submission_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "report_sha256": {
+          "name": "report_sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "schema_version": {
+          "name": "schema_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "solicitation": {
+          "name": "solicitation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "run_date": {
+          "name": "run_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "run_seconds": {
+          "name": "run_seconds",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "run_version": {
+          "name": "run_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "cost_usd": {
+          "name": "cost_usd",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "recommendation": {
+          "name": "recommendation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "runs_report_sha256_key": {
+          "name": "runs_report_sha256_key",
+          "columns": [
+            "report_sha256"
+          ],
+          "isUnique": true
+        },
+        "runs_submission_created_idx": {
+          "name": "runs_submission_created_idx",
+          "columns": [
+            "submission_id",
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "runs_submission_id_submissions_id_fk": {
+          "name": "runs_submission_id_submissions_id_fk",
+          "tableFrom": "runs",
+          "tableTo": "submissions",
+          "columnsFrom": [
+            "submission_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "runs_cost_ge0": {
+          "name": "runs_cost_ge0",
+          "value": "\"runs\".\"cost_usd\" IS NULL OR \"runs\".\"cost_usd\" >= 0"
+        }
+      }
+    },
+    "submissions": {
+      "name": "submissions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "text_sha256": {
+          "name": "text_sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "text_length": {
+          "name": "text_length",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "file": {
+          "name": "file",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "file_sha256": {
+          "name": "file_sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "pages": {
+          "name": "pages",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "page_offsets": {
+          "name": "page_offsets",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "media_type": {
+          "name": "media_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "byline": {
+          "name": "byline",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "submitter": {
+          "name": "submitter",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "submissions_text_sha256_key": {
+          "name": "submissions_text_sha256_key",
+          "columns": [
+            "text_sha256"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "submissions_pages_ge0": {
+          "name": "submissions_pages_ge0",
+          "value": "\"submissions\".\"pages\" IS NULL OR \"submissions\".\"pages\" >= 0"
+        },
+        "submissions_text_length_ge0": {
+          "name": "submissions_text_length_ge0",
+          "value": "\"submissions\".\"text_length\" >= 0"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

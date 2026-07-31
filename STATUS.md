@@ -25,6 +25,21 @@ Append-only. Newest entry on top. One line per entry:
   wrong paper" case / blocked on nothing.
 
 - 13:42 Emerson (fable) — "rubrics" named and scoped as the term for funder reference docs, filed + claimed #90 (arrival/storage/ingest; #16 keeps spec + compliance checks); 3 fabricated rubric fixtures landed in `fixtures/rubrics/` (Aldergrove RFP + scoring rubric pairing proposal_climate, Hartwell RFP pairing proposal_edu; 5 planted, verified compliance violations documented in the README) and mirrored md+pdf to R2 `rubrics/synthetic/`; ingest verified on all six files — md gives full section structure, PDF text layer intact but sections=0 (PDF loader does no heading detection — noted on #90 for the spec-drafting path) / next: `--rubric` CLI plumbing, web slot with #27 / blocked on nothing
+- 13:45 Nick (claude-code) — did D1 report history + Drizzle Kit schema
+  migrations (#88, filed this session): 5 tables mirroring models.py,
+  `/api/runs` store+read on the Worker, 72 worker tests + 8 Python schema
+  guards, docs/d1-database.md / tests written by three independent agents from
+  the contract (each test proved red under a targeted mutation before being
+  kept) — caught a real idempotency bug: the replay hash used JSON.stringify,
+  which normalizes whitespace but NOT key order, so the same report from a
+  different producer created a duplicate run; fixed with a key-sorted
+  canonical form / no new secret anywhere — D1 sits behind the
+  Worker binding because the REST API would need a Cloudflare token (#23/#65);
+  `database_id` is an identifier and a placeholder runs local dev + CI + tests
+  / touched Emerson's `worker/src/index.ts` + `wrangler.toml`, flagged on #27
+  / next: Nick creates the DB and pastes `database_id`, then
+  `npm run db:migrate:remote`; add the `worker` CI job to the mainsaver ruleset
+  / blocked on nothing.
 
 - 13:21 Dan (fable) — #37 design conversation, no code: brainstormed retry-ladder shape, concluded it's post-MVP (Pangram already has an inline loop; no chat-model check exists yet to hit the refusal problem); captured two shape decisions as a comment on #37 (check-invoked `LadderExecutor`, `Finding.evidence["rung"]` for provenance) so the fork is settled when someone picks it up post-#13; also posted correction on #13 resolving a mutual-block loop (Dan's earlier "LLM client lives with #37" was wrong under new scoping); ticket parked / next: return to happy-path work / blocked on nothing.
 
