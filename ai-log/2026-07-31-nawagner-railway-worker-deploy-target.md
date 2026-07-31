@@ -37,6 +37,25 @@
   beyond "forward `/api/*`, serve static otherwise" — there's no real backend
   API yet for any of that to matter against.
 
+## Mid-session: conventions changed under me
+
+Rebased onto main partway through and picked up #32/#33's CLAUDE.md rewrite —
+module ownership table, `STATUS.md`, branch-naming convention, git-identity
+format. Handled:
+
+- CI was broken by my own PR: workflow installed `.[dev]`, `test_web.py`
+  needs `.[web]` for `fastapi`. Fixed to `.[web,dev]`.
+- `web.py`/`railway.toml`/`worker/` aren't in the new module-ownership table,
+  so no heads-up comment needed beyond what's already on #27.
+- Created `STATUS.md` (referenced in CLAUDE.md, didn't exist yet) with an
+  entry for this session.
+- Left branch name (`railway-worker-deploy-target`) as-is rather than
+  renaming to `<handle>/<issue>-<slug>` — it predates the convention and PR
+  #34 was already open; renaming mid-PR is more churn than it's worth here.
+- Did **not** change `git config user.name` to the new `"Name (surface)"`
+  format — that's a git config change, which I don't make regardless of
+  in-repo convention. Nick would need to set that himself if he wants it.
+
 ## Dead ends
 
 - First `curl` verification of `/config` set the env var on the *client*
