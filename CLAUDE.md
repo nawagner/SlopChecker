@@ -45,6 +45,7 @@ enough — this is a hackathon).
 | `src/slopchecker/pipeline/` | Dan (+ Fable) | pat-helper engine port, loaders, quotecheck |
 | `src/slopchecker/lenses/` | Dan (+ anyone) | lens prompt packs (markdown — low conflict risk, edit away) |
 | `src/slopchecker/detect/` | Dan | AI-detection providers behind a `Detector` protocol (currently Pangram) |
+| `src/slopchecker/similarity/` | Dan | corpus similarity (#14): MinHash+LSH near-dup + cluster engine; the registered check lives in `pipeline/checks_similarity.py` |
 | `src/slopchecker/checks/` | Nick | deterministic tier: DOI resolution, metadata, dedup |
 | `src/slopchecker/report/` | Emerson (→ Dominique) | evidence report: HTML + PDF rendering, in-line annotation. Emerson built it and owns it; further iteration hands off to Dominique |
 | `fixtures/rubrics/` | Emerson | synthetic rubric (funder reference doc) fixtures, mirrored to R2 (#90) |
