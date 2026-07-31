@@ -317,8 +317,9 @@ def _render_document(doc: dict, findings: list[dict]) -> str:
     return "\n".join(parts)
 
 
-def _render_card(finding: dict) -> str:
+def _render_card(finding: dict, anchored: frozenset[str] | None = None) -> str:
     fid = str(finding.get("id", ""))
+    loose = anchored is not None and fid.lower() not in anchored
     lane = _finding_lane(finding)
     label = finding.get("label") or finding.get("target") or fid
     checks = finding.get("checks", [])
@@ -344,11 +345,17 @@ def _render_card(finding: dict) -> str:
     note = ""
     if finding.get("note"):
         note = f'\n    <p class="a-note">{escape(finding["note"])}</p>'
+    if loose:
+        note += (
+            '\n    <p class="a-loose">Quote not found in the extracted text — '
+            "no in-document highlight for this one.</p>"
+        )
 
     head = (
         f'<span class="a-id {lane}">{escape(fid)}</span><span class="a-name">{escape(label)}</span>'
     )
-    return f"""  <div class="anno" id="anno-{escape(fid.lower())}">
+    cls = "anno unanchored" if loose else "anno"
+    return f"""  <div class="{cls}" id="anno-{escape(fid.lower())}">
     <div class="a-head">{head}</div>
     <div class="a-sum">{summary}</div>
     <table class="kv">
@@ -448,12 +455,18 @@ def render_report(report: dict) -> str:
         docid_bits.append(f"({doc['submitter']})")
     docid = " — ".join(docid_bits[:2]) + (f" {docid_bits[2]}" if len(docid_bits) > 2 else "")
 
-    cards = "\n\n".join(_render_card(f) for f in findings)
+    # Which findings actually landed a highlight: their cards align beside the
+    # passage; the rest are labeled and stacked after them instead of piling
+    # at the top of the rail pretending to relate to the first paragraph.
+    anchored = frozenset(
+        str(f.get("id", "")).lower() for _, _, f in _anchor_spans(doc.get("text", ""), findings)
+    )
+    cards = "\n\n".join(_render_card(f, anchored) for f in findings)
     report_json = escape(json.dumps(report, indent=2, ensure_ascii=False))
     hint = (
-        "Checks appear beside the passages they refer to — click a card or highlight "
-        "to expand/collapse. Red = failed a check · green = passed · indigo = detector score · "
-        "gray = could not run."
+        "Checks appear beside the passages they refer to — hover either side to see "
+        "what connects, click to expand/collapse. Red = failed a check · green = passed · "
+        "indigo = detector score · gray = could not run."
     )
     schema_note = (
         '<span class="c">// results are true | false | number. '
