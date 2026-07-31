@@ -429,9 +429,7 @@ def test_citation_cap_enforced(monkeypatch):
     """
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
     doc = _sample_doc()  # apa.txt has 7 citations with resolved refs
-    transport = FakeTransport(
-        [judge_response(verdict="supported", passage="anything")]
-    )
+    transport = FakeTransport([judge_response(verdict="supported", passage="anything")])
     check = ClaimSupportCheck(
         # Cap to 1 citation regardless of the fixture size.
         config=_config(max_citations_per_doc=1),
@@ -481,9 +479,7 @@ def test_permanent_transport_error_records_error_ledger(monkeypatch):
     """Auth failure is not a rate-limit blip — surfaces as an errored ledger row."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
     doc = _sample_doc()
-    transport = FakeTransport(
-        [TransportAuthError(401, "invalid key")]
-    )
+    transport = FakeTransport([TransportAuthError(401, "invalid key")])
     check = ClaimSupportCheck(
         config=_config(),
         fetcher=LocalFileFetcher(SOURCES),

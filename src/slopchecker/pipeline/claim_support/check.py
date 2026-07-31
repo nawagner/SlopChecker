@@ -140,9 +140,7 @@ class ClaimSupportCheck:
             return CheckOutput(ledger=[_gap_row("skipped", f"missing {exc.env_var}")])
 
         extraction = extract_citations(doc.text)
-        candidates = _select_candidates(
-            extraction.citations, cap=self._conf.max_citations_per_doc
-        )
+        candidates = _select_candidates(extraction.citations, cap=self._conf.max_citations_per_doc)
 
         if not candidates.usable:
             # No usable citations = valid no-op. Still record the ledger row
