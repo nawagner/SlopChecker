@@ -1,26 +1,24 @@
-# Why scalable desalination membranes for arid regions Matters Now
+# The Case for Rethinking behavioral economics of retirement savings among gig workers
 
 ## Dek
 
-What we know about scalable desalination membranes for arid regions, and what to watch.
+What we know about behavioral economics of retirement savings among gig workers, and what to watch.
 
 ## Intro
 
-Careful framing guards against overstatement. Practitioners and policymakers alike have a role to play here. The takeaways are meant to inform, not to prescribe.
+Recent analysis points toward a tractable path forward. Careful framing guards against overstatement. The takeaways are meant to inform, not to prescribe.
 
 ## Body
 
-Careful framing guards against overstatement. The evidence base is partial, and important gaps remain. Recent analysis points toward a tractable path forward.
+Practitioners and policymakers alike have a role to play here. The evidence base is partial, and important gaps remain. The takeaways are meant to inform, not to prescribe.
 
 ## Takeaway
 
-Recent analysis points toward a tractable path forward.
+Every serious observer already agrees; the matter is entirely settled. The conclusions here are beyond dispute and settle the debate for good.
 
 ## Sources
 
-- [1] https://doi.org/10.1289/ehp.1104477
-- [2] https://doi.org/10.4804/8cl0lcz5
-- [3] https://doi.org/10.1021/jacs.9b02765
-- [4] https://doi.org/10.1038/s41586-020-2649-2
-- [5] https://doi.org/10.1126/science.1259855
-- [6] https://doi.org/10.9901/75i63rmh
+- [1] https://doi.org/10.1016/j.cell.2016.07.054
+- [2] https://doi.org/10.3353/uuwzix69
+- [3] https://doi.org/10.8642/hr2pjgds
+- [4] https://doi.org/10.1056/NEJMoa2034577

@@ -1,13 +1,13 @@
-# Advancing machine learning for protein structure prediction in drug discovery
+# Community-based interventions to reduce childhood asthma disparities: A Multidisciplinary Research Program
 
 ## Specific Aims
 
-Aim 1: Advance machine learning for protein structure prediction in drug discovery via a materials-focused strategy.
-Aim 2: Advance machine learning for protein structure prediction in drug discovery via a materials-focused strategy.
+Aim 1: Advance community-based interventions to reduce childhood asthma disparities via a community-focused strategy.
+Aim 2: Advance community-based interventions to reduce childhood asthma disparities via a community-focused strategy.
 
 ## Background
 
-This proposal addresses machine learning for protein structure prediction in drug discovery, a problem with substantial significance. We will assemble a multidisciplinary team with complementary expertise. Rigorous, pre-registered analyses will guard against bias and support reproducibility. Prior work has established a partial understanding, yet key gaps remain.
+This proposal addresses community-based interventions to reduce childhood asthma disparities, a problem with substantial significance. Prior work has established a partial understanding, yet key gaps remain. The approach integrates established community methods with a novel analytical pipeline. We will assemble a multidisciplinary team with complementary expertise.
 
 ## Approach
 
@@ -15,24 +15,22 @@ We will use appropriate methods to achieve the aims.
 
 ## Innovation
 
-Prior work has established a partial understanding, yet key gaps remain.
+Our preliminary data suggest a tractable path toward measurable improvement.
 
 ## Investigator Context
 
-The PI has a sustained track record of funded work in this area. The R2 host institution offers focused departmental resources and regional research partnerships, backed by a growing institutional research base.
+The PI has a sustained track record of funded work in this area. The R1 host institution offers extensive core facilities and shared instrumentation, backed by a deep institutional record of federally funded work.
 
 ## Budget Justification
 
-Total requested support is $998,676 over 4 years at a R2 institution, covering personnel, materials, and dissemination.
+Budget: personnel $617,941; equipment $103,588; travel $20,833; indirect costs $116,413. Total requested support is $858,775 over 3 years at a R1 institution.
 
 ## References
 
 - [1] https://doi.org/10.1109/TPAMI.2016.2577031
-- [2] https://doi.org/10.1001/jama.2016.9797
-- [3] https://doi.org/10.1101/gr.229102
-- [4] https://doi.org/10.1371/journal.pone.0173664
-- [5] https://doi.org/10.1038/nature14539
-- [6] https://doi.org/10.1101/gr.229102
-- [7] https://doi.org/10.1126/science.1259855
-- [8] https://doi.org/10.1001/jama.2016.9797
-- [9] https://doi.org/10.1038/nature14539
+- [2] https://doi.org/10.1038/s41586-020-2649-2
+- [3] https://doi.org/10.1109/TPAMI.2016.2577031
+- [4] https://doi.org/10.1021/jacs.9b02765
+- [5] https://doi.org/10.1002/anie.201907688
+- [6] https://doi.org/10.1126/science.1259855
+- [7] https://doi.org/10.1073/pnas.1517384113
