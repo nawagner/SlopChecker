@@ -67,8 +67,43 @@ reintroducing exactly the problem this removed.
 ## Results
 
 - Local default `pytest`: **20.1s → 2.7s**
-- Expect `test` job ~42s → ~10s; CI wall clock bounded by `live` (~25s)
-- Coverage unchanged — all 432 tests still run in CI
+- CI `test` job: 42s → **35s** (uv 11s → 2s landed; see the PDF caveat below)
+
+## What independent review caught — and why it changed the PR
+
+I asked a separate agent to try to falsify this work rather than confirm it.
+It confirmed the mechanism (no vacuous pass, clean three-way partition, no
+network in the default run, timings reproduce) and **refuted the coverage
+claim**, which was load-bearing:
+
+`metadata_match` and `citation_identifiers_valid` were named in **no test
+outside `test_checks_live.py`**. Gating that file out of `test` meant a real
+regression merged green:
+
+- neuter the borrowed-DOI comparison (#9's headline capability) → `pytest`
+  green, only the advisory `live` job red
+- stop reporting malformed identifiers → same
+
+That is the exact shape a regression hides in: an advisory job reviewers are
+told to expect red from third-party flakiness. And the PR's own argument for
+keeping `live` advisory *rested* on that false premise.
+
+Fix: `tests/test_checks_registered.py` drives both registered checks against a
+stubbed `ProviderChain`, no network, 8 tests in 0.2s. Verified by replaying
+both sabotages — each now reds the default suite. Coverage of
+`checks/identifiers_valid.py` 40% → 97% and `checks/metadata_match.py` 29% →
+84%, matching what live was contributing. The residual (`providers.py`,
+`net.py`) is genuinely about the outside world, which is live's job.
+
+Two smaller corrections from the same review:
+
+- "all 432 tests run in CI" was wrong — **428 do**. `tests/test_harness.py`
+  module-skips on `importorskip("yaml")` and no CI job installed the `harness`
+  extra, so its 4 tests ran nowhere. Added `harness` (and `similarity`) to the
+  CI extras.
+- `pytest` returns exit 5 on zero-collected, so the mistyped-marker case I
+  worried about is fail-safe. The residual is a marker plus a blanket
+  `skipif` — collected but all skipped exits 0. Noted, not hit here.
 
 ## Dead ends / deliberate non-goals
 
