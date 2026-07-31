@@ -36,18 +36,24 @@ Each is a ground-truth column in `manifest.csv`:
 
 The `all` defect sets every flag at once.
 
-## Mapping to the report contract
+## Mapping to the data model
 
-The ground-truth columns line up with checks in `tests/fixtures/sample_report.json`:
+These fixtures are *inputs*: a loader or the ingestion module (#4) turns each
+document into a `FlattenedDoc`, and a checker's output is an `EvidenceReport`
+(`report.json`). The canonical contract is `docs/DATA_MODEL.md`; the ground-truth
+columns here are the eval answer key, separate from the report.
 
-| corpus ground truth | report.json check |
+Each ground-truth column maps to a `CheckResult.name` in that contract:
+
+| corpus ground truth | check (per DATA_MODEL.md) |
 |---|---|
 | `has_fabricated_citations` | `doi_resolves` (false) |
-| `ai_generated` | `pangram_span` / `pangram_document` |
-| `overclaims`, `budget_inflated`, `missing_methods` | proposal-quality checks |
+| `ai_generated` | `pangram_span` / `pangram_document` (score lane) |
+| `overclaims`, `budget_inflated`, `missing_methods` | quality-tier checks |
 
-The "valid DOI pointing to the wrong paper" case (`metadata_match` / `quote_in_source`
-in the report) is not generated yet — see Open items.
+The "valid DOI pointing to the wrong paper" case maps to a `Finding.verdict` of
+`overstated` / `unsupported` (with `quote_in_source` / `metadata_match`); not
+generated yet — see Open items.
 
 ## Provenance and license
 
