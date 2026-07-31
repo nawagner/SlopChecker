@@ -5,7 +5,8 @@
 
 [build]
 builder = "NIXPACKS"
-buildCommand = "pip install -e '.[web]'"
+# pdf/docx extras: /check ingests uploaded PDFs and DOCX in production.
+buildCommand = "pip install -e '.[web,pdf,docx]'"
 
 [deploy]
 startCommand = "uvicorn slopchecker.web:app --host 0.0.0.0 --port $PORT"

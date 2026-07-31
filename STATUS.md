@@ -5,6 +5,8 @@ Append-only. Newest entry on top. One line per entry:
 
 ## Log
 
+- 12:55 Emerson (claude-code) — real web layer landed on `web.py` (#27): `POST /check` = upload → ingest → run_checks → rendered HTML report (`?format=json` for raw report.json); Railway build now installs pdf/docx extras so uploaded PDFs actually ingest in production; frontend surfaces the pipeline's own 422 reason instead of faking "offline" / next: verify live loop on slop-checker.com after Railway deploy, then demo scenario #25 / blocked on nothing
+
 - 12:41 Dan (fable) — CORRECTION to 12:32: #6's CLI never reached main — PR #56 was stacked on the #53 branch and, because #53 merged without branch-deletion, GitHub didn't retarget it; the #56 squash landed on `danparshall/5-runner-cli` instead (caught by another of Dan's sessions reading the actual diff — thanks). Re-landing now from `danparshall/6-cli` merged with current main, 126 tests green; #58 stays blocked until it merges / next: verify `slopcheck run` on origin/main after merge / blocked on nothing.
 - 12:35 Nick (claude-code) — did create R2 bucket `slopchecker-docs` in the
   Learning Journey AI CF account + mirror the `unimelb_data` Drive folder
