@@ -5,8 +5,11 @@
 
 [build]
 builder = "NIXPACKS"
-# pdf/docx extras: /check ingests uploaded PDFs and DOCX in production.
-buildCommand = "pip install -e '.[web,pdf,docx]'"
+# pdf/docx: /check ingests uploaded PDFs and DOCX in production. llm: the
+# claims lens imports anthropic at check time — without the package it shows
+# as an errored row on every live report (with it but no ANTHROPIC_API_KEY,
+# a clean skipped row).
+buildCommand = "pip install -e '.[web,pdf,docx,llm]'"
 
 [deploy]
 startCommand = "uvicorn slopchecker.web:app --host 0.0.0.0 --port $PORT"
