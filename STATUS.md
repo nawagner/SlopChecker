@@ -6,6 +6,16 @@ Append-only. Newest entry on top. One line per entry:
 ## Log
 
 - 12:41 Dan (fable) — CORRECTION to 12:32: #6's CLI never reached main — PR #56 was stacked on the #53 branch and, because #53 merged without branch-deletion, GitHub didn't retarget it; the #56 squash landed on `danparshall/5-runner-cli` instead (caught by another of Dan's sessions reading the actual diff — thanks). Re-landing now from `danparshall/6-cli` merged with current main, 126 tests green; #58 stays blocked until it merges / next: verify `slopcheck run` on origin/main after merge / blocked on nothing.
+- 12:35 Nick (claude-code) — did create R2 bucket `slopchecker-docs` in the
+  Learning Journey AI CF account + mirror the `unimelb_data` Drive folder
+  into it (4 files, 5.0 MB, byte-for-byte verified; `.DS_Store` skipped) /
+  docs/data-storage.md documents contents + access / next: Nick mints a
+  **bucket-scoped** R2 API token in the dashboard and shares it out-of-band
+  — deliberately not minted in-session, since transcripts land in a public
+  dir / note: the dataset carries applicant-shaped demographic fields
+  (birth year, birth country, home language, per-investigator); confirmed
+  synthetic, but retention/third-party rules belong in #23 / blocked on
+  nothing.
 
 - 12:32 Dan (fable) — all three lanes landed: #55 ingestion (#4: PDF/DOCX/MD/HTML→FlattenedDoc+sections+ref-region, scanned-PDF→errored), #53+#56 registry/tiered-runner + `slopcheck run` CLI (#5, #6: one-file-one-decorator checks, gap rows for skip/error/timeout, dry-run/batch), #59 citations+quotecheck (#7, #10: APA/Chicago/IEEE extraction P/R=1.0 on small clean fixtures, quote-match engine, retrieval stubbed behind SourceFetcher) / filed #58 (wire CLI seam to ingest — small, high-value), scoping comments on #15/#23/#24 for fresh sessions / next: #29 harness once assigned / blocked on nothing.
 
