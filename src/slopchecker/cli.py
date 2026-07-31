@@ -1,8 +1,9 @@
-"""The `slopcheck` command. `run` lands in #6; `config` exists now so you can
-verify your keys are wired up before any checks are written."""
+"""The `slopcheck` command: `run` (#6), `render` (#19), `config`."""
 
 from __future__ import annotations
 
+import csv
+import hashlib
 from pathlib import Path
 from typing import Annotated
 
@@ -11,13 +12,270 @@ from rich.console import Console
 from rich.table import Table
 
 from slopchecker import __version__, config
+from slopchecker.models import EvidenceReport, FlattenedDoc
 
 app = typer.Typer(
-    help="Automating slop checks for funding proposals.",
+    help=("Automating slop checks for funding proposals. Start with: slopcheck run proposal.md"),
     no_args_is_help=True,
     add_completion=False,
 )
 console = Console()
+
+# ---------------------------------------------------------------------------
+# TEMPORARY ingestion seam (#4). Real ingestion (PDF/DOCX -> FlattenedDoc,
+# with pages and offsets) is being built in a parallel lane; when it lands,
+# replace the body of _load_document() with that ingest() and delete
+# _TEXT_SUFFIXES. Until then we accept plain-text .txt/.md only.
+# ---------------------------------------------------------------------------
+_TEXT_SUFFIXES = {".txt": "text/plain", ".md": "text/markdown"}
+
+
+class UnsupportedFormat(Exception):
+    """A file _load_document can't read yet (everything but .txt/.md until #4)."""
+
+
+def _load_document(path: Path) -> FlattenedDoc:
+    media_type = _TEXT_SUFFIXES.get(path.suffix.lower())
+    if media_type is None:
+        raise UnsupportedFormat(
+            f"can't read '{path.suffix}' files yet — PDF/DOCX ingestion lands with #4; "
+            "for now use .txt or .md"
+        )
+    raw = path.read_bytes()
+    return FlattenedDoc(
+        file=path.name,
+        text=raw.decode("utf-8", errors="replace"),
+        sha256=hashlib.sha256(raw).hexdigest(),
+        media_type=media_type,
+    )
+
+
+def _result_text(row) -> str:
+    if row.status != "ok":
+        return (
+            f"[yellow]{row.status}[/yellow]"
+            if row.status == "skipped"
+            else f"[red]{row.status}[/red]"
+        )
+    if isinstance(row.result, bool):
+        return "[green]yes[/green]" if row.result else "[red]no[/red]"
+    return f"[cyan]{row.result:g}[/cyan]"  # a score: its own lane, not pass/fail
+
+
+def _print_summary(report: EvidenceReport, written: list[Path]) -> None:
+    table = Table(title=f"Checks — {report.document.file}", title_justify="left")
+    table.add_column("Check")
+    table.add_column("Result")
+    table.add_column("Detail")
+    for row in report.ledger:
+        table.add_row(row.label or row.check, _result_text(row), row.detail or row.reason or "")
+    console.print(table)
+
+    c = report.counts()
+    console.print(
+        f"passed [green]{c['passed']}[/green] · failed [red]{c['failed']}[/red] · "
+        f"scores {c['scores']} · skipped [yellow]{c['skipped']}[/yellow] · "
+        f"errored [red]{c['errored']}[/red] · findings {len(report.findings)}"
+    )
+    console.print(
+        f"Recommendation: [bold]{report.summary.recommendation}[/bold] "
+        "(signals for a human reviewer — never an auto-reject)"
+    )
+    for path in written:
+        console.print(f"Wrote [green]{path}[/green]")
+
+
+def _dry_run(checks, n_docs: int) -> None:
+    table = Table(title=f"Dry run — would run {len(checks)} check(s) on {n_docs} document(s)")
+    table.add_column("Check id")
+    table.add_column("Name")
+    table.add_column("Tier")
+    table.add_column("Est. cost/doc", justify="right")
+    table.add_column("Network")
+    for rc in checks:
+        table.add_row(
+            rc.meta.id,
+            rc.meta.name,
+            rc.meta.tier,
+            f"${rc.meta.est_cost_usd:.4f}",
+            "yes" if rc.meta.needs_network else "no",
+        )
+    console.print(table)
+    total = sum(rc.meta.est_cost_usd for rc in checks) * n_docs
+    console.print(f"Estimated total API spend: [bold]${total:.4f}[/bold]. No checks were run.")
+
+
+@app.command()
+def run(
+    path: Annotated[
+        Path,
+        typer.Argument(exists=True, help="A proposal file (.txt/.md for now), or a folder of them"),
+    ],
+    tier: Annotated[
+        str,
+        typer.Option("--tier", help="Which cost tier to run: deterministic, api, llm, or all"),
+    ] = "all",
+    only: Annotated[
+        list[str] | None,
+        typer.Option("--only", help="Run only this check id (repeatable)"),
+    ] = None,
+    skip: Annotated[
+        list[str] | None,
+        typer.Option("--skip", help="Skip this check id (repeatable)"),
+    ] = None,
+    out: Annotated[
+        Path | None,
+        typer.Option("--out", "-o", help="Folder for reports (default: ./slopcheck-reports)"),
+    ] = None,
+    formats: Annotated[
+        str,
+        typer.Option("--format", help="Report formats, comma-separated: json,html"),
+    ] = "json",
+    solicitation: Annotated[
+        str | None,
+        typer.Option("--solicitation", help="Solicitation the proposal responds to (id or path)"),
+    ] = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="List what would run and the estimated cost; run nothing"),
+    ] = False,
+    batch: Annotated[
+        bool,
+        typer.Option("--batch", help="Treat PATH as a folder (implied when PATH is a folder)"),
+    ] = False,
+) -> None:
+    """Check one proposal (or a folder of them) and write an evidence report.
+
+    The report lists what each check found, what was skipped and why. It
+    recommends human review where warranted; it never rejects anything on
+    its own. Exit code is nonzero only if the tool itself fails — findings
+    are evidence, not errors.
+    """
+    from slopchecker.pipeline import CheckContext, all_checks, discover, run_checks, select_checks
+    from slopchecker.report import render_report
+
+    config.load()
+    discover()
+
+    fmt_list = [f.strip() for f in formats.split(",") if f.strip()]
+    bad = set(fmt_list) - {"json", "html"}
+    if bad or not fmt_list:
+        console.print(f"[red]--format must be json, html, or both; got '{formats}'[/red]")
+        raise typer.Exit(2)
+
+    try:
+        checks = select_checks(all_checks(), tier=tier, only=only or [], skip=skip or [])
+    except ValueError as exc:
+        console.print(f"[red]{exc}[/red]")
+        console.print("Known checks: " + ", ".join(rc.meta.id for rc in all_checks()))
+        raise typer.Exit(2) from exc
+
+    if batch and not path.is_dir():
+        console.print("[red]--batch expects PATH to be a folder[/red]")
+        raise typer.Exit(2)
+
+    if path.is_dir():
+        targets = sorted(
+            p for p in path.iterdir() if p.is_file() and p.suffix.lower() in _TEXT_SUFFIXES
+        )
+        if not targets:
+            console.print(f"[red]no readable proposals (.txt/.md) found in {path}[/red]")
+            raise typer.Exit(1)
+    else:
+        targets = [path]
+
+    if dry_run:
+        _dry_run(checks, n_docs=len(targets))
+        return
+
+    out_dir = out or Path("slopcheck-reports")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    ctx = CheckContext(solicitation=solicitation)
+
+    rows: list[dict] = []
+    for target in targets:
+        try:
+            doc = _load_document(target)
+        except (UnsupportedFormat, OSError) as exc:
+            if len(targets) == 1:
+                console.print(f"[red]{exc}[/red]")
+                raise typer.Exit(1) from exc
+            # batch: a bad file is a gap, not a crash — record it and move on
+            console.print(f"[yellow]skipping {target.name}: {exc}[/yellow]")
+            rows.append({"file": target.name, "error": str(exc)})
+            continue
+
+        report = run_checks(doc, checks, context=ctx)
+        report.solicitation = solicitation
+
+        written: list[Path] = []
+        if "json" in fmt_list:
+            json_path = out_dir / f"{target.stem}.report.json"
+            json_path.write_text(report.model_dump_json(exclude_none=True, indent=2))
+            written.append(json_path)
+        if "html" in fmt_list:
+            html_path = out_dir / f"{target.stem}.report.html"
+            html_path.write_text(render_report(report.to_report_dict()))
+            written.append(html_path)
+
+        counts = report.counts()
+        rows.append(
+            {
+                "file": target.name,
+                "concerns": counts["failed"] + counts["errored"],
+                **counts,
+                "findings": len(report.findings),
+                "report": str(written[0]) if written else "",
+            }
+        )
+        if len(targets) == 1:
+            _print_summary(report, written)
+
+    if len(targets) > 1:
+        _print_batch_summary(rows, out_dir)
+
+
+def _print_batch_summary(rows: list[dict], out_dir: Path) -> None:
+    """Ranked table + summary.csv: most concerning (failed + errored) first."""
+    rows.sort(key=lambda r: r.get("concerns", -1), reverse=True)
+
+    table = Table(title=f"Batch summary — {len(rows)} document(s), most concerns first")
+    for col in ("File", "Concerns", "Passed", "Failed", "Scores", "Skipped", "Errored", "Findings"):
+        table.add_column(col, justify="right" if col != "File" else "left")
+    for r in rows:
+        if "error" in r:
+            table.add_row(r["file"], "[yellow]not read[/yellow]", "", "", "", "", "", "")
+        else:
+            table.add_row(
+                r["file"],
+                str(r["concerns"]),
+                str(r["passed"]),
+                str(r["failed"]),
+                str(r["scores"]),
+                str(r["skipped"]),
+                str(r["errored"]),
+                str(r["findings"]),
+            )
+    console.print(table)
+
+    csv_path = out_dir / "summary.csv"
+    fields = [
+        "file",
+        "concerns",
+        "passed",
+        "failed",
+        "scores",
+        "skipped",
+        "errored",
+        "findings",
+        "report",
+        "error",
+    ]
+    with csv_path.open("w", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(rows)
+    console.print(f"Wrote [green]{csv_path}[/green]")
 
 
 # Named explicitly: the function can't be `config` (that's the imported module),
