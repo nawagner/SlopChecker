@@ -20,6 +20,7 @@ enough on its own to read anything.
 | `unimelb/unimelb_test.csv` | 919 KB | same schema, unlabelled |
 | `unimelb/unimelb_example.csv` | 36 KB | sample submission format (`ID,Status`) |
 | `unimelb/unimelb.zip` | 462 KB | original archive as received |
+| `fixtures/proposal_climate.pdf` | 17 KB | PDF render of `harness/fixtures/proposal_climate.md` (fabricated, planted defects) — round-trip test artifact for the upload pipeline |
 
 Mirrored from the team Drive folder `unimelb_data` on 2026-07-31.
 `.DS_Store` was not copied.
