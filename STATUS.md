@@ -11,6 +11,8 @@ Append-only. Newest entry on top. One line per entry:
   now live, see docs/data-storage.md for setup / next: nothing / blocked
   on nothing.
 
+- 13:08 Emerson (claude-code) — landing page + index refinement handed to Dominique as #74 (scoped: `worker/public/` statics only; `worker/src/` + deploy config stay with Emerson under #27, which a parallel session is actively working); ownership table updated / next: Dominique picks up #74 / blocked on nothing
+
 - 12:55 Emerson (claude-code) — real web layer landed on `web.py` (#27): `POST /check` = upload → ingest → run_checks → rendered HTML report (`?format=json` for raw report.json); Railway build now installs pdf/docx extras so uploaded PDFs actually ingest in production; frontend surfaces the pipeline's own 422 reason instead of faking "offline" / next: verify live loop on slop-checker.com after Railway deploy, then demo scenario #25 / blocked on nothing
 
 - 12:50 Dan (fable) — #58 done on `danparshall/58-ingest-cli` after #63 landed: deleted the temporary `_load_document` seam + `_TEXT_SUFFIXES`/`UnsupportedFormat`, inlined `ingest.ingest()` in the `run()` loop, mapped `IngestResult.status != "ok"` to the existing degrade path (batch → yellow-skip + row, single-file → red + exit 1), widened the batch-dir filter from `_TEXT_SUFFIXES` to `ingest.LOADERS`; new CLI tests: PDF end-to-end (fabricated via pymupdf), corrupt-PDF, unsupported-suffix (.rst), batch-with-gaps; two existing tests rewritten around a `scratch_registry` fake check (empty-markdown fixture no longer reaches checks — #4 now errors it at ingest, which is the intended shape); 139 passed / 2 skipped locally / next: open PR / blocked on nothing.
