@@ -38,6 +38,16 @@ _WS = re.compile(r"\s+")
 _STOPWORDS = frozenset(
     "the a an of and or for in on to with by from at as is are its their".split()
 )
+# Whole words that flip a title's meaning. Kept deliberately small: these are
+# matched as tokens, never as substrings, so "non" here would still not fire
+# on "nonlinear".
+_NEGATIONS = frozenset("not no never without cannot none nor neither".split())
+# Surname particles. A citation that drops "van der" is citing the same
+# person, and treating it as a different author turned an ordinary Dutch or
+# German name into a "different work entirely" verdict.
+_PARTICLES = frozenset(
+    "van von der den de del della di da dos das du la le les el al bin ibn mac mc o".split()
+)
 
 
 class Grade(StrEnum):
@@ -87,6 +97,20 @@ def similarity(left: str | None, right: str | None) -> float:
     return ratio
 
 
+def _head(title: str) -> str:
+    """Everything before the subtitle separator. Colons are the common case,
+    but em- and en-dashes separate subtitles just as often in practice."""
+    for sep in (":", "—", "–", " - "):
+        if sep in title:
+            return title.split(sep)[0]
+    return title
+
+
+def _negations(text: str | None) -> set[str]:
+    """Whole-word negations only — "non" must not match "nonlinear"."""
+    return {t for t in normalize(text).split() if t in _NEGATIONS}
+
+
 def title_similarity(cited: str | None, canonical: str | None) -> float:
     """Title similarity that tolerates a truncated subtitle.
 
@@ -96,10 +120,23 @@ def title_similarity(cited: str | None, canonical: str | None) -> float:
     """
     best = similarity(cited, canonical)
     for a, b in ((cited, canonical), (canonical, cited)):
-        head = (a or "").split(":")[0]
+        head = _head(a or "")
         if head and head != a:
-            best = max(best, similarity(head, (b or "").split(":")[0]), similarity(head, b))
+            best = max(best, similarity(head, _head(b or "")), similarity(head, b))
     return best
+
+
+def negation_mismatch(cited: str | None, canonical: str | None) -> bool:
+    """True when one title negates and the other doesn't.
+
+    On a short title one inserted word barely moves any similarity measure:
+    "Attention Is All You Need" vs "Attention Is Not All You Need" scores
+    0.93 and sailed through as a clean match — while being, of course, the
+    opposite paper. Titles are short and negations are load-bearing, so
+    asymmetric negation is treated as a signal in its own right rather than
+    left to the ratio.
+    """
+    return _negations(cited) != _negations(canonical)
 
 
 def grade_similarity(score: float, strong: float, weak: float) -> Grade:
@@ -120,20 +157,35 @@ def grade_year(cited: int | None, canonical: int | None) -> Grade:
     return Grade.different
 
 
+def _core_surname(surname: str) -> str:
+    """Surname with leading particles dropped: "van der Berg" → "berg"."""
+    tokens = [t for t in normalize(surname).split() if t]
+    while len(tokens) > 1 and tokens[0] in _PARTICLES:
+        tokens.pop(0)
+    return " ".join(tokens)
+
+
 def grade_author(cited_surname: str | None, canonical: SourceRecord) -> Grade:
     """First-author surname against the canonical author list.
 
     Cited-first-author appearing anywhere in the real author list is a
     *minor* discrepancy (wrong author ordered first), not a different work;
     absent entirely is a real signal.
+
+    Particles are compared both ways: "Berg" for "van der Berg" is how half
+    the world's bibliographies alphabetize, and scoring it as a different
+    author was enough — combined with a merely-uncertain title — to push an
+    honest citation all the way to "different work entirely".
     """
     cited = normalize(cited_surname)
     if not cited or not canonical.surnames:
         return Grade.unknown
     surnames = [normalize(s) for s in canonical.surnames]
-    if surnames and cited == surnames[0]:
+    cores = [_core_surname(s) for s in canonical.surnames]
+    cited_core = _core_surname(cited_surname or "")
+    if surnames and (cited == surnames[0] or cited_core == cores[0]):
         return Grade.matches
-    if cited in surnames:
+    if cited in surnames or cited_core in cores:
         return Grade.minor
     if any(similarity(cited, s) >= 0.85 for s in surnames):
         return Grade.minor  # transliteration or hyphenation drift
@@ -210,7 +262,13 @@ def compare(ref: ReferenceEntry, canonical: SourceRecord | None) -> MetadataMatc
         return MetadataMatch(Grade.unknown, 0.0, {}, canonical, None)
 
     title_score = title_similarity(ref.title, canonical.title)
-    fields = {"title": str(grade_similarity(title_score, TITLE_STRONG, TITLE_WEAK))}
+    title_grade = grade_similarity(title_score, TITLE_STRONG, TITLE_WEAK)
+    if negation_mismatch(ref.title, canonical.title) and title_grade is Grade.matches:
+        # Surfaced for a human rather than escalated to "different work": the
+        # tool's job is to raise the signal, not to decide the citation is
+        # wrong on the strength of one token.
+        title_grade = Grade.minor
+    fields = {"title": str(title_grade)}
 
     # first_surname (#7) already knows both author shapes — "Surname, I. I."
     # and "I. I. Surname". Splitting on the comma ourselves turned "G. Kucsko"
@@ -226,7 +284,7 @@ def compare(ref: ReferenceEntry, canonical: SourceRecord | None) -> MetadataMatc
         fields["venue"] = str(venue)
 
     return MetadataMatch(
-        grade=_overall(Grade(fields["title"]), author, year),
+        grade=_overall(title_grade, author, year),
         title_score=title_score,
         fields=fields,
         canonical=canonical,

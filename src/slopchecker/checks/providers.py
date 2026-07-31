@@ -248,6 +248,24 @@ def _year_from_parts(message: dict) -> int | None:
     return None
 
 
+def _safely(call, *args, **kwargs) -> SourceRecord | None:
+    """Run one provider. A provider that raises is a provider that has no
+    answer — fall through to the next one.
+
+    ``MetadataProvider`` is a public Protocol (the whole point of #9's "one
+    interface" criterion), so the chain cannot assume every implementation
+    returns None politely. Without this, one malformed API payload — a
+    ``TypeError`` deep in a record parser — propagates out through the
+    ThreadPoolExecutor in metadata_match and takes down the check for the
+    entire document, which is precisely what "degrade to gaps, never crash"
+    exists to prevent.
+    """
+    try:
+        return call(*args, **kwargs)
+    except Exception:  # noqa: BLE001 — isolation is the point
+        return None
+
+
 class ProviderChain:
     """Try each provider in order; first record wins. Results are cached.
 
@@ -265,11 +283,11 @@ class ProviderChain:
         if cached is not None:
             return _from_cache(cached)
         for provider in self.providers:
-            record = provider.lookup(client, ident)
+            record = _safely(provider.lookup, client, ident)
             if record is not None and record.title:
                 self.cache.set("metadata", key, _to_cache(record))
                 return record
-        self.cache.set("metadata", key, None)
+        self.cache.set("metadata", key, _to_cache(None))
         return None
 
     def search(
@@ -285,11 +303,11 @@ class ProviderChain:
         if cached is not None:
             return _from_cache(cached)
         for provider in self.providers:
-            record = provider.search(client, title=title, surname=surname, year=year)
+            record = _safely(provider.search, client, title=title, surname=surname, year=year)
             if record is not None and record.title:
                 self.cache.set("metadata_search", key, _to_cache(record))
                 return record
-        self.cache.set("metadata_search", key, None)
+        self.cache.set("metadata_search", key, _to_cache(None))
         return None
 
 

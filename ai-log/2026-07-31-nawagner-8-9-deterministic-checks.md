@@ -123,6 +123,72 @@ offline files cover every decision the module makes on its own, so the fix if
 it becomes routine is a marker skipping `test_checks_live.py` unless
 `SLOPCHECK_LIVE=1`. Noted at the top of that file.
 
+## Second pass: independent spec-derived review (red-green)
+
+Four independent Sonnet subagents were given the #8/#9 acceptance criteria and
+CLAUDE.md's invariants — *not* the implementation's reasoning — and asked to
+write failing tests for whatever the spec implies. They found eight real
+defects in code I'd already called done and tested. All fixed; regression
+tests in `tests/test_checks_regressions.py` (25 tests, 17 of which fail
+against the pre-fix tree — verified by stashing the fixes and re-running).
+
+Worst first:
+
+1. **Vacuous pass.** `conclusive = resolves + not_found + blocked` meant five
+   paywalled DOIs produced `result=True`, "All DOIs resolve", next to a detail
+   reading "0 / 5 resolved". One 403 among four network failures was enough to
+   suppress the `errored` path entirely. A bot wall is not evidence a citation
+   is sound; only `resolves`/`not_found` are conclusive now, and an
+   all-blocked batch is a `skipped` gap, an all-unreachable one `errored`.
+2. **Anchor spans slid on indented references.** `anchor_for` stripped the
+   quote but left `span.start` put, so on any hanging-indent bibliography the
+   span kept the leading whitespace and chopped an equal number of characters
+   off the end — `text[span] != quote`, breaking the one invariant every
+   finding in the module rests on.
+3. **A valid ISBN reported as malformed.** ISBNs group with spaces, so the
+   scan can't stop at whitespace; a bibliography that doesn't punctuate
+   between fields ("…40615-7 2020") swept the year in and reported a 17-digit
+   "malformed ISBN". A false positive on an honest citation — the failure
+   this project can least afford.
+4. **A malformed arXiv id silently rewritten into a real one.** The scanner
+   capped the suffix at 5 digits, so `2107.043210` was captured as
+   `2107.04321` — a different, real paper. We'd have hidden the defect and
+   then reported another author's metadata against the reference.
+5. **Coverage gaps cached as fact.** Only `transport_error` was excluded from
+   the cache, so a 5xx→`unreachable` was persisted for the 7-day TTL and
+   served as settled fact long after the source recovered.
+6. **Negated titles graded as clean matches.** "Attention Is Not All You Need"
+   vs "Attention Is All You Need" scores 0.93 — one word barely moves any
+   ratio on a short title. Asymmetric whole-word negation now caps the title
+   grade at `minor` (surfaced for a human, not escalated to a verdict).
+7. **Name particles read as a different author.** "Berg" for "van der Berg" —
+   how half the world's bibliographies alphabetize — scored 0.5 and, combined
+   with a merely-uncertain title, pushed an honest citation all the way to
+   "different work entirely".
+8. **`ProviderChain` didn't isolate providers.** `MetadataProvider` is a
+   public Protocol; a provider raising instead of returning None propagated
+   out through the thread pool and killed the check for the whole document.
+
+Lesson worth keeping: my own tests were written alongside the code and
+inherited its assumptions. Every one of these came from someone reading the
+spec cold. The two guard tests that pass both before and after ("a genuinely
+bad ISBN checksum is *still* reported", "'non' must not match inside
+'nonlinear'") exist because two of the fixes could easily have over-corrected.
+
+### Found in other people's modules — flagged, not fixed
+
+- **`pipeline/citations/references.py` (#7, Dan):** `_HEADING_RE` ends
+  `[ \t]*:?[ \t]*$` under `re.MULTILINE`, and Python's `$` doesn't consume a
+  preceding `\r`. A CRLF document — i.e. anything authored on Windows, which
+  is a lot of grant proposals — never matches the heading, so
+  `find_reference_region` returns None and **all four of my checks report "no
+  reference list found"** on a document that plainly has one. High impact,
+  one-character fix, but it's their module and their fixture P/R numbers.
+- **`checks/tagging.py` (#15, Alex):** registered id is `tagging`, but the
+  ledger rows are emitted as `doc_type_confidence`, `submitter_type_confidence`
+  and `topic_tags`, so those rows don't trace back to a registry entry the way
+  registry.py's contract requires. Also emits findings with `anchor=None`.
+
 ## Left to do
 
 - **Dedup (#14) is not in this PR** — scoped out deliberately; it needs a

@@ -38,6 +38,11 @@ from slopchecker.pipeline.registry import CheckContext, CheckOutput
 # Politeness over speed: a handful of hosts, a handful of connections.
 _MAX_WORKERS = 4
 
+# The only two outcomes that tell us something about the *source*. Everything
+# else tells us about our own reach, which is why blocked and unreachable are
+# neither cached nor counted as evidence that anything was verified.
+_CONCLUSIVE = (Outcome.resolves, Outcome.not_found)
+
 
 def url_for(ident: Identifier) -> str:
     """The URL that answers "does this exist?" for an identifier."""
@@ -64,8 +69,11 @@ def resolve_one(client: httpx.Client, cache: Cache, ident: Identifier) -> Resolu
             pass  # cache written by an older shape: just re-resolve
 
     resolution = fetch_status(client, url_for(ident))
-    # Transport failures are ours, not the document's — never cached.
-    if not resolution.transport_error:
+    # Only conclusive answers are cached. A blocked or unreachable result is
+    # us failing to look, and persisting a non-answer for the 7-day TTL means
+    # one transient 503 gets served as fact long after the source recovered —
+    # the opposite of what a coverage gap is supposed to mean.
+    if resolution.outcome in _CONCLUSIVE:
         cache.set(
             "resolve",
             key,
@@ -107,10 +115,21 @@ def run_resolution_check(
     if not targets:
         return CheckOutput(ledger=[nothing_to_check_row(check_id, label, f"well-formed {noun}s")])
 
+    # One network call per *distinct* identifier. A foundational paper cited
+    # in both the intro and the methods is two references sharing one DOI, and
+    # resolving them in parallel raced past the cache — both threads missed,
+    # both fetched, neither had written yet. Findings are still per-reference:
+    # each anchors to its own quote at its own place in the document.
     cache = cache_for(no_cache=ctx.no_cache, cache_dir=ctx.cache_dir)
+    unique: dict[tuple[str, str], Identifier] = {}
+    for _, ident in targets:
+        unique.setdefault((ident.kind, ident.value.lower()), ident)
+
     with http_client() as client:
-        with ThreadPoolExecutor(max_workers=min(_MAX_WORKERS, len(targets))) as pool:
-            resolutions = list(pool.map(lambda pair: resolve_one(client, cache, pair[1]), targets))
+        with ThreadPoolExecutor(max_workers=min(_MAX_WORKERS, len(unique))) as pool:
+            answers = list(pool.map(lambda i: resolve_one(client, cache, i), unique.values()))
+    resolved = dict(zip(unique, answers, strict=True))
+    resolutions = [resolved[(ident.kind, ident.value.lower())] for _, ident in targets]
 
     return _build_output(
         doc,
@@ -152,18 +171,25 @@ def _build_output(
             )
         )
 
-    conclusive = counts[Outcome.resolves] + counts[Outcome.not_found] + counts[Outcome.blocked]
+    conclusive = counts[Outcome.resolves] + counts[Outcome.not_found]
     if conclusive == 0:
-        # Nothing answered at all. That is a statement about our network.
+        # Nothing was actually verified. Counting `blocked` as conclusive here
+        # produced a vacuous pass: five paywalled DOIs became result=True,
+        # "All DOIs resolve", next to a detail reading "0 / 5 resolved". A
+        # bot wall is not evidence that a citation is sound.
+        if counts[Outcome.unreachable]:
+            status, reason = (
+                "errored",
+                f"no {noun}s could be reached — network failure, not a citation defect",
+            )
+        else:
+            status, reason = (
+                "skipped",
+                f"all {len(targets)} {noun}(s) blocked or paywalled — none could be verified",
+            )
         return CheckOutput(
-            ledger=[
-                LedgerRow(
-                    check=check_id,
-                    label=label,
-                    status="errored",
-                    reason=f"no {noun}s could be reached — network failure, not a citation defect",
-                )
-            ]
+            ledger=[LedgerRow(check=check_id, label=label, status=status, reason=reason)],
+            findings=findings,
         )
 
     return CheckOutput(

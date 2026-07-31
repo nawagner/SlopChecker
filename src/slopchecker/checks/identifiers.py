@@ -37,14 +37,22 @@ _DOI_NEAR_MISS_RE = re.compile(r"\b(?:doi:\s*)?10\.\d{1,9}(?:/\S*)?", re.IGNOREC
 # arXiv: post-2007 "2107.04321v2" and legacy "math.GT/0309136".
 _ARXIV_NEW_RE = re.compile(r"^(\d{2})(\d{2})\.(\d{4,5})(v\d+)?$")
 _ARXIV_OLD_RE = re.compile(r"^[a-z-]+(?:\.[A-Z]{2})?/\d{7}(v\d+)?$")
+# The scanner's suffix is \d{4,} — deliberately laxer than the validator's
+# \d{4,5}. Capturing a 6-digit suffix means valid_arxiv_id can *reject* it as
+# malformed; capping the scan at 5 instead silently truncated "2107.043210"
+# to "2107.04321", which is a different real paper — we'd have hidden the
+# defect and then reported another author's metadata against this reference.
 _ARXIV_IN_TEXT_RE = re.compile(
     r"arxiv[:\s]*(?:preprint\s+)?(?:arxiv:)?\s*"
-    r"(?P<id>\d{4}\.\d{4,5}(?:v\d+)?|[a-z-]+(?:\.[A-Z]{2})?/\d{7}(?:v\d+)?)",
+    r"(?P<id>\d{4}\.\d{4,}(?:v\d+)?|[a-z-]+(?:\.[A-Z]{2})?/\d{7}(?:v\d+)?)",
     re.IGNORECASE,
 )
 
+# Deliberately permissive: ISBNs group their digits with spaces or any of the
+# unicode dashes, so the run can't be split on whitespace here. _isbn_in()
+# below decides where the identifier actually ends.
 _ISBN_IN_TEXT_RE = re.compile(
-    r"isbn(?:-?1[03])?:?\s*([0-9][0-9\s‐-―-]{8,20}[0-9Xx])", re.IGNORECASE
+    r"isbn(?:-?1[03])?:?\s*([0-9][0-9\s‐-―-]{8,24}[0-9Xx])", re.IGNORECASE
 )
 _URL_IN_TEXT_RE = re.compile(r"https?://[^\s<>\"',]+")
 # Trailing sentence punctuation is part of the prose, not the identifier.
@@ -150,6 +158,34 @@ def valid_isbn(raw: str | None) -> bool:
     return False
 
 
+def _isbn_in(run: str) -> tuple[str, str]:
+    """(raw slice, normalized digits) for the ISBN inside a captured run.
+
+    The capture has to be permissive — ISBNs group their digits with spaces
+    and dashes, so the run can't simply stop at whitespace. That means a bare
+    year following an ISBN ("…40615-7 2020", ordinary in a bibliography that
+    doesn't punctuate between fields) gets swept in, and the result was a
+    17-digit blob reported to a reviewer as a malformed ISBN when the ISBN
+    was perfectly good.
+
+    So: a run of exactly 10 or 13 digits is taken as-is — that keeps a real
+    bad checksum reported as one. Only when there are *extra* digits do we cut
+    back to a 13- or 10-digit prefix, and only if that prefix actually
+    validates. Trying the 10-prefix of every 13-digit run would let a
+    malformed ISBN-13 pass as an accidentally-valid ISBN-10.
+    """
+    marks = [i for i, c in enumerate(run) if c.isdigit() or c in "Xx"]
+    if len(marks) not in (10, 13):
+        for length in (13, 10):
+            if len(marks) > length:
+                candidate = run[: marks[length - 1] + 1]
+                if valid_isbn(candidate):
+                    return candidate, normalize_isbn(candidate) or ""
+    # Nothing shorter validates: report the whole run, so a genuine defect
+    # still surfaces rather than being trimmed away.
+    return run, normalize_isbn(run) or ""
+
+
 def valid_url(raw: str | None) -> bool:
     """True for a parseable absolute http(s) URL with a plausible host.
 
@@ -200,9 +236,18 @@ def malformed_reason(kind: IdentifierKind, value: str) -> str:
     return "not a parseable absolute http(s) address"
 
 
-def _span_for(ref: ReferenceEntry, raw: str) -> Span | None:
-    """Offsets of ``raw`` inside the document, derived from the entry's span."""
-    offset = ref.raw.find(raw)
+def _span_for(ref: ReferenceEntry, raw: str, offset: int | None = None) -> Span | None:
+    """Offsets of ``raw`` inside the document, derived from the entry's span.
+
+    ``offset`` is the position the scanner actually matched at. Falling back
+    to ``ref.raw.find(raw)`` re-finds the *first* occurrence, which is a
+    different place whenever one identifier's text is a substring of an
+    earlier one ("10.1234/abc.2020" inside "10.1234/abc.2020.1") — the span
+    then pointed into the wrong DOI while still slicing to the right string,
+    so it looked correct from every direction except the offset.
+    """
+    if offset is None:
+        offset = ref.raw.find(raw)
     if offset < 0:
         return None
     start = ref.span.start + offset
@@ -219,7 +264,7 @@ def identifiers_in(ref: ReferenceEntry) -> list[Identifier]:
     found: list[Identifier] = []
     seen: set[tuple[str, str]] = set()
 
-    def add(kind: IdentifierKind, value: str | None, raw: str) -> None:
+    def add(kind: IdentifierKind, value: str | None, raw: str, offset: int | None = None) -> None:
         if not value:
             return
         key = (kind, value.lower())
@@ -227,12 +272,18 @@ def identifiers_in(ref: ReferenceEntry) -> list[Identifier]:
             return
         seen.add(key)
         found.append(
-            Identifier(kind=kind, value=value, raw=raw, ref_key=ref.key, span=_span_for(ref, raw))
+            Identifier(
+                kind=kind,
+                value=value,
+                raw=raw,
+                ref_key=ref.key,
+                span=_span_for(ref, raw, offset),
+            )
         )
 
     for match in _DOI_IN_TEXT_RE.finditer(ref.raw):
         raw = match.group(0).rstrip(_TRAILING_JUNK)
-        add("doi", normalize_doi(raw), raw)
+        add("doi", normalize_doi(raw), raw, match.start())
     add("doi", normalize_doi(ref.doi), ref.doi or "")
 
     # A "10.1234" with no suffix never matches _DOI_IN_TEXT_RE, so it would
@@ -240,14 +291,15 @@ def identifiers_in(ref: ReferenceEntry) -> list[Identifier]:
     for match in _DOI_NEAR_MISS_RE.finditer(ref.raw):
         raw = match.group(0).rstrip(_TRAILING_JUNK)
         if not valid_doi(raw) and normalize_doi(raw) is None:
-            add("doi", raw.lower(), raw)
+            add("doi", raw.lower(), raw, match.start())
 
     for match in _ARXIV_IN_TEXT_RE.finditer(ref.raw):
-        add("arxiv", match.group("id"), match.group(0))
+        add("arxiv", match.group("id"), match.group(0), match.start())
     add("arxiv", normalize_arxiv_id(ref.arxiv_id), ref.arxiv_id or "")
 
     for match in _ISBN_IN_TEXT_RE.finditer(ref.raw):
-        add("isbn", normalize_isbn(match.group(1)), match.group(0).strip())
+        isbn_raw, isbn_value = _isbn_in(match.group(1))
+        add("isbn", isbn_value, isbn_raw, match.start(1))
 
     for match in _URL_IN_TEXT_RE.finditer(ref.raw):
         raw = match.group(0).rstrip(_TRAILING_JUNK)

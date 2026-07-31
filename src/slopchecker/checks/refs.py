@@ -44,10 +44,21 @@ def identifiers_for(doc: FlattenedDoc) -> list[tuple[ReferenceEntry, list[Identi
 
 
 def anchor_for(doc: FlattenedDoc, ref: ReferenceEntry) -> Anchor:
-    """Anchor a finding to the reference entry, on its page when known."""
-    quote = doc.text[ref.span.start : ref.span.end].strip()
-    span = Span(start=ref.span.start, end=ref.span.start + len(quote))
-    return Anchor(page=page_of(doc, ref.span.start), quote=quote, span=span)
+    """Anchor a finding to the reference entry, on its page when known.
+
+    Stripping has to move ``span.start`` with it. Trimming the quote while
+    leaving the offset put kept the leading whitespace inside the span and
+    chopped an equal number of real characters off the end — so on any
+    hanging-indent bibliography (routine, and exactly what the numbered-entry
+    parser captures) ``text[span] != quote`` and the anchor pointed at a
+    window that merely overlapped the reference.
+    """
+    raw = doc.text[ref.span.start : ref.span.end]
+    lead = len(raw) - len(raw.lstrip())
+    quote = raw.strip()
+    start = ref.span.start + lead
+    span = Span(start=start, end=start + len(quote))
+    return Anchor(page=page_of(doc, start), quote=quote, span=span)
 
 
 def page_of(doc: FlattenedDoc, offset: int) -> int | None:
