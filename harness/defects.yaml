@@ -75,6 +75,26 @@
     replacement mutates enough of the quote that fuzzy match fails
     cleanly.)
 
+# --- Post-ingest defects (#71): mutation applied to FlattenedDoc.text ---
+# after the loader runs, so the check runs against text that has actually
+# been extracted from a real PDF (or DOCX/HTML). Substrate paths are
+# relative to `harness/substrates/` (see --substrates in run.py).
+
+- id: cite-orphan-real-pdf
+  substrate: grant_application__human.pdf
+  original: "Aim 1:"
+  mutated: "Aim 1 [99]:"
+  check_expected: citation_has_reference
+  match:
+    kind: unlinked_citation_number
+    number: 99
+  description: >
+    Insert an orphan [99] marker into the first Aim heading of a real
+    grant-application PDF. The corpus numbers references 1..~10; [99] has
+    no matching entry, so a working citation check must flag it. This
+    exercises the citation extractor against text that has flowed through
+    the PDF loader (not a hand-authored markdown fixture).
+
 # --- Pending: defects that require checks not yet available on main. ---
 # The harness reports these as PENDING coverage gaps, not MISSes. They
 # convert to catchable defects the day the corresponding check lands.
