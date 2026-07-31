@@ -13,11 +13,13 @@ falls out of implementation defaults (#23).
 
 ## The short version
 
-- The **only** thing that sends your document off-machine today is the
-  **Pangram** AI-detection check, and only when `PANGRAM_API_KEY` is set.
-- Every other tier is either fully local or not yet wired to a network service
-  (see the table).
-- No check ever transmits data to a service you have not supplied a key for.
+- The **Pangram** AI-detection check is the only thing that sends your document's
+  **raw text** off-machine, and only when `PANGRAM_API_KEY` is set.
+- Citation source-fetching (#10) sends **cited identifiers/URLs** (not the
+  submission body) to open-access sources, and only when a network fetcher is
+  configured.
+- Everything else is either fully local or not yet wired to a network service
+  (see the table). No check transmits data to a service you have not enabled.
 
 ## What each check sends, and when
 
@@ -27,7 +29,7 @@ falls out of implementation defaults (#23).
 | Claims / citation support / budget review (LLM tier) | **Anthropic** (default model `claude-opus-5`) | Anthropic API | Extracted claims and citation/quote text | `ANTHROPIC_API_KEY` is set | `[PLANNED]` — declared in `config.py`, no live call in `src/` yet |
 | DOI / reference resolution (#8) | **Crossref** | Crossref REST API | Citation metadata / DOIs only (no submission body) | always (no auth; `CROSSREF_MAILTO` is a courtesy header) | `[PLANNED]` — not yet implemented |
 | Prior-funding lookups (#21) | **Candid** | Candid grants API | Lookup queries derived from the submission | `CANDID_API_KEY` is set | `[PLANNED]` — not yet implemented |
-| Quote verification against sources (#10) | Open web (arXiv, PMC, DOAJ, cited URLs) | various | Requests to cited source URLs | a network fetcher is configured | `[PLANNED]` — currently **local-only**; only `LocalFileFetcher` (reads pre-downloaded text) ships today |
+| Quote verification against sources (#10) | Open web — **open-access only** (arXiv, PMC OA, DOAJ, plain-URL gray literature) | various | The **cited identifiers/URLs** (DOI, arXiv id, URL) — **not** the submission body | a network fetcher is configured (default is `LocalFileFetcher`, which stays local) | **Live in code today** (#93) — OA-only by design; no paywall circumvention |
 | Ingestion, tagging (#15), quote-matching, report render | none | — | nothing leaves the machine | always | Fully local |
 
 Everything in the **deterministic tier** — document ingestion, tagging, word
@@ -67,27 +69,30 @@ answers below are taken from each provider's published policy as of
 
 ## Offline / deterministic-only mode
 
-`[PLANNED]` (#23 acceptance criterion): a flag (e.g. `--offline`) that runs the
-deterministic tier only and makes **zero** third-party network calls, for
-reviewers who cannot send submissions to any external service. A test will
-assert no outbound requests are made in this mode.
+The tool is **online-capable by default today** — network tiers run when their
+keys are set and, for #10, when a network fetcher is configured. A dedicated
+`[PLANNED]` `--offline` flag (#23 acceptance criterion) will force the
+deterministic tier only and make **zero** third-party network calls, with a test
+asserting no outbound requests; that flag is a follow-up, not yet shipped.
 
-Until that flag lands, the practical equivalent is to **leave all API keys
-unset** — with no `PANGRAM_API_KEY` (and no LLM/Candid keys), no check has a
-credential to call out with, and the run stays local. The report records each
-such check as `skipped: missing <KEY>`, so a keyless run is honest about what it
-did not do rather than silently passing.
+Until it lands, the practical equivalent is to **leave all API keys unset** and
+use the default `LocalFileFetcher` — with no `PANGRAM_API_KEY` (and no
+LLM/Candid keys) and no network fetcher, no check has a way to call out and the
+run stays local. The report records each such check as `skipped: missing <KEY>`,
+so a keyless run is honest about what it did not do rather than silently passing.
 
 ## Caches and retention
 
 | Cache | What it holds | Location | Default |
 |---|---|---|---|
 | Pangram results | Detection results keyed by a content hash of the text | `<cache_dir>/<hash>.json` | **Off** — caching is opt-in; disabled unless a `cache_dir` is configured |
-| Source text (#10) | Fetched open-access source full text | cache directory | Only populated once network fetchers exist; local-only today |
+| Source text (#10) | Fetched open-access source full text | cache directory | Populated only when a network fetcher is configured; never redistributed (reports carry only the matched window) |
 | Credentials | API keys | `.env` (never committed; see `.gitignore`) | — |
 
-- **Retention period** — `[DECISION]` How long may cached results and any
-  fetched source text persist before they must be purged?
+- **Retention period** — cached results and any fetched source text are purged
+  after **30 days**, matching the default deletion window the major API
+  providers we call already use (e.g. Anthropic's commercial API). Caching stays
+  off unless a `cache_dir` is configured.
 - **Cache purge** — `[PLANNED]` (#23 acceptance criterion): a command to delete
   all caches on demand.
 - Shared bulk corpora and fixtures live in Cloudflare R2, not in git — see
@@ -95,22 +100,20 @@ did not do rather than silently passing.
   **synthetic** data; if real submissions are ever indexed for similarity
   (#14), the same questions in this document apply to them.
 
-## Team policy decisions still open
+## Team policy decisions (settled)
 
-Each carries a recommended default; the team makes the final call.
+- **Default mode** — online-capable by default (network tiers run when their
+  keys/fetchers are configured). An `--offline` switch is a planned follow-up.
+- **Open-web source fetch (#10)** — permitted for unpublished submissions for
+  the MVP. In practice the shipped fetchers are **open-access only** (arXiv, PMC
+  OA, DOAJ, plain-URL gray literature) and send cited identifiers/URLs, not the
+  submission body — so the exposure is narrow by design.
+- **Cache retention period** — **30 days**, aligned with the major API
+  providers' default deletion window; caching off unless a `cache_dir` is set.
 
-- `[DECISION]` **Default mode** — offline-by-default, or online-by-default once
-  keys are present? _Recommended: offline-by-default_, so network tiers are
-  opt-in and unpublished submissions never leave the machine by accident.
-- `[DECISION]` **Open-web source fetch (#10)** — acceptable for unpublished
-  submissions, or restricted to allow-listed open-access repositories?
-  _Recommended: allow-listed open-access repositories only._
-- `[DECISION]` **Cache retention period** (above) — _Recommended: caching off by
-  default; if enabled, a short TTL (e.g., seven days) plus the purge command._
-
-Provider training and retention answers are filled in above from each provider's
-published policy (2026-07-31); the two `[CONFIRM]` items there are the only
-provider-side questions that still warrant confirmation in writing.
+The only items still open are the two provider-side `[CONFIRM]`s above (the
+Pangram API-path confirmation and confirming Anthropic Commercial Terms), which
+warrant a note in writing before the first real submission.
 
 ## Per-report disclosure
 
