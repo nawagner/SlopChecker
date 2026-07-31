@@ -13,8 +13,43 @@ from __future__ import annotations
 
 from slopchecker.checks.cache import CONTENT_HASH_TTL_S, remote_cache
 from slopchecker.detect import PangramConfig, PangramDetector
-from slopchecker.models import FlattenedDoc, LedgerRow
+from slopchecker.models import Finding, FlattenedDoc, LedgerRow
 from slopchecker.pipeline.registry import CheckContext, CheckOutput, register
+
+# The report shows the MOST AI-like passages, ranked by Pangram's per-window
+# score, not every AI-labeled window — a heavily-AI document would otherwise
+# wallpaper the report and bury the rest of the evidence. The cut is stated
+# in the ledger detail, never silent.
+_MAX_AI_PASSAGES = 5
+
+
+def _window_score(finding: Finding) -> float:
+    for check in finding.checks:
+        if check.name == "pangram_window_ai_score" and isinstance(check.result, (int, float)):
+            return float(check.result)
+    return 0.0
+
+
+def _rank_findings(findings: list[Finding]) -> list[Finding]:
+    """Top passages by AI score, relabeled with their rank.
+
+    The detector's own label ("AI-Generated" / "AI-Assisted") moves to
+    evidence; the display label carries rank + score so the report reads
+    as a ranked list of the most AI-like passages.
+    """
+    ranked = sorted(findings, key=_window_score, reverse=True)[:_MAX_AI_PASSAGES]
+    out: list[Finding] = []
+    for rank, finding in enumerate(ranked, start=1):
+        score = _window_score(finding)
+        out.append(
+            finding.model_copy(
+                update={
+                    "label": f"Most AI-like passage #{rank}",
+                    "note": f"Pangram score {score:.2f} ({finding.label})",
+                }
+            )
+        )
+    return out
 
 
 @register(
@@ -59,8 +94,26 @@ def pangram_document(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
             reason=result.reason or "detector returned no ledger row",
         )
 
+    findings = _rank_findings(result.findings)
+
+    # Total score stays the headline: enrich the doc-level row's detail with
+    # the passage ranking so ledger-only readers still get both numbers.
+    if ledger_row.status == "ok" and findings:
+        shown = ", ".join(f"{_window_score(f):.2f}" for f in findings)
+        suffix = (
+            f" (showing top {len(findings)} of {len(result.findings)})"
+            if len(result.findings) > len(findings)
+            else ""
+        )
+        ledger_row = ledger_row.model_copy(
+            update={
+                "detail": f"fraction of text AI-classified; "
+                f"most AI-like passage scores: {shown}{suffix}"
+            }
+        )
+
     return CheckOutput(
         ledger=[ledger_row],
-        findings=result.findings,
+        findings=findings,
         cost_usd=result.cost_usd,
     )

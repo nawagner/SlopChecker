@@ -99,3 +99,67 @@ def test_check_is_discoverable_in_registry() -> None:
     meta = matches[0].meta
     assert meta.tier == "api"
     assert meta.needs_network is True
+
+
+# --- most-AI passage ranking (last-minute demo change, 2026-07-31) ----------
+
+
+def test_findings_ranked_by_score_and_relabeled(
+    doc: FlattenedDoc, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("PANGRAM_API_KEY", "test-key")
+    transport = FakeTransport([pangram_response(fraction_ai=0.6)])
+
+    import slopchecker.pipeline.checks_detect as checks_detect
+
+    monkeypatch.setattr(
+        checks_detect,
+        "PangramDetector",
+        lambda config: PangramDetector(config, transport=transport),
+    )
+
+    output = checks_detect.pangram_document(doc, CheckContext())
+
+    # Ranked: 0.94 window first, 0.62 second, labels carry the rank.
+    scores = [f.checks[0].result for f in output.findings]
+    assert scores == sorted(scores, reverse=True)
+    assert output.findings[0].label == "Most AI-like passage #1"
+    assert output.findings[1].label == "Most AI-like passage #2"
+    # Original Pangram label survives in the note alongside the score.
+    assert "0.94" in output.findings[0].note
+    assert "AI-Generated" in output.findings[0].note
+    # Total score stays the ledger result; detail carries the top scores.
+    row = output.ledger[0]
+    assert row.result == pytest.approx(0.6)
+    assert "0.94" in row.detail
+
+
+def test_passage_cap_is_stated_not_silent(
+    doc: FlattenedDoc, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    response = pangram_response(fraction_ai=0.9)
+    base = dict(response["windows"][0])
+    seg_len = base["end_index"] - base["start_index"]
+    many = []
+    for i in range(8):  # 8 AI windows > _MAX_AI_PASSAGES
+        w = dict(base)
+        w["start_index"], w["end_index"] = 0, seg_len
+        w["ai_assistance_score"] = 0.99 - i * 0.01
+        many.append(w)
+    response["windows"] = many
+
+    monkeypatch.setenv("PANGRAM_API_KEY", "test-key")
+    transport = FakeTransport([response])
+
+    import slopchecker.pipeline.checks_detect as checks_detect
+
+    monkeypatch.setattr(
+        checks_detect,
+        "PangramDetector",
+        lambda config: PangramDetector(config, transport=transport),
+    )
+
+    output = checks_detect.pangram_document(doc, CheckContext())
+
+    assert len(output.findings) == checks_detect._MAX_AI_PASSAGES
+    assert "showing top 5 of 8" in output.ledger[0].detail
