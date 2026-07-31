@@ -36,104 +36,143 @@ def _patch_runtime(monkeypatch, payload: dict[str, Any], model: str = "claude-te
     monkeypatch.setattr("slopchecker.pipeline.checks_llm.run_lens", fake_run_lens)
 
 
+def _claim(**overrides: Any) -> dict[str, Any]:
+    base = {
+        "id": "CL1",
+        "type": "outcome",
+        "scope": "specific",
+        "page": 1,
+        "quote": "Meridian will deliver twelve regional trainings within the first grant year",
+        "quantitative": True,
+        "citation": None,
+    }
+    return {**base, **overrides}
+
+
 def test_claims_check_maps_only_flagged_claims_to_findings(monkeypatch, sample_doc):
-    """Unflagged claims are silent: an ordinary claim is not a defect, and the
+    """Flagged = uncited AND specific AND needs-a-source (prior-work or
+    quantitative) — #147's silence policy with #144's scope generalization.
+    Everything else is silent: an ordinary claim is not a defect, and the
     first version's descriptive booleans made every claim render as a red
-    failure in the report."""
+    failure."""
     payload = {
         "claims": [
-            {
-                "id": "CL1",
-                "type": "outcome",
-                "page": 1,
-                "quote": "Meridian will deliver twelve regional trainings within the first grant year",
-                "quantitative": True,
-                "citation": None,  # flagged: quantitative and unsourced
-            },
-            {
-                "id": "CL2",
-                "type": "prior-work",
-                "page": 1,
-                "quote": "The information environment has degraded rapidly",
-                "quantitative": False,
-                "citation": "[1]",  # unflagged → no finding
-            },
-            {
-                "id": "CL3",
-                "type": "prior-work",
-                "page": 1,
-                "quote": "The information environment has degraded rapidly",
-                "quantitative": True,
-                "citation": "[1]",  # quantitative but cited → no finding
-            },
+            _claim(id="CL1"),  # quantitative + uncited → flagged
+            _claim(
+                id="CL2",
+                type="prior-work",
+                quantitative=False,
+                citation="[1]",
+                quote="The information environment has degraded rapidly",
+            ),  # cited → no finding
+            _claim(
+                id="CL3",
+                type="prior-work",
+                quantitative=False,
+                quote="The information environment has degraded rapidly",
+            ),  # prior-work + uncited → flagged even though non-quantitative
+            _claim(
+                id="CL4",
+                type="timeline",
+                quantitative=False,
+                quote="within the first grant year",
+            ),  # uncited non-quant promise → no finding (can't cite your own future)
         ]
     }
     _patch_runtime(monkeypatch, payload)
 
     out = claims_check(sample_doc, CheckContext())
 
-    assert [f.id for f in out.findings] == ["CL1"]
-    f1 = out.findings[0]
+    assert [f.id for f in out.findings] == ["CL1", "CL3"]
+    f1, f3 = out.findings
     assert f1.label == "Unsourced quantitative claim"
+    assert f3.label == "Uncited prior-work claim"
     assert f1.anchor is not None
     assert f1.anchor.quote == payload["claims"][0]["quote"]
     assert f1.anchor.page == 1
     # Every finding advertises its provider/model in evidence.
     assert f1.evidence["provider"] == "anthropic"
     assert f1.evidence["model"] == "claude-test"
+    assert f1.evidence["scope"] == "specific"
+    assert f1.evidence["quantitative"] is True
 
 
 def test_flagged_claim_check_polarity_renders_as_failure(monkeypatch, sample_doc):
     """False IS the flag: the renderer's failing lane keys off result=False,
-    so the one check on a flagged claim must read ``quant_claim_sourced: NO``."""
+    so the one check on a flagged claim must read ``claim_sourced: NO``."""
+    payload = {"claims": [_claim()]}
+    _patch_runtime(monkeypatch, payload)
+
+    out = claims_check(sample_doc, CheckContext())
+
+    (f1,) = out.findings
+    assert [(c.name, c.result) for c in f1.checks] == [("claim_sourced", False)]
+
+
+def test_claims_check_background_claims_are_silent(monkeypatch, sample_doc):
+    """Background (context-setting) claims produce no Finding — they frame
+    the argument rather than borrow evidential authority (#144)."""
     payload = {
         "claims": [
-            {
-                "id": "CL1",
-                "type": "outcome",
-                "page": 1,
-                "quote": "Meridian will deliver twelve regional trainings within the first grant year",
-                "quantitative": True,
-                "citation": None,
-            },
+            _claim(
+                type="prior-work",
+                scope="background",
+                quantitative=False,
+                quote="The information environment has degraded rapidly",
+            ),
         ]
     }
     _patch_runtime(monkeypatch, payload)
 
     out = claims_check(sample_doc, CheckContext())
 
+    assert out.findings == []
+
+
+def test_claims_check_missing_scope_defaults_to_specific(monkeypatch, sample_doc):
+    """A payload without ``scope`` (schema drift) fails visible, not silent:
+    the claim is treated as specific so a legitimate uncited narrow claim
+    can't be muted by a parsing gap."""
+    claim = _claim(quote="Meridian will deliver twelve regional trainings")
+    del claim["scope"]
+    _patch_runtime(monkeypatch, {"claims": [claim]})
+
+    out = claims_check(sample_doc, CheckContext())
+
     (f1,) = out.findings
-    assert [(c.name, c.result) for c in f1.checks] == [("quant_claim_sourced", False)]
+    assert [(c.name, c.result) for c in f1.checks] == [("claim_sourced", False)]
+    assert f1.evidence["scope"] == "specific"
 
 
-def test_claims_check_emits_doc_level_quant_unsourced_ledger_row(monkeypatch, sample_doc):
-    """The acceptance-criterion number on #13 — the report summary count."""
+def test_claims_check_emits_doc_level_ledger_counts(monkeypatch, sample_doc):
+    """``claims_quant_unsourced`` is #13's acceptance-criterion number;
+    ``claims_specific_uncited`` is #144's generalization (= flagged count)."""
     payload = {
         "claims": [
-            {
-                "id": "CL1",
-                "type": "outcome",
-                "page": 1,
-                "quote": "Meridian will deliver twelve regional trainings within the first grant year",
-                "quantitative": True,
-                "citation": None,
-            },
-            {
-                "id": "CL2",
-                "type": "outcome",
-                "page": 1,
-                "quote": "Meridian will deliver twelve regional trainings",
-                "quantitative": True,
-                "citation": None,
-            },
-            {
-                "id": "CL3",
-                "type": "prior-work",
-                "page": 1,
-                "quote": "The information environment has degraded rapidly",
-                "quantitative": False,
-                "citation": "[1]",
-            },
+            _claim(id="CL1"),  # quant + uncited: in both counts
+            _claim(
+                id="CL2", quote="Meridian will deliver twelve regional trainings"
+            ),  # quant + uncited: in both counts
+            _claim(
+                id="CL3",
+                type="prior-work",
+                quantitative=False,
+                citation="[1]",
+                quote="The information environment has degraded rapidly",
+            ),  # cited: in neither
+            _claim(
+                id="CL4",
+                type="prior-work",
+                quantitative=False,
+                quote="The information environment has degraded rapidly",
+            ),  # uncited prior-work, non-quant: flagged only
+            _claim(
+                id="CL5",
+                type="prior-work",
+                scope="background",
+                quantitative=False,
+                quote="The information environment has degraded rapidly",
+            ),  # background: in neither
         ]
     }
     _patch_runtime(monkeypatch, payload)
@@ -142,7 +181,14 @@ def test_claims_check_emits_doc_level_quant_unsourced_ledger_row(monkeypatch, sa
 
     row = next(r for r in out.ledger if r.check == "claims_quant_unsourced")
     assert row.status == "ok"
-    assert row.result == 2  # Both quantitative claims lacked a citation.
+    assert row.result == 2  # CL1 + CL2
+
+    row = next(r for r in out.ledger if r.check == "claims_specific_uncited")
+    assert row.status == "ok"
+    assert row.result == 3  # CL1 + CL2 + CL4
+
+    row = next(r for r in out.ledger if r.check == "claims")
+    assert row.detail == "5 claims extracted"  # full extraction still reported
 
 
 def test_claims_check_skipped_when_runtime_skips(monkeypatch, sample_doc):
@@ -183,18 +229,7 @@ def test_claims_check_emits_ok_status_row_under_registered_id(monkeypatch, sampl
     Before this test the ok-path emitted only ``claims_quant_unsourced`` — downstream
     "did the claims check run?" queried by the registered id got no answer on success.
     """
-    payload = {
-        "claims": [
-            {
-                "id": "CL1",
-                "type": "outcome",
-                "page": 1,
-                "quote": "Meridian will deliver twelve regional trainings",
-                "quantitative": True,
-                "citation": None,
-            }
-        ]
-    }
+    payload = {"claims": [_claim(quote="Meridian will deliver twelve regional trainings")]}
     _patch_runtime(monkeypatch, payload)
 
     out = claims_check(sample_doc, CheckContext())
@@ -218,19 +253,9 @@ def test_claims_check_registered_and_discoverable():
 
 def test_claims_check_page_defaults_to_none_when_missing(monkeypatch, sample_doc):
     """A claim with no page (no page_offsets on the doc) still produces a valid Finding."""
-    payload = {
-        "claims": [
-            {
-                "id": "CL1",
-                "type": "outcome",
-                "quote": "Meridian will deliver twelve regional trainings",
-                "quantitative": True,
-                "citation": None,
-                # no "page" key
-            },
-        ]
-    }
-    _patch_runtime(monkeypatch, payload)
+    claim = _claim(quote="Meridian will deliver twelve regional trainings")
+    del claim["page"]
+    _patch_runtime(monkeypatch, {"claims": [claim]})
 
     out = claims_check(sample_doc, CheckContext())
     assert len(out.findings) == 1

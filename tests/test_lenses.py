@@ -16,7 +16,7 @@ from slopchecker.lenses import (
 )
 
 CLAIM_TYPES = {"capability", "outcome", "timeline", "prior-work", "impact"}
-CLAIM_KEYS = {"id", "type", "page", "quote", "quantitative", "citation"}
+CLAIM_KEYS = {"id", "type", "scope", "page", "quote", "quantitative", "citation"}
 
 
 # ---------------------------------------------------------------- loader

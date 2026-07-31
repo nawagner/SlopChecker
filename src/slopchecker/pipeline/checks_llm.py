@@ -44,36 +44,53 @@ def _lens_config(no_cache: bool = False) -> LensRunConfig:
     return LensRunConfig(cache_dir=cache_dir)
 
 
+def _scope(claim: dict[str, Any]) -> str:
+    """``background`` (context-setting) or ``specific`` (narrow, checkable).
+
+    Missing/unknown scope degrades to ``specific`` — fail visible, not
+    silent: a schema drift can't mute a legitimate uncited narrow claim.
+    """
+    scope = claim.get("scope")
+    return scope if scope == "background" else "specific"
+
+
 def _map_claim_to_finding(
     claim: dict[str, Any], provider: str, model: str | None
 ) -> Finding | None:
     """One *flagged* claim → one quote-anchored Finding, per lenses/claims.md.
 
-    Unflagged claims return None and never reach the report. The first
-    version emitted every claim with three descriptive booleans
-    (quantitative? cited?), and since at least one of the three is False
-    for every possible claim, the renderer painted all ten claims on the
-    demo document as red failures — indistinguishable from fabricated
-    DOIs. Attributes are not checks. A claim that raises no flag is
-    silent, same policy as claim_support's ``supported`` verdict.
+    A claim is flagged when it is uncited AND ``specific`` AND *needs a
+    source*: ``type == "prior-work"`` (asserts facts about literature or
+    the world) or ``quantitative`` (#13's acceptance criterion, #147's
+    case). Uncited non-quantitative promises (outcome/timeline/capability)
+    are not flagged — an applicant cannot cite their own future work.
+    Unflagged claims return None and never reach the report: attributes
+    are not checks, and the first version's descriptive booleans painted
+    every claim on the demo document as a red failure (#147). Silence for
+    unflagged claims is the same policy as claim_support's ``supported``
+    verdict.
     """
     quantitative = bool(claim.get("quantitative", False))
     citation = claim.get("citation")
-    if not quantitative or citation is not None:
-        return None
     claim_type = claim.get("type", "unknown")
+    needs_source = claim_type == "prior-work" or quantitative
+    if _scope(claim) == "background" or citation is not None or not needs_source:
+        return None
+    label = "Unsourced quantitative claim" if quantitative else "Uncited prior-work claim"
     return Finding(
         id=str(claim["id"]),
         target="claim",
-        label="Unsourced quantitative claim",
+        label=label,
         anchor=Anchor(page=claim.get("page"), quote=claim["quote"]),
         # False = the flag, so the renderer's failing lane reads correctly:
-        # "quant_claim_sourced: NO".
-        checks=[CheckResult(name="quant_claim_sourced", result=False)],
+        # "claim_sourced: NO".
+        checks=[CheckResult(name="claim_sourced", result=False)],
         evidence={
             "provider": provider,
             "model": model,
             "type": claim_type,
+            "scope": _scope(claim),
+            "quantitative": quantitative,
         },
     )
 
@@ -97,9 +114,10 @@ def claims(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
 
     Runtime handles credentials, retries, JSON parsing, and mechanical
     quote-anchoring; this check just turns the parsed payload into
-    quote-anchored Findings plus the document-level unsourced-quantitative
-    summary count (the report-summary number named in #13's acceptance
-    criteria).
+    quote-anchored Findings plus the document-level summary counts
+    (``claims_quant_unsourced`` is the report-summary number named in
+    #13's acceptance criteria; ``claims_specific_uncited`` is its #144
+    generalization and equals the flagged-Finding count).
     """
     lens = load_lens(_LENS_ID)
     result = run_lens(lens, doc, _lens_config(no_cache=ctx.no_cache))
@@ -118,6 +136,7 @@ def claims(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
 
     claims = (result.payload or {}).get("claims", [])
     findings = [f for c in claims if (f := _map_claim_to_finding(c, result.provider, result.model))]
+    quant_unsourced = sum(1 for c in claims if c.get("quantitative") and c.get("citation") is None)
     return CheckOutput(
         findings=findings,
         ledger=[
@@ -130,6 +149,12 @@ def claims(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
             LedgerRow(
                 check="claims_quant_unsourced",
                 label="Unsourced quantitative claims",
+                result=quant_unsourced,
+                detail=f"{quant_unsourced} of {len(claims)} claims",
+            ),
+            LedgerRow(
+                check="claims_specific_uncited",
+                label="Uncited specific claims",
                 result=len(findings),
                 detail=f"{len(findings)} of {len(claims)} claims",
             ),
