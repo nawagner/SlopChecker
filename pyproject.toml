@@ -22,6 +22,8 @@ llm = ["anthropic>=0.40"]
 web = ["fastapi>=0.115", "uvicorn>=0.30", "python-multipart>=0.0.9"]
 # Validation harness (#29): planted-defect injector + recall report.
 harness = ["pyyaml>=6.0"]
+# Corpus similarity check (#14): MinHash + LSH for near-duplicate detection.
+similarity = ["datasketch>=1.6"]
 dev = ["ruff>=0.5", "pytest>=8.2", "mypy>=1.10"]
 
 [project.scripts]

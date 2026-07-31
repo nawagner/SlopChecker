@@ -7,6 +7,27 @@ Append-only. Newest entry on top. One line per entry:
 
 - 14:40 Emerson (claude-code) — PDF prose now reflows in the report (#19, second pass): extracted PDF text carries one `\n` per visual line, so even after the page-split fix prose rendered as fragment columns; mid-sentence breaks now render as spaces while headings/`Key: value`/list lines keep hard breaks (NIH R01: 0.97 → 0.6 breaks per 100 chars, remainder is real structure). Trap worth knowing: v1 tested the char immediately before `\n`, which is a *space* on nearly every PDF line — heuristic never fired on real documents while synthetic tests passed / also merged #96 (citations+Pangram registered; live report now 13 ledger rows, real Pangram 1.0 on the fabricated fixture) and #115 (Railway llm extra — claims lens was erroring `ModuleNotFoundError: anthropic` on every live upload) / next: #20 batch summary (claimed, sequenced behind this) / blocked on nothing
 
+- 14:23 Dan (fable) — #14 corpus similarity landed on
+  `danparshall/14-similarity`: new `src/slopchecker/similarity/` module
+  (shingles + MinHash+LSH index via `datasketch` as `[similarity]` extra +
+  union-find clustering + verbatim shared-passage extraction for
+  quote-anchored `Anchor`s); registered check `similar_documents` (counts
+  near-neighbours at Jaccard ≥ 0.5) and cluster ledger row
+  `template_cluster` (only when doc is in a ≥2-doc component) in
+  `pipeline/checks_similarity.py`; extended `CheckContext` with
+  `batch: Sequence[FlattenedDoc]` + `similarity_index` and added
+  `pipeline.build_context(docs, ...)` factory; CLI batch mode restructured
+  as two-pass (ingest all → build ctx → run per-doc) so the check sees the
+  whole batch. Single-file / bare-ctx callers emit a clean `skipped`
+  ledger row. Ownership table gains `similarity/` row. On the current
+  fixture corpus: 0 clusters at 0.5 (no true near-dup pairs are planted
+  yet — Alex's #94 has them); at 0.3 the shared grant-application
+  scaffold over-clusters (33-doc mega-cluster); the check itself fires
+  cleanly on planted-pair E2E test (Jaccard 0.60). 251 unit + 9 integration
+  passed, ruff clean / next: PR, follow-up issues for local embeddings +
+  reviewer-COI + renderer surfacing of cross-doc evidence / blocked on
+  nothing.
+
 - 17:54 Dan (fable) — #11 claim-support LLM check landed on `danparshall/11-claim-support`: new `pipeline/claim_support/` subpackage, adversarial verify (judge → mechanical `match_quote` grounding → refuter), registered under `tier="llm"` and off by default. Two invariants each covered by a test: every emitted `Finding` carries a passage the LLM claimed *and* verified against the retrieved source; `supported`/`unverifiable`/low-confidence/refuted/no-passage/unavailable-source all silent (bias hard toward silence, per #11). `Anchor.quote` is the claim sentence from `FlattenedDoc.text` (renderer contract — self-code-review caught me anchoring to the source passage); the LLM's source passage rides in `evidence["source_passage"]`. Cost ceiling = `max_citations_per_doc=20` (2N LLM calls worst-case) + `max_source_chars=30_000` head-truncation. All LLM plumbing (Transport protocol, `_call_with_retry` mirroring pangram, `output_config.format` structured output, prompt assembly) private to the subpackage per #37's design comment. Rebased over #93's fetchers; the check uses the `SourceFetcher` protocol so it picks up `build_default_fetcher()` for free once we wire it in. 20 new tests; full suite 228 passed, ruff+mypy clean / next: open PR, follow-up tickets for 20-pair confusion matrix (AC 2), cross-provider refuter, and wiring real fetchers into the registered wrapper / blocked on nothing.
 
 - 17:29 Dan (fable) — #13 runtime half landed on `danparshall/13-lens-runtime`:
@@ -37,7 +58,6 @@ Append-only. Newest entry on top. One line per entry:
   fixture styles, which lock ALL the CRLF behavior down regardless of who
   fixes what; 366 passed / next: merge #105; demo-critical #25 still
   unowned / blocked on nothing.
-
 - 17:39 Dan (fable) — #10 fetchers landed on `danparshall/10-fetchers`: real `SourceFetcher` implementations for arXiv (HTML then PDF-via-pymupdf), PMC-OA (DOI→PMCID→EFetch JATS body), DOAJ (OA gate — indexed DOIs only, then follow `bibjson.link[type=fulltext]`), and plain URL (gray literature); `ChainFetcher` + `build_default_fetcher()` route by `applies_to` with first-hit-wins (arXiv → PMC → DOAJ → URL). Every failure path — 4xx, 5xx, transport error, unparseable JSON, non-OA PMC, missing pymupdf — returns `None` and the check layer maps that to `source_unavailable` (skipped, mandatory reason); an uncheckable quote can never look like a `not_found`. Retries deliberately absent: #37's retry ladder wraps this layer rather than duplicating logic in each fetcher. 30 new tests via `httpx.MockTransport` (suite stays offline). Stayed out of `src/slopchecker/checks/` — Nick's #80 has its own net/cache; consolidation is later work. Full suite: 204 passed, 4 skipped, 9 deselected (integration), 0 failures / next: open PR, wire `build_default_fetcher()` into CLI as a small follow-up / blocked on nothing.
   (Note: this 17:39 entry was dropped from main by an earlier STATUS merge
   resolution — restored here per the append-only rule, corrections get a
