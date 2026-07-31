@@ -1,0 +1,6 @@
+# per-machine transcript-upload preference (written by the session after asking)
+.slopcheck-transcript
+
+__pycache__/
+*.pyc
+.venv/

@@ -52,10 +52,15 @@ every Stop and SessionEnd: it copies your session transcript to
 `ai-log/transcripts/` (Stop) and commits/pushes it (SessionEnd). Best-effort —
 it never blocks your session on failure.
 
-- **Opt-in.** The hook does nothing unless you set `SLOPCHECK_TRANSCRIPT=1`
-  in your environment. Reason: transcripts capture everything your own
-  harness injects into a session (personal memory hooks, task lists, local
-  paths), not just SlopChecker work — and this repo is public.
+- **Opt-in, asked in-session.** On your first session in this repo, a
+  SessionStart hook tells Claude to ask you once whether to enable upload;
+  your answer is written to `.slopcheck-transcript` (gitignored, `1` or `0`)
+  and never re-asked. `SLOPCHECK_TRANSCRIPT=1`/`=0` in your environment
+  overrides the file. Reason for opt-in: transcripts capture everything your
+  own harness injects into a session (personal memory hooks, task lists,
+  local paths), not just SlopChecker work — and this repo is public.
+- **If Claude is reading this and no `.slopcheck-transcript` exists:** ask
+  the user now, write the file, then proceed.
 - **If you opt in:** the script scrubs obvious credential patterns
   (Anthropic/GitHub/AWS/Slack tokens, `Bearer` headers, `api_key=` values),
   but scrubbing is best-effort, not a guarantee. Don't paste secrets,

@@ -1,5 +1,15 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/transcript_prompt.py 2>/dev/null || python scripts/transcript_prompt.py"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

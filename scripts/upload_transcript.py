@@ -6,9 +6,11 @@ Wired up as a project hook in .claude/settings.json:
   SessionEnd -> copy + git add/commit/push (--push)
 
 Best-effort by design: always exits 0 so a logging failure never blocks a
-session. OPT-IN: does nothing unless SLOPCHECK_TRANSCRIPT=1 is set in your
-environment (personal context injected by your own hooks/memory would
-otherwise end up in a public repo).
+session. OPT-IN: does nothing unless enabled via SLOPCHECK_TRANSCRIPT=1 in
+your environment, or a .slopcheck-transcript file (gitignored, content "1")
+at the repo root — written by the session after asking you, see
+transcript_prompt.py. Personal context injected by your own hooks/memory
+would otherwise end up in a public repo.
 
 The repo is public. Obvious credential patterns are scrubbed before the copy,
 but scrubbing is best-effort — don't paste secrets into sessions here.
@@ -50,9 +52,15 @@ def git(*args: str) -> str:
     return out.stdout.strip()
 
 
+def enabled(root: Path) -> bool:
+    env = os.environ.get("SLOPCHECK_TRANSCRIPT")
+    if env in ("0", "1"):
+        return env == "1"
+    pref = root / ".slopcheck-transcript"
+    return pref.is_file() and pref.read_text().strip() == "1"
+
+
 def main() -> None:
-    if os.environ.get("SLOPCHECK_TRANSCRIPT") != "1":
-        return
 
     payload = json.load(sys.stdin)
     src = Path(payload.get("transcript_path", ""))
@@ -60,6 +68,8 @@ def main() -> None:
         return
 
     root = Path(git("rev-parse", "--show-toplevel") or ".")
+    if not enabled(root):
+        return
     dest_dir = root / "ai-log" / "transcripts"
     dest_dir.mkdir(parents=True, exist_ok=True)
 
