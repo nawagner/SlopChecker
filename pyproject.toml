@@ -1,0 +1,48 @@
+[project]
+name = "slopchecker"
+version = "0.1.0"
+description = "Automating slop checks for funding proposals"
+readme = "README.md"
+requires-python = ">=3.11"
+
+dependencies = [
+    "pydantic>=2.7",
+    "typer>=0.12",
+    "rich>=13.7",
+    "httpx>=0.27",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+# Heavy/optional deps live behind extras so someone working on citations
+# doesn't need the PDF or LLM stack installed (see #2).
+pdf = ["pypdf>=4.2", "pdfplumber>=0.11"]
+docx = ["python-docx>=1.1"]
+llm = ["anthropic>=0.40"]
+dev = ["ruff>=0.5", "pytest>=8.2", "mypy>=1.10"]
+
+[project.scripts]
+slopcheck = "slopchecker.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/slopchecker"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["slopchecker"]
+# Non-blocking to start (#2) — tighten once the data model in #3 lands.
+ignore_missing_imports = true
