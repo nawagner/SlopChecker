@@ -139,75 +139,86 @@ on one. Worth its own issue.
 
 ---
 
-# Part 3 — #143: the wall clock became a scheduling problem
+# Part 3 — #143: what didn't work, and the metric that did
 
-#114 and #118 both cut *work*. By this point the remaining problem was
-*shape*: four jobs, none dominant, wall clock = max(jobs).
+#114 and #118 cut *work*. By this point the problem was *shape*: four jobs,
+none dominant. I shipped two changes. **One was wrong, and the one that
+survived improved a different metric than the one I set out to improve.**
 
-Per-job on `6a58eeb`:
+## Reverted: xdist on the live suite
 
-| Job | Total | Breakdown |
-|---|---|---|
-| `test` | 35s | setup 8 · ruff 1 · `pytest` 7.8 · `pytest -m integration` 11.6 |
-| `live` | 26s | setup 9 · `pytest -m live` 14 |
-| `worker` | 20s | setup 6 · npm ci 4 · checks 2 · `npm test` 6 |
+Locally this looked decisive — serial 17.7s, n=2 13.5s, n=3 11.7s, n=4 10.5s,
+n=6 12.5s, n=8 12.4s. A clean curve with an obvious optimum, reproducible.
 
-Critical path flips between `test` and `live` run to run (on PR `a1c7afc` it
-was test 25s / live 28s), so shaving either alone often buys nothing. Both
-needed attacking.
+**On the runner: 15s against 14s serial.** Nothing. And it aims four
+concurrent workers at doi.org/Crossref/OpenAlex/arXiv for no benefit.
 
-## 1. `integration` gets its own job
+Same root cause as the #132 finding: this sandbox reaches those hosts through
+a slow proxy, so the suite is genuinely network-bound *here* and workers
+overlap the waiting. On a GitHub runner the network is fast enough that it
+barely waits, and xdist's worker startup is pure overhead. Recorded in the
+workflow comment at the point of use so nobody re-adds it off a local
+benchmark.
 
-11.6s serialised behind a 7.8s unit run for no reason.
+## Kept: `integration` in its own job
 
-The gating question is the one I got wrong in #114, so this time I measured
-before arguing: **the integration suite is hermetic.** Under blocked DNS it
-passes identically and in the same time (9.39s vs 9.27s). That's what makes
-splitting it safe where splitting `live` was not — it can be a *required*
-check, so the ruleset becomes `test` AND `integration`. Commented on #43,
-because adding the job without adding the ruleset entry is precisely the #114
-mistake wearing a new costume.
+Hermetic, verified rather than assumed — under blocked DNS it passes
+identically and in the same time (9.39s vs 9.27s). That's what makes it safe
+to *require*, unlike `live`. Ruleset set becomes `test` AND `integration`
+(noted on #43); adding the job without the ruleset entry would be the #114
+mistake in a new costume.
 
-## 2. `pytest -m live -n 4`
+## The measurement that reframed it
 
-xdist belongs here and *only* here. #114 explicitly rejected xdist for the
-unit suite and that call still stands — it's CPU-bound at ~85% utilisation, so
-worker startup costs more than it saves. The live suite is the mirror image:
-24 tests at ~10% CPU, all of it waiting on four third-party hosts.
+Three runs, and the number I was chasing never moved:
 
-Worker count measured rather than guessed:
+| | before (3 jobs) | run 1 (4 jobs, xdist) | run 2 (4 jobs, no xdist) |
+|---|---|---|---|
+| `test` | 35s | 24s | 19s |
+| `integration` | — | 29s | 21s |
+| `live` | 26s | 25s | 27s |
+| `worker` | 20s | 20s | 23s |
+| max job | 35s | 29s | 27s |
+| **wall span** | **35s** | **35s** | **35s** |
 
-| workers | serial | 2 | 3 | **4** | 6 | 8 |
-|---|---|---|---|---|---|---|
-| wall | 17.7s | 13.5s | 11.7s | **10.5s** | 12.5s | 12.4s |
+**Wall span was exactly 35s in all three.** With 3 jobs one is allocated ~6s
+late; with 4 jobs, two are allocated ~8s late. The runner's allocation stagger
+absorbs the parallelism almost exactly. More jobs did not make CI finish
+sooner.
 
-It gets *worse* past 4 — politeness limits and connection contention. Recorded
-in the workflow comment as a ceiling, not a starting point, because the
-obvious future "optimisation" is someone bumping it to 8.
+What *did* improve is the metric that actually gates a merge:
 
-`--dist load` deliberately: all live tests are in one file, so `--dist
-loadfile` would pin them to one worker and buy nothing. Module-scoped fixtures
-rebuild per worker as a result; that's already in the 10.5s.
+- time-to-**required**-checks-green: **35s → 21s**
 
-Ran `-n 4` three consecutive times, 24/24 each. Concurrency against third-party
-APIs is the one thing here that could flake, so a single green run wasn't
-enough evidence.
+`test` (19s) and `integration` (21s) both land before the advisory `live`
+(27s), and nobody waits on `live` — it can never be required, by design. So
+once #43 flips, a PR becomes mergeable 14s sooner even though the run as a
+whole still takes 35s.
 
-## The finding that changed the plan
+That is close to the ~21s I originally projected, and it is worth being clear
+that I got there for a different reason than I claimed. The projection assumed
+span would fall. It didn't.
 
-I went in expecting #132 (CLI/web network I/O) to be the big lever, since it's
-~19s of the local unit suite. **On CI it's worth almost nothing:**
-`test_web.py` runs in **0.147s on the runner** vs 2.35s here. GitHub's network
-to Crossref is fast; my sandbox goes through a proxy.
+## A CI landmine found by accident
 
-So the local profile overstates #132's CI value by more than an order of
-magnitude. It stays open as a dev-loop fix — which is still worth doing, it's
-just not a wall-clock fix. Second time this session that local profiling
-pointed at the wrong thing (the first was #118's PDF tests, invisible locally
-because they skip without a browser). Profile on the machine that has the
-problem.
+A PR with merge conflicts gets **no workflow run at all** — `mergeable_state:
+dirty` means GitHub can't compute `refs/pull/N/merge`, so `pull_request`
+workflows never fire. I burned real time misdiagnosing this as a dropped
+webhook and then as a repo-wide Actions outage; both were wrong.
 
-## Not done
+It's nasty because it inverts the signal: the PR shows **no check**, not a
+failing one, and the last green run stays visible so it reads as passing. Same
+shape `ci.yml` already warns about for `paths:` filters. Once #43 flips, a PR
+that develops a conflict silently stops producing checks and the fix is always
+rebase, never re-run.
 
-Per-job setup is ~8s × 4 jobs and is now the floor. No obvious lever — the uv
-cache already hits. Anyone attacking wall clock further starts there.
+## Standing conclusion for whoever optimises this next
+
+Per-job setup (~8-9s x 4) plus allocation stagger is the floor, and splitting
+further will not beat it — that is now measured, not assumed. Real remaining
+work is inside `test_integration_e2e.py` (subprocess-heavy) which is #81's
+territory. And #132 stays a dev-loop fix: 19s locally, 0.147s on the runner.
+
+**Three times this session a local profile pointed at the wrong thing** (#118
+PDF tests invisible locally, #132 overstated by ~100x, xdist transferring to
+zero). Profile on the machine that has the problem.
