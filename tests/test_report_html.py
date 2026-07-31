@@ -63,6 +63,21 @@ def test_generated_from_report_alone(report, html):
     assert "report.json (this page is a render of this)" in html
 
 
+def test_report_json_is_collapsed_and_downloadable(report, html):
+    # Raw JSON folds away by default (native <details>, no JS needed) and the
+    # download button carries the CLI's <stem>.report.json naming. The JSON
+    # itself must still round-trip out of the page.
+    import html as html_mod
+
+    fold = re.search(r'<details class="fold">(.*?)</details>', html, re.S).group(1)
+    assert "<summary>" in fold and 'id="report-src"' in fold
+    assert "<details open" not in html  # collapsed by default
+    name = re.search(r'id="dl-json" data-name="([^"]+)"', html).group(1)
+    assert name.endswith(".report.json")
+    embedded = re.search(r'<pre id="report-src">(.*?)</pre>', html, re.S).group(1)
+    assert json.loads(html_mod.unescape(embedded)) == report
+
+
 def test_no_verdict_language(html):
     assert "Screening aid, not a determination" in html
     assert "AI-generated: yes" not in html

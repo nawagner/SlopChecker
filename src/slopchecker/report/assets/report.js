@@ -133,6 +133,22 @@
     });
   });
 
+  // Download the embedded report.json. textContent un-escapes the HTML
+  // entities, so what downloads is byte-for-byte the JSON this page was
+  // rendered from. preventDefault keeps the click from toggling <details>.
+  var dl = document.getElementById("dl-json");
+  if (dl) {
+    dl.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var src = document.getElementById("report-src");
+      var a = document.createElement("a");
+      a.href = "data:application/json;charset=utf-8," + encodeURIComponent(src.textContent);
+      a.download = dl.getAttribute("data-name") || "report.json";
+      a.click();
+    });
+  }
+
   window.addEventListener("resize", layout);
   window.addEventListener("load", layout);
   layout();

@@ -472,6 +472,7 @@ def render_report(report: dict) -> str:
         '<span class="c">// results are true | false | number. '
         "No prose required from the checker.</span>"
     )
+    json_name = escape(Path(doc.get("file", "document")).stem) + ".report.json"
 
     return f"""<!doctype html>
 <html lang="en">
@@ -506,9 +507,13 @@ def render_report(report: dict) -> str:
 <h2>Summary</h2>
 {_render_summary(ledger, report.get("summary", {}))}
 
-<h2>report.json (this page is a render of this)</h2>
-<div class="schema">{report_json}
+<details class="fold">
+  <summary>report.json (this page is a render of this)
+    <button type="button" id="dl-json" data-name="{json_name}">Download</button>
+  </summary>
+  <div class="schema"><pre id="report-src">{report_json}</pre>
 {schema_note}</div>
+</details>
 
 <p class="foot">Screening aid, not a determination. Boolean findings are independently
 verifiable. Scores are probabilistic and never sufficient on their own.</p>
