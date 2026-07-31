@@ -2,6 +2,15 @@ name = "slopchecker-web"
 main = "src/index.ts"
 compatibility_date = "2026-07-31"
 
+# Explicit, not left to the "disabled once a custom domain exists" default —
+# keeps the *.workers.dev URL alive for quick checks alongside the real domain.
+workers_dev = true
+# Lets `wrangler versions upload` mint a distinct preview URL per version
+# without shifting production traffic — what Cloudflare's Git integration
+# (Settings > Builds, connected to nawagner/SlopChecker) uses for preview
+# deploys on non-main branches.
+preview_urls = true
+
 [assets]
 directory = "./public"
 binding = "ASSETS"
@@ -10,6 +19,9 @@ binding = "ASSETS"
 # Not a secret — Railway's public service URL, just a proxy target.
 RAILWAY_API_URL = "https://slopchecker-production.up.railway.app"
 
-# Custom domain: run after slop-checker.com's DNS is on Cloudflare —
-#   wrangler deploy
-#   wrangler route add "slop-checker.com/*" slopchecker-web
+# slop-checker.com is already a Cloudflare zone with no conflicting DNS
+# records, so this provisions the DNS record + SSL automatically on deploy —
+# no manual `wrangler route add` needed.
+[[routes]]
+pattern = "slop-checker.com"
+custom_domain = true
