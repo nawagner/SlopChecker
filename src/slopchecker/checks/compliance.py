@@ -86,9 +86,7 @@ def load_spec(path: str | os.PathLike[str]) -> SolicitationSpec:
         max_words = narrative_raw.get("max_words")
         max_pages = narrative_raw.get("max_pages")
         if max_words is None and max_pages is None:
-            raise ValueError(
-                f"{path}: narrative block must set max_words and/or max_pages"
-            )
+            raise ValueError(f"{path}: narrative block must set max_words and/or max_pages")
         narrative = NarrativeLimit(
             start_section=narrative_raw.get("start_section"),
             end_section=narrative_raw.get("end_section"),
