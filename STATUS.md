@@ -5,6 +5,34 @@ Append-only. Newest entry on top. One line per entry:
 
 ## Log
 
+- 16:25 Dan (fable) — #144 claims lens tuning on `danparshall/144-claims-lens`,
+  three fixes with an eval to back each claim (`lens-eval/`, 137 real opus runs,
+  checkpointed JSONL). (1) Lens prompt v0.3: specificity gate, meta-discourse/
+  vague-gesture exclusions, and a `scope: background|specific` field (Dan's
+  design) — background = context-setting generalization, no citation expected;
+  specific = narrow assertion borrowing evidential authority; hyperbole is
+  explicitly specific ("Every serious observer already agrees" stays caught).
+  (2) Mapping: **raced Emerson's #147 on the same file — independently found
+  the same red-cards/inverted-polarity problem** (his 15:32 line). Reconciled
+  as a synthesis on rebase: #147's silence policy + False-is-the-flag polarity
+  kept, flag generalized from `quant && uncited` to `uncited && specific &&
+  needs-a-source` (prior-work or quantitative — uncited promises stay silent,
+  you can't cite your own future work). Labels: "Unsourced quantitative claim"
+  / "Uncited prior-work claim", single check `claim_sourced: NO`. New
+  `claims_specific_uncited` ledger count beside `claims_quant_unsourced`.
+  (3) Runtime: lens cache key now includes the prompt payload (prompt edits
+  used to serve stale cached extractions until TTL); quote anchoring is
+  whitespace-tolerant (model rewraps a hard-wrapped sentence → quote rescued
+  to exact source bytes) with residual drops surfaced as a `claims_unanchored`
+  gap row — byte-exact anchoring was silently zeroing whole runs (`15/0/15`
+  repeats, missed planted defects) AND masking v0.1's false positives. Eval:
+  screenshot-repro PDF fires 2/0/2 under old prompt, 0/0/0 under v0.3; planted
+  harness defects 24/24 under v0.3; filler blog/think-tank docs all 0.
+  **Trap for everyone: eval baselines extracted from `HEAD` go stale the
+  moment you commit — pin to merge-base; per-row `lens_sha` caught it.**
+  / next: PR; @etbrooking sanity-check the flag generalization on #13 /
+  blocked on nothing.
+
 - 16:06 Emerson (fable) — two last-minute demo changes: (1) `topic_classification` LLM check (new `pipeline/checks_topics.py`): Claude classifies the doc into the FIXED taxonomy topic set (single source: `checks.tagging.load_taxonomy()` — model can't invent topics, off-list → errored row, "other" allowed); primary + ≤2 secondary with confidence and verbatim evidence quotes (quote fails quotecheck → anchor dropped, topic kept); deterministic `tagging` stays as the no-LLM fallback lane. (2) Pangram findings now RANKED: top-5 most AI-like passages by window score, labels "Most AI-like passage #N", note carries score + original Pangram label, doc ledger row keeps fraction_ai as result with top scores + any cap in detail ("showing top 5 of 8" — never silent). Dan's detector untouched, all in my mapping layer. 584 passed (+12 new), ruff clean / next: PR + merge / blocked on nothing
 
 - 16:12 Emerson (claude-code) — dropped the submitter-type tag from the report surface (Emerson's call, #15): on real uploads it was almost always 'unknown (no supporting signal)' or a weak guess — a row that never informs a decision is noise. Removed the submitter_type_confidence ledger row + tag-submitter-type finding; infer_submitter_type and its taxonomy stay (unit tests intact) for when a consumer earns it. checks/ is Nick's module — noted on #15 / next: nothing queued / blocked on nothing
