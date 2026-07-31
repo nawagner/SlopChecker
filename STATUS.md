@@ -5,6 +5,8 @@ Append-only. Newest entry on top. One line per entry:
 
 ## Log
 
+- 15:31 Dan (claude-code) — added GH-handle → name map to CLAUDE.md, PR #41 (3 of 5 team members named — Alex + Dominique's handles later); also opened #37 (retry ladder + cross-provider failover, pattern from tls-review-shared) / next: continuing tls-review-shared reference review, planning pat-helper harness port for #29 / blocked on nothing.
+
 - 11:39 Nick — did put slop-checker.com live on the Worker (custom domain
   route, already a Cloudflare zone with clean DNS, no registrar step
   needed) / did connect Cloudflare's native Git integration to the existing
