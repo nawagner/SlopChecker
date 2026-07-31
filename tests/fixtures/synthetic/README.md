@@ -16,7 +16,25 @@ each combination into a full document.
 - `coverage.json` — value counts per dimension, to confirm the grid is actually covered.
 - `run_meta.json` — how this set was generated (informational).
 
-Tooling lives in `scripts/synth/` (`synth_proposals.py`, `score.py`).
+Tooling lives in `scripts/synth/` (`synth_proposals.py`, `score.py`, `render_fixtures.py`).
+
+## Rendered document files (`files/`)
+
+`files/` holds a representative subset rendered into **real document formats** —
+`.md`, `.html`, `.docx`, `.pdf` — so the ingestion module (#4) and downstream
+checks can be exercised on actual files, not text-in-JSON. 12 fixtures span the
+three document types and the key cases (clean, fabricated citations, overclaims,
+plus budget-inflated and missing-methods for grants). `files/files_index.csv`
+maps each file back to its `corpus_id` and ground-truth flags.
+
+Regenerate with `scripts/synth/render_fixtures.py` (see its header). MD/HTML are
+stdlib; DOCX needs `python-docx` (the `[docx]` extra); PDF is a **local build
+step** — a Chromium-family browser prints the HTML, so CI never renders, it only
+reads the committed files.
+
+All four formats round-trip through `slopchecker.ingest.ingest()` with
+`status=ok`; note the PDF path preserves text and DOIs but not heading structure
+(sections come back empty), which is a real ingestion characteristic to test for.
 
 ## Document types
 
@@ -96,7 +114,6 @@ tested against realistic slop.
 
 ## Open items (tracked on #22)
 
-- PDF and DOCX rendering of fixtures.
 - "Valid DOI pointing to the wrong paper" case.
 - Explicit near-duplicate pairs with linked provenance.
 - A budget with a deliberate arithmetic error.
