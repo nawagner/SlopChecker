@@ -13,6 +13,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 
 from slopchecker.report.html import render_file
@@ -22,6 +23,13 @@ _WINDOWS_CANDIDATES = [
     r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
     r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+]
+
+# macOS app bundles are never on PATH, so `shutil.which` can't see them.
+_MACOS_CANDIDATES = [
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
 ]
 
 
@@ -37,7 +45,7 @@ def find_browser() -> str | None:
         path = shutil.which(name)
         if path:
             return path
-    for path in _WINDOWS_CANDIDATES:
+    for path in _WINDOWS_CANDIDATES + _MACOS_CANDIDATES:
         if Path(path).exists():
             return path
     return None
@@ -55,31 +63,58 @@ def html_to_pdf(html_path: Path, pdf_path: Path, timeout: int = 60) -> Path:
     # exiting browser children when the context closes; leftover tmp files are
     # preferable to a spurious OSError.
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as profile:
-        subprocess.run(
-            [
-                browser,
-                "--headless",
-                "--disable-gpu",
-                "--no-sandbox",
-                # No crashpad/breakpad children: they inherit our stdout/stderr
-                # pipes and outlive the browser process, which deadlocks
-                # capture_output on Linux CI until the timeout kills the run.
-                "--disable-crash-reporter",
-                "--disable-breakpad",
-                "--no-first-run",
-                "--disable-dev-shm-usage",
-                f"--user-data-dir={profile}",
-                "--no-pdf-header-footer",
-                f"--print-to-pdf={pdf_path}",
-                Path(html_path).resolve().as_uri(),
-            ],
-            check=True,
-            timeout=timeout,
-            capture_output=True,
-        )
-    if not Path(pdf_path).exists():
-        raise RuntimeError(f"Browser exited cleanly but produced no PDF at {pdf_path}")
-    return Path(pdf_path)
+        stderr_path = Path(profile) / "browser-stderr.log"
+        cmd = [
+            browser,
+            "--headless",
+            "--disable-gpu",
+            "--no-sandbox",
+            # No crashpad/breakpad children: they inherit our stdout/stderr
+            # handles and outlive the browser process; keeping stderr in a
+            # file (not a pipe) makes that survivable everywhere.
+            "--disable-crash-reporter",
+            "--disable-breakpad",
+            "--no-first-run",
+            "--disable-dev-shm-usage",
+            f"--user-data-dir={profile}",
+            "--no-pdf-header-footer",
+            f"--print-to-pdf={pdf_path}",
+            Path(html_path).resolve().as_uri(),
+        ]
+        # Chrome's "new headless" (>=132) can finish the print but never
+        # exit — observed on macOS with Chrome 150 (main + gpu/utility
+        # helpers park indefinitely after the PDF is written; no flag set
+        # prevents it). So completion is judged by the artifact, not the
+        # exit: poll for a size-stable PDF, then reap the browser.
+        out = Path(pdf_path)
+        with stderr_path.open("wb") as stderr_file:
+            proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=stderr_file)
+            deadline = time.monotonic() + timeout
+            last_size = -1
+            try:
+                while time.monotonic() < deadline:
+                    if proc.poll() is not None:
+                        break
+                    size = out.stat().st_size if out.exists() else -1
+                    if size > 0 and size == last_size:
+                        break  # PDF written and stable; browser is just lingering
+                    last_size = size
+                    time.sleep(0.25)
+            finally:
+                if proc.poll() is None:
+                    proc.terminate()
+                    try:
+                        proc.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        proc.kill()
+                        proc.wait()
+        if not out.exists() or out.stat().st_size == 0:
+            tail = stderr_path.read_bytes()[-2000:].decode(errors="replace")
+            raise RuntimeError(
+                f"Browser produced no PDF at {pdf_path} "
+                f"(exit code {proc.returncode}). stderr tail:\n{tail}"
+            )
+    return out
 
 
 def render_pdf(report_path: Path, out_path: Path | None = None) -> Path:

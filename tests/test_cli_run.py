@@ -150,7 +150,12 @@ def test_tier_and_skip_selection(sample_md, tmp_path):
     )
     assert result.exit_code == 0, result.output
     report = EvidenceReport.model_validate_json((out / "sample.report.json").read_text())
-    assert [row.check for row in report.ledger] == ["has_text"]
+    checks = [row.check for row in report.ledger]
+    # Intent: --tier deterministic keeps a deterministic check and --skip drops
+    # word_count. Assert that intent, not the exact set — new deterministic
+    # checks (e.g. tagging, #15) legitimately add rows here.
+    assert "has_text" in checks
+    assert "word_count" not in checks
 
 
 def test_unknown_check_id_is_tool_failure(sample_md):
