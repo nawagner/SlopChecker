@@ -48,7 +48,12 @@ header .facts { font-family: var(--mono); font-size: .75rem; color: var(--soft);
 .doc { font-family: var(--serif); font-size: 1.02rem; line-height: 1.75; max-width: 42rem; }
 .doc h3 { font-size: 1.15rem; margin: 0 0 .2rem; }
 .doc .byline { color: var(--soft); font-style: italic; font-size: .92rem; margin: 0 0 1.3rem; }
-.doc p { margin: 0 0 1.1rem; }
+/* pre-wrap: the flattened text IS the evidence — line breaks the checkers
+   saw (PDF text lines especially) render as the checkers saw them. */
+.doc p { margin: 0 0 1.1rem; white-space: pre-wrap; }
+.doc .pgbrk { font-family: var(--mono); font-size: .72rem; color: var(--soft);
+              border-top: 1px dashed var(--rule); margin: 1.6rem 0 1.1rem;
+              padding-top: .35rem; text-transform: uppercase; letter-spacing: .08em; }
 .doc .refs { font-size: .87rem; border-top: 1px solid var(--rule);
              padding-top: .9rem; margin-top: 1.4rem; }
 .doc .refs p { margin: 0 0 .45rem; }
