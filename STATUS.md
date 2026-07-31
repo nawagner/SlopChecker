@@ -22,6 +22,14 @@ Append-only. Newest entry on top. One line per entry:
   real fix (crashpad pipe deadlock) minutes later and #47 is closed / #2's
   last box is genuinely done now: required + green / blocked on nothing.
 
+- 12:02 Alex (claude-code) — #22 synthetic proposal fixtures: dimension-covered
+  generator (`scripts/synth/synth_proposals.py`, template + anthropic backends,
+  tier-stratified NIH pulls) + eval harness (`score.py`) + committed 60-doc
+  `--offline` corpus in `tests/fixtures/synthetic/`; draft PR up. Finding: naive
+  checks score ~1.0 on templates but drop to 0.0 recall on model-backed slop /
+  next: doc-type coverage (blog/report), PDF/DOCX rendering / blocked on the
+  report.json schema question left on #22 (for #3 owner).
+
 - 15:31 Dan (claude-code) — added GH-handle → name map to CLAUDE.md, PR #41 (3 of 5 team members named — Alex + Dominique's handles later); also opened #37 (retry ladder + cross-provider failover, pattern from tls-review-shared) / next: continuing tls-review-shared reference review, planning pat-helper harness port for #29 / blocked on nothing.
 
 - 11:39 Nick — did put slop-checker.com live on the Worker (custom domain

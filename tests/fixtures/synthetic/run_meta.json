@@ -1,0 +1,12 @@
+{
+  "generated_utc": "2026-07-31T15:58:16.276572+00:00",
+  "n_records": 60,
+  "tiers": [
+    "R1",
+    "R2"
+  ],
+  "backend": "template",
+  "model": null,
+  "seed": 42,
+  "offline": true
+}
