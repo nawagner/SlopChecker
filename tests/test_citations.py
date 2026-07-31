@@ -191,6 +191,47 @@ def test_sources_heading_is_a_reference_section():
     assert ext.ref_region is not None
 
 
+# --------------------------------------------- markdown headings (#156)
+
+_ATX_HEADING = """# A Proposal
+
+We build on prior work [1] and on established methods [2].
+
+## References
+
+1. [1] https://doi.org/10.1038/s41586-020-2649-2
+2. [2] https://doi.org/10.1073/pnas.1517384113
+"""
+
+
+@pytest.mark.parametrize(
+    "heading",
+    ["## References", "# References", "###### References", "**References**", "*Sources*"],
+    ids=["h2", "h1", "h6", "bold", "emphasis-sources"],
+)
+def test_markdown_heading_is_a_reference_section(heading):
+    """Markdown reaches the parser with its markers intact (#156)."""
+    text = f"Body text [1] here.\n\n{heading}\n\n[1] https://doi.org/10.1038/s41586-020-2649-2\n"
+    assert find_reference_region(text) is not None
+
+
+def test_atx_heading_does_not_strand_the_bibliography_as_intext_markers():
+    # The real damage in #156: with no region found, the reference list's own
+    # [1]/[2] keys were counted as in-text markers and each became a false
+    # "unlinked citation" finding on a document with a fine bibliography.
+    ext = extract_citations(_ATX_HEADING)
+    assert len(ext.references) == 2
+    assert [c.reference for c in ext.citations].count(None) == 0
+    assert ext.findings == []
+
+
+def test_heading_word_inside_a_sentence_is_not_a_heading():
+    # The optional wrappers must not loosen the anchoring — the region runs
+    # heading-to-end, so a false positive swallows the rest of the document.
+    text = "We list our references below and cite sources throughout.\n\nMore body text.\n"
+    assert find_reference_region(text) is None
+
+
 # ------------------------------------------------------------- CRLF (#98)
 
 
