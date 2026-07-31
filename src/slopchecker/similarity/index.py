@@ -110,8 +110,7 @@ class SimilarityIndex:
         sig = self._signatures[doc_id]
         candidates = [c for c in self._lsh.query(sig) if c != doc_id]
         scored = [
-            Neighbor(doc_id=c, jaccard=float(sig.jaccard(self._signatures[c])))
-            for c in candidates
+            Neighbor(doc_id=c, jaccard=float(sig.jaccard(self._signatures[c]))) for c in candidates
         ]
         # LSH returns candidates that PROBABLY meet the threshold; verify with
         # the MinHash estimate and drop false positives before returning.

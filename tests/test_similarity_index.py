@@ -152,11 +152,7 @@ class TestThreshold:
         # close to 1.0 can't be bucketed by LSH at num_perm=128 — see
         # datasketch's _optimal_param; that's an intrinsic LSH property, not a
         # cliff worth testing here.)
-        low = SimilarityIndex(
-            [_doc("a.txt", SIMILAR_A), _doc("b.txt", SIMILAR_B)], threshold=0.3
-        )
-        high = SimilarityIndex(
-            [_doc("a.txt", SIMILAR_A), _doc("b.txt", SIMILAR_B)], threshold=0.9
-        )
+        low = SimilarityIndex([_doc("a.txt", SIMILAR_A), _doc("b.txt", SIMILAR_B)], threshold=0.3)
+        high = SimilarityIndex([_doc("a.txt", SIMILAR_A), _doc("b.txt", SIMILAR_B)], threshold=0.9)
         assert low.top_neighbors("a.txt")  # some neighbour above 0.3
         assert not high.top_neighbors("a.txt")  # nothing above 0.9

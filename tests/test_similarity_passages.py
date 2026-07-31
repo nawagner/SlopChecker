@@ -21,8 +21,7 @@ class TestSharedPassage:
     def test_returns_shared_phrase_verbatim(self) -> None:
         # 8 tokens of shared prose, embedded in different surrounding text.
         shared = (
-            "policymakers should prioritize investments in early-childhood"
-            " education programs today"
+            "policymakers should prioritize investments in early-childhood education programs today"
         )
         a = f"In summary, {shared} at every level."
         b = f"The report argues that {shared} across the country."
@@ -34,8 +33,7 @@ class TestSharedPassage:
 
     def test_span_points_at_the_quote_in_a(self) -> None:
         shared = (
-            "policymakers should prioritize investments in early-childhood"
-            " education programs today"
+            "policymakers should prioritize investments in early-childhood education programs today"
         )
         a = f"In summary, {shared} at every level."
         b = f"The report argues that {shared} across the country."
