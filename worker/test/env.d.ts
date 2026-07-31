@@ -10,14 +10,17 @@ import type { Env as WorkerEnv } from "../src/index";
  * version no longer references — verified in
  * node_modules/@cloudflare/vitest-pool-workers/types/cloudflare-test.d.ts.
  *
- * `DB` is non-optional here (it's optional on the Worker's own Env, so an
- * unbound dev session degrades gracefully) because the test config always
- * binds it and every test would otherwise need a null check.
+ * `DB`, `CACHE` and `SLOPCHECK_CACHE_TOKEN` are non-optional here (they're
+ * optional on the Worker's own Env, so an unbound dev session degrades
+ * gracefully) because the test config always binds them and every test would
+ * otherwise need a null check.
  */
 declare global {
   namespace Cloudflare {
     interface Env extends WorkerEnv {
       DB: D1Database;
+      CACHE: KVNamespace;
+      SLOPCHECK_CACHE_TOKEN: string;
       TEST_MIGRATIONS: D1Migration[];
     }
   }

@@ -38,10 +38,48 @@ from typing import Any, Protocol, runtime_checkable
 import httpx
 
 from slopchecker import config as _config
+from slopchecker.checks.cache import Cache
 from slopchecker.models import Anchor, CheckResult, Finding, FlattenedDoc, LedgerRow, Span
 
 DEFAULT_BASE_URL = "https://text.external-api.pangram.com"
 DEFAULT_MODEL = "pangram-4"
+
+#: Cache namespace for detector responses (#119).
+CACHE_NAMESPACE = "pangram"
+
+#: Response fields allowed into a cache. A whitelist, not a blacklist: the
+#: shared KV tier takes derived values only (#119), and Pangram can add a field
+#: to its response without asking us. Anything unlisted is dropped rather than
+#: forwarded, so a future `windows[].text` cannot silently publish document
+#: text. Nothing here is text — `_windows_to_findings` re-slices every quote out
+#: of `doc.text`, and the cache key is the hash of that same text, so a hit
+#: guarantees the offsets still line up.
+_CACHEABLE_TOP_LEVEL = ("fraction_ai", "headline")
+_CACHEABLE_WINDOW = (
+    "label",
+    "start_index",
+    "end_index",
+    "ai_assistance_score",
+    "confidence",
+    "word_count",
+    "token_length",
+)
+
+
+def project(response: dict[str, Any]) -> dict[str, Any]:
+    """A Pangram response reduced to the fields the report actually reads.
+
+    Applied on every cache write. `headline` is Pangram's own verdict string
+    ("This document is likely AI-generated"), not document text — it is the one
+    free-text field kept, and it is bounded by Pangram's own vocabulary.
+    """
+    projected: dict[str, Any] = {k: response[k] for k in _CACHEABLE_TOP_LEVEL if k in response}
+    windows = response.get("windows")
+    if isinstance(windows, list):
+        projected["windows"] = [
+            {k: w[k] for k in _CACHEABLE_WINDOW if k in w} for w in windows if isinstance(w, dict)
+        ]
+    return projected
 
 
 # --- Transport layer -------------------------------------------------------
@@ -215,6 +253,9 @@ class PangramConfig:
       set once we know actual per-unit pricing.
     - `cache_dir` — content-hash cache root; `None` disables caching.
       Cache key covers (model, text) so a model change invalidates.
+    - `cache` — a `Cache` (#119), used in preference to `cache_dir` when
+      both are set. This is how the hosted service caches at all: the
+      Railway filesystem is ephemeral, so `cache_dir` is useless there.
     - `ai_label_names` — which Pangram window labels get surfaced as
       passage findings. Human-labeled windows are counted at the
       document level but not turned into evidence cards.
@@ -225,6 +266,7 @@ class PangramConfig:
     initial_backoff_seconds: float = 0.5
     unit_price_usd: float = 0.0
     cache_dir: Path | None = None
+    cache: Cache | None = None
     ai_label_names: tuple[str, ...] = ("AI-Generated", "AI-Assisted")
 
 
@@ -365,16 +407,22 @@ class PangramDetector:
 
     # ---- Cache -----------------------------------------------------------
 
-    def _cache_path(self, doc: FlattenedDoc) -> Path | None:
-        if self._conf.cache_dir is None:
-            return None
+    def _cache_key(self, doc: FlattenedDoc) -> str:
         h = hashlib.sha256()
         h.update(self._conf.model.encode())
         h.update(b"\x00")
         h.update(doc.text.encode())
-        return self._conf.cache_dir / f"{h.hexdigest()}.json"
+        return h.hexdigest()
+
+    def _cache_path(self, doc: FlattenedDoc) -> Path | None:
+        if self._conf.cache_dir is None:
+            return None
+        return self._conf.cache_dir / f"{self._cache_key(doc)}.json"
 
     def _cache_read(self, doc: FlattenedDoc) -> dict[str, Any] | None:
+        if self._conf.cache is not None:
+            cached = self._conf.cache.get(CACHE_NAMESPACE, self._cache_key(doc))
+            return cached if isinstance(cached, dict) else None
         path = self._cache_path(doc)
         if path is None or not path.is_file():
             return None
@@ -384,6 +432,11 @@ class PangramDetector:
             return None
 
     def _cache_write(self, doc: FlattenedDoc, response: dict[str, Any]) -> None:
+        if self._conf.cache is not None:
+            # Projected, never raw: a `Cache` may be the shared KV namespace,
+            # and #119 allows only derived values there.
+            self._conf.cache.set(CACHE_NAMESPACE, self._cache_key(doc), project(response))
+            return
         path = self._cache_path(doc)
         if path is None:
             return

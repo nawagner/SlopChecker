@@ -52,6 +52,7 @@ enough — this is a hackathon).
 | `worker/public/` | Dominique | landing page + demo report statics (design/copy/UX, #74). Emerson built the first pass |
 | `worker/src/` + deploy config | Emerson | Cloudflare Worker proxy, Railway API, hosting (#27) |
 | `worker/src/db/`, `worker/src/routes/runs.ts`, `worker/migrations/` | Nick | D1 report history: schema, Drizzle migrations, `/api/runs` (#88). Lives inside Emerson's `worker/src/` — the `WORKER_OWNED` list in `index.ts` is the seam between them |
+| `worker/src/routes/cache.ts`, `src/slopchecker/checks/cache.py` | Nick | Shared KV result cache: `/api/cache` + the Python client (#119). Same `WORKER_OWNED` seam. Reached from Dan's modules via the optional `cache` field on `PangramConfig` / `LensRunConfig` |
 | `harness/` | Dan (+ Fable) | planted-defect validation, recall scoring |
 | `docs/` narrative + demo | Emerson, Dominique | demo script, framing, README language |
 | `STATUS.md` | everyone | append-only log (see below) |
