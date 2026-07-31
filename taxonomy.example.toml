@@ -17,6 +17,16 @@ ai = ["artificial intelligence", "machine learning", "frontier model", "compute"
 biosecurity = ["biosecurity", "biosafety", "pathogen", "dual-use research", "select agent"]
 metascience = ["metascience", "replication", "peer review", "research on research"]
 energy = ["energy", "grid", "nuclear", "emissions", "renewable"]
+labor_economics = ["labor market", "employment", "workforce", "wages", "unemployment", "remote work"]
+education = ["education", "classroom", "k-12", "curriculum", "student achievement", "teacher"]
+public_health = ["public health", "epidemiology", "health outcomes", "vaccination", "clinical trial", "disease surveillance"]
+climate_environment = ["climate change", "climate adaptation", "conservation", "biodiversity", "decarbonization", "extreme weather"]
+democracy_governance = ["democracy", "elections", "civic engagement", "governance", "rule of law", "transparency"]
+media_information = ["journalism", "media literacy", "misinformation", "disinformation", "information environment", "fact-checking"]
+global_development = ["international development", "humanitarian", "poverty reduction", "food security", "global south"]
+housing_urban = ["housing", "zoning", "urban planning", "homelessness", "affordable housing"]
+criminal_justice = ["criminal justice", "policing", "incarceration", "recidivism", "sentencing"]
+immigration = ["immigration", "migration", "refugee", "asylum", "visa"]
 
 [doc_types]
 # Single-label: the highest-scoring type wins and drives which checks run.

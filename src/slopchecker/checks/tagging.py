@@ -45,8 +45,10 @@ from slopchecker.pipeline.registry import CheckContext, CheckOutput, register
 # --- default taxonomy -------------------------------------------------------
 # Shipped as a Python literal (always importable, no packaged-data-file
 # fragility) and mirrored in taxonomy.example.toml as the user-facing template.
-# Deliberately small: the domains this team actually sees. Replace, don't
-# extend in place — a funder's vocabulary is their own.
+# Broad enough that a generic funder demo rarely lands on "other" (widened
+# 2026-07-31 after the flagship labor-economics fixture classified as
+# "other"), but still a default: a funder's own vocabulary replaces it
+# wholesale via SLOPCHECKER_TAXONOMY.
 
 DEFAULT_TAXONOMY: dict[str, dict[str, list[str]]] = {
     "topics": {
@@ -61,6 +63,76 @@ DEFAULT_TAXONOMY: dict[str, dict[str, list[str]]] = {
         ],
         "metascience": ["metascience", "replication", "peer review", "research on research"],
         "energy": ["energy", "grid", "nuclear", "emissions", "renewable"],
+        "labor_economics": [
+            "labor market",
+            "employment",
+            "workforce",
+            "wages",
+            "unemployment",
+            "remote work",
+        ],
+        "education": [
+            "education",
+            "classroom",
+            "k-12",
+            "curriculum",
+            "student achievement",
+            "teacher",
+        ],
+        "public_health": [
+            "public health",
+            "epidemiology",
+            "health outcomes",
+            "vaccination",
+            "clinical trial",
+            "disease surveillance",
+        ],
+        "climate_environment": [
+            "climate change",
+            "climate adaptation",
+            "conservation",
+            "biodiversity",
+            "decarbonization",
+            "extreme weather",
+        ],
+        "democracy_governance": [
+            "democracy",
+            "elections",
+            "civic engagement",
+            "governance",
+            "rule of law",
+            "transparency",
+        ],
+        "media_information": [
+            "journalism",
+            "media literacy",
+            "misinformation",
+            "disinformation",
+            "information environment",
+            "fact-checking",
+        ],
+        "global_development": [
+            "international development",
+            "humanitarian",
+            "poverty reduction",
+            "food security",
+            "global south",
+        ],
+        "housing_urban": [
+            "housing",
+            "zoning",
+            "urban planning",
+            "homelessness",
+            "affordable housing",
+        ],
+        "criminal_justice": [
+            "criminal justice",
+            "policing",
+            "incarceration",
+            "recidivism",
+            "sentencing",
+        ],
+        "immigration": ["immigration", "migration", "refugee", "asylum", "visa"],
     },
     "doc_types": {
         "grant_application": [

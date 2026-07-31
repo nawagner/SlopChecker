@@ -11,9 +11,11 @@ the key is set in production, not on anything in this module.
 
 from __future__ import annotations
 
+import re
+
 from slopchecker.checks.cache import CONTENT_HASH_TTL_S, remote_cache
 from slopchecker.detect import PangramConfig, PangramDetector
-from slopchecker.models import Finding, FlattenedDoc, LedgerRow
+from slopchecker.models import Finding, FlattenedDoc, LedgerRow, Span
 from slopchecker.pipeline.registry import CheckContext, CheckOutput, register
 
 # The report shows the MOST AI-like passages, ranked by Pangram's per-window
@@ -22,12 +24,42 @@ from slopchecker.pipeline.registry import CheckContext, CheckOutput, register
 # in the ledger detail, never silent.
 _MAX_AI_PASSAGES = 5
 
+# Pangram windows run hundreds of words; on a short document five whole
+# windows still highlight nearly everything. The mark shows only the
+# window's opening (cut at a sentence boundary), the note states the full
+# passage length, and the untrimmed span stays in evidence.
+_MAX_ANCHOR_CHARS = 300
+_SENTENCE_BREAK = re.compile(r"[.!?][\"”']?(?:\s|$)")
+
 
 def _window_score(finding: Finding) -> float:
     for check in finding.checks:
         if check.name == "pangram_window_ai_score" and isinstance(check.result, (int, float)):
             return float(check.result)
     return 0.0
+
+
+def _trim_anchor(finding: Finding) -> tuple[Finding, int]:
+    """Cut the anchor to the window's opening sentences; report words trimmed.
+
+    The trimmed quote is a verbatim prefix of the original, so the
+    quote-anchoring contract holds; the full window span survives in
+    ``evidence``. Returns the (possibly copied) finding and the word count
+    of the whole window for the note.
+    """
+    anchor = finding.anchor
+    words = len(anchor.quote.split()) if anchor and anchor.quote else 0
+    if anchor is None or anchor.quote is None or len(anchor.quote) <= _MAX_ANCHOR_CHARS:
+        return finding, words
+    head = anchor.quote[:_MAX_ANCHOR_CHARS]
+    breaks = [m.end() for m in _SENTENCE_BREAK.finditer(head)]
+    cut = breaks[-1] if breaks else (head.rfind(" ") if head.rfind(" ") > 0 else len(head))
+    quote = anchor.quote[:cut].rstrip()
+    span = None
+    if anchor.span is not None:
+        span = Span(start=anchor.span.start, end=anchor.span.start + len(quote))
+    trimmed = anchor.model_copy(update={"quote": quote, "span": span})
+    return finding.model_copy(update={"anchor": trimmed}), words
 
 
 def _rank_findings(findings: list[Finding]) -> list[Finding]:
@@ -41,11 +73,16 @@ def _rank_findings(findings: list[Finding]) -> list[Finding]:
     out: list[Finding] = []
     for rank, finding in enumerate(ranked, start=1):
         score = _window_score(finding)
+        trimmed, words = _trim_anchor(finding)
+        shown = trimmed is not finding
+        note = f"Pangram score {score:.2f} ({finding.label})"
+        if shown:
+            note += f" — opening of a {words}-word passage"
         out.append(
-            finding.model_copy(
+            trimmed.model_copy(
                 update={
                     "label": f"Most AI-like passage #{rank}",
-                    "note": f"Pangram score {score:.2f} ({finding.label})",
+                    "note": note,
                 }
             )
         )
