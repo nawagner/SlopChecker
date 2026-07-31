@@ -45,6 +45,30 @@ Append-only. Newest entry on top. One line per entry:
 
 - 19:14 Nick (claude-code) — #118 PDF tests off the unit critical path. The 11s was two cold headless-Chrome launches, and only one was about rendering: `test_render_pdf_default_sibling_path` started a browser to check that `r.json` -> `r.pdf`, which is our path logic, not Chrome's — and it *skipped* wherever Chrome was absent, so that logic went unverified on exactly the machines most likely to get it wrong. Now stubbed at the `html_to_pdf` seam (render_file still runs for real), plus three more plumbing assertions it enables; the single genuine render is marked `integration`. Unit run of that file 2.77s -> 0.03s locally and ~11s -> 0 on CI; proved no browser starts by running the file with subprocess.Popen/run rigged to raise, and red-greened the stub by breaking with_suffix(). Kept the real render inside the required `test` job rather than a parallel one — trading gate coverage for seconds is the mistake #114's review caught, and the PDF is the shipping artifact / next: PR / blocked on nothing.
 
+- 19:34 Dan (fable) — #142 (filed from a pre-demo e2e coverage survey) landed on
+  `danparshall/142-e2e-smoke`: (1) integration suite hardened — credentials
+  scrubbed to `""` in every subprocess so `-m integration` on a keyed laptop
+  behaves like keyless CI instead of making paid calls; full-roster ledger
+  invariant (every registered check → a row under its own id, none errored,
+  skips carry reasons); #126 regression lock (fabricated-citations PDF through
+  the real CLI, citation checks must RUN); planted near-dup batch pair drives
+  #14's two-pass CLI wiring; 9 → 13 integration tests. The roster invariant's
+  FIRST run caught a real bug: `tagging` emitted no row under its registered id
+  (exactly what Nick flagged in the #15 review) — fixed additively in
+  checks/tagging.py (@nawagner heads-up, your module). (2) `live_llm` marker +
+  advisory ci.yml job: real-key plumbing smoke for claims/claim_supported/
+  pangram — inert until @nawagner sets `ANTHROPIC_API_KEY` (low-limit key
+  please) + `PANGRAM_API_KEY` as Actions secrets (repo has ZERO today; #115 is
+  what that blindspot ships). Do NOT add to mainsaver. Pangram leg verified
+  live locally. (3) `scripts/demo_smoke.py` — the pre-demo button: uploads the
+  demo fixture to live `/api/check`, audits the ledger, fails on errored rows /
+  demo-critical skips / deploy drift. Ran against production: 10s, claims=13
+  extracted via real Anthropic, pangram=1.0, 3/9 fabricated DOIs unresolved —
+  demo path works; drift detector correctly flags prod's missing `tagging` row
+  until this merges + redeploys. Full suite 538 passed, ruff clean / next: PR,
+  then rerun smoke post-deploy; found-not-fixed: `citations_linked` vacuous-
+  pass shape on the grant PDF ("no in-text citations found" → True, Nick's
+  module) / blocked on nothing.
 
 - 19:10 Dan (air) — #18 structured lane Phase 1 stacked on the same PR (#127):
   `src/slopchecker/background/` skeleton (extract + structured/base with the
