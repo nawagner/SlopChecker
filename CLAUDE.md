@@ -8,6 +8,9 @@ Team ideation doc: ask a teammate for the Google Doc link. The issue tree
 
 ## Work against issues
 
+- `git pull --rebase` at session start and again before every push — five
+  people are committing to main in parallel, and a stale clone is how
+  conflicts happen.
 - Pick an open issue before writing code. Comment on it when you start (so two
   people don't collide) and when you finish (what landed, commit SHA).
 - Reference the issue number in every commit message (`#19`).
