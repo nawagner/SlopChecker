@@ -65,6 +65,34 @@ format. Handled:
 - `.venv` here was built with `uv venv`, which doesn't ship `pip` — `uv pip
   install -p .venv/bin/python` instead of activating and using `pip` directly.
 
+## Follow-up (after merge): first real Railway deploy
+
+Created the `slopchecker` Railway project and ran `railway up`. First deploy
+failed:
+
+```
+OSError: Readme file does not exist: README.md
+```
+
+Nixpacks' Python provider splits the build into a dependency-caching layer
+that copies only `pyproject.toml` before running `pip install .`, then copies
+the rest of the source afterward. `readme = "README.md"` in `[project]` makes
+hatchling validate the file's presence during metadata generation — which
+runs in that first layer, before README.md exists there. Fails regardless of
+`.[web]` vs plain `.`; it's about *when* the file shows up in the build
+context, not what's being installed.
+
+Fix: dropped the `readme` field from `pyproject.toml`. Nothing publishes this
+package to PyPI, so the only cost is a missing long-description there — moot.
+Redeployed with `railway up`; succeeded. Live at
+https://slopchecker-production.up.railway.app — `/health` and `/config` both
+respond correctly, `/config` correctly shows `false` for every credential
+since none are set yet.
+
+This fix needs to land on `main` separately (PR, since main is protected) —
+`railway up` deploys whatever's on disk, not what's in git, so the live
+deploy and the repo were briefly out of sync until this PR.
+
 ## Left to do
 
 - `railway init`/`railway up` to actually create the Railway project and get
