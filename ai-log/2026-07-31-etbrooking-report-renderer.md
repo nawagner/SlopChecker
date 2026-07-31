@@ -55,3 +55,14 @@ Session: Claude Code (Fable 5), continuing the mock work from earlier sessions.
 - `mockups/evidence-report-mock.html` is now historical — the renderer is the
   product. Consider regenerating the mock from the fixture to keep them in sync.
 - Batch view (#20) can reuse the ledger table styling.
+
+## Addendum (same session): PDF output + module takeover
+
+- `src/slopchecker/report/pdf.py`: HTML → PDF via installed headless
+  Chrome/Edge (`--print-to-pdf`, drives the @media print stylesheet). No new
+  Python dependencies. `CHROMIUM` env var overrides binary discovery —
+  that's the hook for Railway/CI, which will need a chromium package.
+- `slopcheck render --pdf` (or `-o out.pdf`).
+- Ownership: Alex isn't tracking the report module (confirmed in person), so
+  the CLAUDE.md table now reads Emerson (→ Dominique) for `report/`. HTML and
+  PDF both; further iteration hands to Dominique.

@@ -47,12 +47,16 @@ def config_cmd() -> None:
 @app.command()
 def render(
     report: Annotated[Path, typer.Argument(exists=True, help="Path to a report.json")],
-    out: Annotated[Path | None, typer.Option("--out", "-o", help="Output HTML path")] = None,
+    out: Annotated[Path | None, typer.Option("--out", "-o", help="Output path")] = None,
+    pdf: Annotated[bool, typer.Option("--pdf", help="Print to PDF via headless Chromium")] = False,
 ) -> None:
-    """Render a report.json into the self-contained HTML evidence report (#19)."""
-    from slopchecker.report import render_file
+    """Render a report.json into the evidence report: HTML, or PDF with --pdf (#19)."""
+    from slopchecker.report import render_file, render_pdf
 
-    written = render_file(report, out)
+    if pdf or (out is not None and out.suffix.lower() == ".pdf"):
+        written = render_pdf(report, out)
+    else:
+        written = render_file(report, out)
     console.print(f"Wrote [green]{written}[/green]")
 
 

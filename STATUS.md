@@ -5,6 +5,8 @@ Append-only. Newest entry on top. One line per entry:
 
 ## Log
 
+- 11:20 Emerson (claude-code) — PDF output landed (`slopcheck render --pdf`, headless Chrome/Edge print, no new deps); took over `report/` module ownership (Alex not tracking it — confirmed in person), further iteration hands to Dominique / next: demo scenario #25 / blocked on nothing
+
 - 11:17 Nick — did deploy the Cloudflare Worker for real
   (slopchecker-web.nwagner.workers.dev), proxy to Railway verified on all
   routes / found + fixed a real bug: `/config` reloaded `.env` per-request
