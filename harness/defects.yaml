@@ -1,0 +1,109 @@
+# Planted-defect corpus for the SlopChecker validation harness (#29).
+#
+# `harness/run.py` copies `harness/fixtures/` -> a mutated directory, applies
+# every defect below (first-occurrence substring replace in `file`), runs the
+# check pipeline on the mutated copies, and scores recall: for each defect,
+# does any surviving Finding identify it?
+#
+# Fields
+# ------
+#   id           unique kebab-case slug (appears in the recall report)
+#   file         path relative to harness/fixtures/ containing `original`
+#   original     exact text to replace (first occurrence; hard error if absent)
+#   mutated      replacement text (empty string = delete the span)
+#   check_expected  which registered check *should* catch it (informational)
+#   match        how run.py decides "did any Finding catch this defect?"
+#                See MATCHERS in harness/run.py for the vocabulary. Kept out
+#                of the check itself so the harness owns the recall contract.
+#   pending_lens (optional) name of a not-yet-runnable check. Defects tagged
+#                this way are reported as PENDING (coverage gap) rather than
+#                MISS. Currently: `claims` -> blocked on #37 (no LLM client).
+#   description  what a working check should surface. Human-facing.
+#
+# On the defect set below: DOI-resolution defects would be a natural fit but
+# no DOI-resolution check has landed yet (Nick's #8, not merged), so they'd
+# be MISS-by-construction and drag the recall number for a bad reason.
+# Added once the check registers.
+
+- id: cite-orphan-climate
+  file: proposal_climate.md
+  original: "at the neighborhood scale [1]"
+  mutated: "at the neighborhood scale [9]"
+  check_expected: citation_has_reference
+  match:
+    kind: unlinked_citation_number
+    number: 9
+  description: >
+    The in-text citation [9] has no matching entry in the References. A
+    working citation check should surface the orphan marker as an unlinked
+    in-text citation.
+
+- id: cite-missing-ref-climate
+  file: proposal_climate.md
+  original: "[3] Marchetti, D. Community-Partnered Environmental Health Reports (2022). doi:10.9999/fake-6604-3311"
+  mutated: ""
+  check_expected: citation_has_reference
+  match:
+    kind: unlinked_citation_number
+    number: 3
+  description: >
+    The Marchetti [3] reference entry has been deleted from the References
+    list, but [3] is still cited in the body text. A working citation check
+    should surface the inline [3] mentions as unlinked.
+
+- id: quote-mutated-edu
+  file: proposal_edu.md
+  original: |-
+    the sequence's efficacy appears to depend more
+    on the fidelity of the task progression than on the intensity of
+    adult coaching, though direct evidence for this claim remains
+    limited
+  mutated: >-
+    our intervention achieves substantially larger post-test effect
+    sizes than any prior fraction-reasoning study conducted in
+    comparable rural districts
+  check_expected: quote_in_source
+  match:
+    kind: quote_not_in_source
+    source_key: doi-10.9999_fake-5580-1902
+  description: >
+    The verbatim quote attributed to Priestley [2] has been replaced with
+    fabricated content that does not appear in the retrieved source text.
+    A working quote check should report quote_in_source=false for this
+    passage. (An earlier version of this defect swapped a single phrase
+    and scored 0.88 on fuzzy match — above the 0.85 threshold; the
+    replacement mutates enough of the quote that fuzzy match fails
+    cleanly.)
+
+# --- Pending: defects that require checks not yet available on main. ---
+# The harness reports these as PENDING coverage gaps, not MISSes. They
+# convert to catchable defects the day the corresponding check lands.
+
+- id: unsupported-claim-climate
+  file: proposal_climate.md
+  original: "We will partner with the planning departments"
+  mutated: |
+    Our approach will improve municipal heat-illness outcomes by
+    approximately 65% within the first deployment season. We will partner
+    with the planning departments
+  check_expected: claim_support
+  match:
+    kind: pending
+  pending_lens: claims
+  description: >
+    An inserted strong empirical claim ("65% improvement") with no
+    supporting citation. Requires the claims lens (blocked on #37 — no
+    LLM client).
+
+- id: misattr-edu
+  file: proposal_edu.md
+  original: "one of the strongest classroom-observable predictors of later algebra"
+  mutated: "the single best-established causal driver of college completion rates,"
+  check_expected: claim_support
+  match:
+    kind: pending
+  pending_lens: claims
+  description: >
+    The claim attributed to [1] has been swapped for a much stronger and
+    unrelated one; the cited paper does not support it. Requires the
+    claims lens (blocked on #37 — no LLM client).

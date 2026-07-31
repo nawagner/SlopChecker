@@ -22,6 +22,7 @@ build/
 # Run artifacts
 reports/
 *.slopcheck.json
+harness/out/
 
 # macOS
 .DS_Store
