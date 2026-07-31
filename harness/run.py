@@ -43,7 +43,10 @@ import yaml
 REPO = Path(__file__).parent.parent
 sys.path.insert(0, str(REPO / "src"))
 
+from collections import defaultdict  # noqa: E402
+
 from injector import inject  # noqa: E402
+from post_ingest import mutate_ingest_result  # noqa: E402
 
 from slopchecker.ingest import ingest  # noqa: E402
 from slopchecker.models import Finding  # noqa: E402
@@ -123,14 +126,28 @@ def _run_checks(doc_text: str, ref_region, fetcher: SourceFetcher) -> list[Findi
 
 
 def run_harness(
-    fixtures_dir: Path,
+    fixtures_dir: Path | None,
     defects_file: Path,
     sources_dir: Path,
     out_dir: Path,
     *,
     today: str | None = None,
+    substrates_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Inject defects, run checks on mutated fixtures, return a recall summary.
+
+    Two mutation paths, distinguished by defect shape (see harness/defects.yaml):
+
+    - **Pre-ingest** (defect has `file`, no `substrate`): copy
+      ``fixtures_dir`` into a mutated dir, mutate on disk, then ingest.
+      Constrained to formats we can hand-author cleanly (markdown).
+    - **Post-ingest** (defect has `substrate`, #71): ingest a real fixture
+      from ``substrates_dir`` first, mutate the flattened text, then run
+      checks. Exercises the loader in the recall measurement.
+
+    Both paths merge into the same per-file findings map and the same
+    recall scoring, so `MATCHERS` / `_finding_matches_defect` don't care
+    which path a defect came from.
 
     `today` is injected for tests; production callers omit it and get the
     real date. Returns a dict with `hits`, `misses`, `pending`, `extras`,
@@ -138,22 +155,77 @@ def run_harness(
     """
     today = today or date.today().isoformat()
     defects = yaml.safe_load(defects_file.read_text()) or []
-
-    mutated_dir = out_dir / f"mutated_{today}"
-    manifest = inject(fixtures_dir, defects, mutated_dir)
+    pre_defects = [d for d in defects if "substrate" not in d]
+    post_defects = [d for d in defects if "substrate" in d]
 
     fetcher = LocalFileFetcher(sources_dir)
     per_file_findings: dict[str, list[Finding]] = {}
     per_file_errors: dict[str, str] = {}
-    for path in sorted(mutated_dir.iterdir()):
-        if not path.is_file():
-            continue
-        result = ingest(path)
-        if result.status != "ok":
-            per_file_errors[path.name] = result.reason or "unknown ingest error"
-            per_file_findings[path.name] = []
-            continue
-        per_file_findings[path.name] = _run_checks(result.document.text, result.references, fetcher)
+    manifest: list[dict[str, Any]] = []
+
+    # --- Pre-ingest path (existing #29 flow) -------------------------------
+    if pre_defects:
+        if fixtures_dir is None:
+            raise ValueError(
+                "pre-ingest defects present but fixtures_dir is None "
+                "(defect without a `substrate` field needs a fixture file)"
+            )
+        mutated_dir = out_dir / f"mutated_{today}"
+        manifest.extend(inject(fixtures_dir, pre_defects, mutated_dir))
+        for path in sorted(mutated_dir.iterdir()):
+            if not path.is_file():
+                continue
+            result = ingest(path)
+            if result.status != "ok":
+                per_file_errors[path.name] = result.reason or "unknown ingest error"
+                per_file_findings[path.name] = []
+                continue
+            per_file_findings[path.name] = _run_checks(
+                result.document.text, result.references, fetcher
+            )
+
+    # --- Post-ingest path (#71) --------------------------------------------
+    if post_defects:
+        if substrates_dir is None:
+            raise ValueError(
+                "post-ingest defects present but substrates_dir is None "
+                "(defect with a `substrate` field needs a substrates_dir)"
+            )
+        by_substrate: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for defect in post_defects:
+            by_substrate[defect["substrate"]].append(defect)
+        for substrate_name, subs in by_substrate.items():
+            substrate_path = substrates_dir / substrate_name
+            ingested = ingest(substrate_path)
+            if ingested.status != "ok":
+                # Ingest failure: record the error and manifest the defects
+                # so they show up as MISS (checks never got a chance to run).
+                per_file_errors[substrate_name] = ingested.reason or "unknown ingest error"
+                per_file_findings.setdefault(substrate_name, [])
+                for defect in subs:
+                    manifest.append(
+                        {
+                            "id": defect["id"],
+                            "file": substrate_name,
+                            "line": 0,
+                            "original": defect["original"],
+                            "mutated": defect["mutated"],
+                            "match": defect.get("match", {"kind": "pending"}),
+                            "pending_lens": defect.get("pending_lens"),
+                            "check_expected": defect.get("check_expected"),
+                            "description": defect.get("description"),
+                        }
+                    )
+                continue
+            mutated, sub_manifest = mutate_ingest_result(ingested, subs)
+            # Normalize `file` to the substrate name so recall scoring finds
+            # findings under the same key.
+            for entry in sub_manifest:
+                entry["file"] = substrate_name
+            manifest.extend(sub_manifest)
+            per_file_findings[substrate_name] = _run_checks(
+                mutated.document.text, mutated.references, fetcher
+            )
 
     matched_finding_ids: set[tuple[str, str]] = set()
     per_defect: list[dict[str, Any]] = []
@@ -299,6 +371,11 @@ def main() -> int:
     parser.add_argument("--defects", default=str(REPO / "harness" / "defects.yaml"))
     parser.add_argument("--sources", default=str(REPO / "harness" / "sources"))
     parser.add_argument("--out", default=str(REPO / "harness" / "out"))
+    parser.add_argument(
+        "--substrates",
+        default=str(REPO / "harness" / "substrates"),
+        help="Real-document substrates for post-ingest defects (#71).",
+    )
     args = parser.parse_args()
 
     summary = run_harness(
@@ -306,6 +383,7 @@ def main() -> int:
         defects_file=Path(args.defects),
         sources_dir=Path(args.sources),
         out_dir=Path(args.out),
+        substrates_dir=Path(args.substrates),
     )
     print(
         f"Recall {summary['hits']}/{summary['runnable_total']} "
