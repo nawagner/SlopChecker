@@ -1,6 +1,27 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
 # per-machine transcript-upload preference (written by the session after asking)
 .slopcheck-transcript
 
+# Python
 __pycache__/
+*.py[cod]
 *.pyc
 .venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Run artifacts
+reports/
+*.slopcheck.json
+
+# macOS
+.DS_Store
