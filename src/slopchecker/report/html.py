@@ -25,9 +25,37 @@ CHECK_LABELS = {
     "number_in_source": ("Number found in source", "number found"),
     "pangram_span": ("Span score", "span"),
     "pangram_document": ("Document score", "doc"),
+    "rubric_budget_ceiling": ("Budget within rubric ceiling", "within ceiling"),
 }
 
 _LANE_RANK = {"no": 0, "score": 1, "yes": 2, "skip": 3}  # strongest wins on overlap
+
+
+def _fmt_usd(value: object) -> str:
+    return f"${value:,.0f}" if isinstance(value, (int, float)) else str(value)
+
+
+# A finding's `evidence` dict is the checker's working data. A reader verifying
+# the finding needs part of it — the funder's own words, the two numbers being
+# compared — and none of the parse internals, so keys opt in here instead of
+# the dict being dumped into the card. What renders is the value itself:
+# quotes verbatim, numbers formatted, never a sentence synthesized around
+# them. Anything unregistered is still on the page, in the embedded
+# report.json. Adding a check with evidence worth showing = a row here.
+#
+# evidence key -> (caption, evidence key naming the document it was quoted from)
+_EV_QUOTES = {
+    "rubric_quote": ("The solicitation requires", "rubric_file"),
+}
+# evidence key -> (label, formatter) for the card's key/value table
+_EV_FIELDS = {
+    "ceiling_usd": ("Rubric ceiling", _fmt_usd),
+    "budget_total_usd": ("Budget total", _fmt_usd),
+}
+# Caption for the finding's own anchor quote when it's shown as the second
+# half of a pair. Alone it isn't repeated in the card at all — it's already
+# marked in the document text beside it.
+_ANCHOR_CAPTION = "This proposal says"
 
 
 def _check_label(name: str, short: bool = False) -> str:
@@ -317,12 +345,50 @@ def _render_document(doc: dict, findings: list[dict]) -> str:
     return "\n".join(parts)
 
 
+def _quote_block(caption: str, text: str, source: str | None, lane: str) -> str:
+    src = f'<span class="ev-src">{escape(source)}</span>' if source else ""
+    return (
+        f'\n      <div class="ev-q {lane}">'
+        f'<p class="ev-cap">{escape(caption)}{src}</p>'
+        f"<blockquote>{escape(text)}</blockquote></div>"
+    )
+
+
+def _render_evidence_quotes(finding: dict) -> str:
+    """The two-quote pair: the funder's own line, then the proposal's.
+
+    Both sides are verbatim from real documents — the renderer captions them
+    and quotes them, and never paraphrases either. The proposal side is the
+    finding's anchor quote, already marked in the document text; it repeats
+    here so the comparison still stands on its own in print, where the rail
+    lands after the document instead of beside it.
+    """
+    evidence = finding.get("evidence") or {}
+    quotes = [
+        _quote_block(caption, str(evidence[key]), _source_label(evidence, source_key), "req")
+        for key, (caption, source_key) in _EV_QUOTES.items()
+        if evidence.get(key)
+    ]
+    if not quotes:
+        return ""
+    anchor = (finding.get("anchor") or {}).get("quote")
+    if anchor:
+        quotes.append(_quote_block(_ANCHOR_CAPTION, anchor, None, _finding_lane(finding)))
+    return f'\n    <div class="ev">{"".join(quotes)}\n    </div>'
+
+
+def _source_label(evidence: dict, source_key: str) -> str | None:
+    source = evidence.get(source_key)
+    return str(source) if source else None
+
+
 def _render_card(finding: dict, anchored: frozenset[str] | None = None) -> str:
     fid = str(finding.get("id", ""))
     loose = anchored is not None and fid.lower() not in anchored
     lane = _finding_lane(finding)
     label = finding.get("label") or finding.get("target") or fid
     checks = finding.get("checks", [])
+    evidence = finding.get("evidence") or {}
 
     summary = " · ".join(
         f"{escape(_check_label(c.get('name', ''), short=True))} "
@@ -342,6 +408,15 @@ def _render_card(finding: dict, anchored: frozenset[str] | None = None) -> str:
         + "</td></tr>"
         for c in checks
     )
+    # Registered evidence facts sit under the check rows: same table, but they
+    # are inputs to the check, not results, so they carry no result colour.
+    fact_rows = "\n".join(
+        f"      <tr><td>{escape(label_)}</td>"
+        f'<td class="v-fact">{escape(fmt(evidence[key]))}</td></tr>'
+        for key, (label_, fmt) in _EV_FIELDS.items()
+        if key in evidence
+    )
+    rows = "\n".join(r for r in (rows, fact_rows) if r)
     note = ""
     if finding.get("note"):
         note = f'\n    <p class="a-note">{escape(finding["note"])}</p>'
@@ -357,7 +432,7 @@ def _render_card(finding: dict, anchored: frozenset[str] | None = None) -> str:
     cls = "anno unanchored" if loose else "anno"
     return f"""  <div class="{cls}" id="anno-{escape(fid.lower())}">
     <div class="a-head">{head}</div>
-    <div class="a-sum">{summary}</div>
+    <div class="a-sum">{summary}</div>{_render_evidence_quotes(finding)}
     <table class="kv">
 {rows}
     </table>{note}
@@ -430,8 +505,14 @@ def _render_summary(ledger: list[dict], summary: dict) -> str:
 
 def _header_facts(report: dict) -> str:
     run = report.get("run", {})
+    # The solicitation (rubric filename, or an explicit label) is what the
+    # document was measured against — say so, rather than leaving a bare
+    # filename in a list of run facts. Absent, the header stays silent: the
+    # skipped rubric row in the ledger is where "not checked against a
+    # solicitation" belongs.
+    solicitation = report.get("solicitation")
     facts = [
-        report.get("solicitation"),
+        f"Checked against: {solicitation}" if solicitation else None,
         run.get("date"),
         f"{len(report.get('ledger', []))} checks",
         f"{run['seconds']}s" if run.get("seconds") is not None else None,

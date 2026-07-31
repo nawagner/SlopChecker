@@ -75,6 +75,32 @@ mark.active { outline: 2px solid var(--accent); outline-offset: 1px; }
 .rail.condensed .anno:not(.expanded) .a-sum { display: block; }
 .rail.condensed .anno:not(.expanded) .a-head { margin-bottom: .15rem; }
 .a-head { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .45rem; }
+
+/* The evidence pair (#149): the funder's requirement above the proposal line
+   that violates it, both verbatim. Stacked, not side by side — the rail is
+   22rem and quoted lines shouldn't be re-wrapped into two narrow columns.
+   Rule colours reuse the lane tokens: accent = the solicitation's own words,
+   lane colour = the passage in the submission.
+   Deliberately absent above: a `.rail.condensed .anno:not(.expanded) .ev`
+   hide. The pair survives condensing, unlike the kv table — that table is
+   recoverable from the one-line summary, while a quoted comparison *is* the
+   finding, and clamping it to two lines would misrepresent the evidence. It
+   costs the stack a few rem; the placer pushes the cards below it down. */
+.ev { margin: 0 0 .6rem; display: grid; gap: .5rem; }
+.ev-q { border-left: 3px solid var(--rule); padding-left: .6rem; }
+.ev-q.req { border-left-color: var(--accent); }
+.ev-q.no { border-left-color: var(--no); }
+.ev-q.yes { border-left-color: var(--yes); }
+.ev-q.score { border-left-color: var(--score); }
+.ev-q.skip { border-left-color: var(--soft); }
+.ev-cap { display: flex; flex-wrap: wrap; gap: .1rem .45rem; margin: 0 0 .2rem;
+          font-size: .68rem; letter-spacing: .07em; text-transform: uppercase;
+          color: var(--soft); }
+.ev-src { font-family: var(--mono); text-transform: none; letter-spacing: 0; }
+/* pre-wrap for the same reason the document body uses it: a quote is evidence,
+   so it keeps the line breaks the checker saw. */
+.ev blockquote { margin: 0; font-family: var(--serif); font-size: .86rem;
+                 line-height: 1.5; white-space: pre-wrap; }
 .a-id { font-family: var(--mono); font-size: .7rem; font-weight: 700; color: var(--on-strong);
         border-radius: 3px; padding: .1rem .35rem; }
 .a-id.no { background: var(--no); } .a-id.yes { background: var(--yes); }
@@ -90,6 +116,9 @@ mark.active { outline: 2px solid var(--accent); outline-offset: 1px; }
 .v-no { color: var(--no); font-weight: 700; }
 .v-score { color: var(--score); font-weight: 700; }
 .v-skip { color: var(--soft); font-weight: 700; }
+/* An evidence input, not a result — no lane colour, so it can't be misread as
+   a pass or a fail. */
+.v-fact { font-weight: 600; }
 .why { color: var(--soft); font-weight: 400; }
 .a-note { font-size: .76rem; color: var(--soft); margin: .45rem 0 0; }
 
@@ -149,6 +178,9 @@ table.ledger { border-collapse: collapse; width: 100%; font-size: .84rem; min-wi
   .rail.condensed .anno:not(.expanded) .kv { display: table; }
   .rail.condensed .anno:not(.expanded) .a-note { display: block; }
   .rail.condensed .anno:not(.expanded) .a-sum { display: none; }
+  /* A quoted pair must not be split across a page: half the comparison on
+     page 3 and half on page 4 isn't the comparison. */
+  .ev, .ev-q { break-inside: avoid; }
   mark, .a-id, .verdict, .ledger th {
     -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
