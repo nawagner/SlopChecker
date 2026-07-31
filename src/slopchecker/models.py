@@ -65,6 +65,34 @@ class Verdict(StrEnum):
     unverifiable = "unverifiable"
 
 
+class EntityKind(StrEnum):
+    """Kind of named entity we look up in a public registry (#18)."""
+
+    org = "org"
+    person = "person"
+
+
+class BackgroundConfidence(StrEnum):
+    """How strongly a structured-registry hit attaches to a named entity (#18).
+
+    - ``verified``: single hit with corroborating affiliation (or a
+      registry-native unique id like an EIN or ORCID).
+    - ``probable``: name matches plus one corroborating field, but not enough
+      to be sure the record is the person or org named in the proposal.
+    - ``unverified``: produced by a lookup for its own bookkeeping — never
+      reaches a shipping report. ``BackgroundReport`` rejects it at assembly.
+
+    The ``unverified`` state exists so a lookup can enumerate ambiguous
+    matches (\"N candidates, none verified\") before deciding whether to
+    surface any of them — the invariant is *filtering happens*, not that
+    it happens early.
+    """
+
+    verified = "verified"
+    probable = "probable"
+    unverified = "unverified"
+
+
 class Span(_Model):
     """Character offsets into ``FlattenedDoc.text`` (half-open: [start, end))."""
 
@@ -217,6 +245,115 @@ class Summary(_Model):
     recommendation: str = "human_review"
 
 
+# --- Background lookups (#18) ------------------------------------------------
+#
+# Structured public-registry lookups (ProPublica / OpenAlex / ORCID) and the
+# optional open-web research pass both write into ``BackgroundReport``. Every
+# item in the report is source-linked; anything a registry couldn't
+# corroborate is either explicitly ``EntityNotFound`` or a coverage
+# ``BackgroundGap`` — silent absence would be indistinguishable from
+# "checked and clean" and is disallowed.
+
+
+class Entity(_Model):
+    """A named person or organization extracted from the proposal.
+
+    ``affiliation`` is the corroboration hook: for a person, the org they
+    claim to be with; for an org, typically unset. Common-name
+    disambiguation (\"no verified match for a person without an
+    affiliation\") is a code-level invariant enforced at the lookup site,
+    not by this model — different registries have different fields that
+    count as \"corroboration.\"
+    """
+
+    id: str
+    kind: EntityKind
+    name: str
+    affiliation: str | None = None
+    anchor: Anchor | None = None
+
+
+class BackgroundFinding(_Model):
+    """One source-linked datum about an entity from a public registry.
+
+    ``source_url`` is required — no unsourced findings. ``data`` carries
+    the raw registry fields so a human can verify the claim without
+    re-running the lookup. ``secondary_sources`` supports cross-client
+    dedup (OpenAlex + ORCID hitting the same person are one finding, not
+    two).
+    """
+
+    id: str
+    entity_id: str
+    registry: str
+    source_url: str
+    confidence: BackgroundConfidence
+    label: str | None = None
+    data: dict[str, Any] = Field(default_factory=dict)
+    secondary_sources: list[str] = Field(default_factory=list)
+
+
+class EntityNotFound(_Model):
+    """Explicit \"we looked for this entity in this registry and it isn't there.\"
+
+    Distinct from ``BackgroundGap`` (something prevented us from looking)
+    and from absence (silent — never allowed). ``query_url`` records the
+    URL we hit that returned zero results, so the negative is auditable.
+    """
+
+    entity_id: str
+    registry: str
+    query_url: str
+
+
+class BackgroundGap(_Model):
+    """Per-(entity, registry) coverage gap for the background lookups.
+
+    Distinct from ``LedgerRow``'s skipped/errored (which is per-check-run).
+    ``entity_id=None`` means the whole registry was unreachable (no key,
+    HTTP 5xx on every request, ...); a set ``entity_id`` scopes the gap
+    to one lookup that failed while others succeeded.
+    """
+
+    entity_id: str | None = None
+    registry: str
+    reason: str
+
+
+class BackgroundReport(_Model):
+    """Structured background lookups on an application's entities (#18).
+
+    Rides on ``EvidenceReport`` as an optional field so this shape can
+    ship independently of the runner integration. The open-web lane's
+    generated brief lands in ``brief_markdown``; the structured lane
+    leaves it ``None``.
+    """
+
+    entities: list[Entity] = Field(default_factory=list)
+    findings: list[BackgroundFinding] = Field(default_factory=list)
+    not_found: list[EntityNotFound] = Field(default_factory=list)
+    gaps: list[BackgroundGap] = Field(default_factory=list)
+    brief_markdown: str | None = None
+
+    @model_validator(mode="after")
+    def _referential_integrity(self) -> BackgroundReport:
+        entity_ids = {e.id for e in self.entities}
+        for f in self.findings:
+            if f.confidence is BackgroundConfidence.unverified:
+                raise ValueError(
+                    f"finding '{f.id}': unverified findings must not enter a BackgroundReport"
+                )
+            if f.entity_id not in entity_ids:
+                raise ValueError(f"finding '{f.id}': entity_id '{f.entity_id}' not in entities")
+        for nf in self.not_found:
+            if nf.entity_id not in entity_ids:
+                raise ValueError(f"not_found: entity_id '{nf.entity_id}' not in entities")
+        for g in self.gaps:
+            if g.entity_id is not None and g.entity_id not in entity_ids:
+                raise ValueError(f"gap: entity_id '{g.entity_id}' not in entities")
+        return self
+
+
 class EvidenceReport(_Model):
     """The report.json contract: everything the renderer needs, nothing else."""
 
@@ -227,6 +364,7 @@ class EvidenceReport(_Model):
     findings: list[Finding] = Field(default_factory=list)
     ledger: list[LedgerRow] = Field(default_factory=list)
     summary: Summary = Field(default_factory=Summary)
+    background: BackgroundReport | None = None
 
     def counts(self) -> dict[str, int]:
         """Summary tallies derived from the ledger (never stored)."""

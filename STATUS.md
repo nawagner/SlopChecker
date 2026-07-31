@@ -5,6 +5,49 @@ Append-only. Newest entry on top. One line per entry:
 
 ## Log
 
+- 19:10 Dan (air) — #18 structured lane Phase 1 stacked on the same PR (#127):
+  `src/slopchecker/background/` skeleton (extract + structured/base with the
+  `RegistryLookup` Protocol for the coming ProPublica/OpenAlex/ORCID clients)
+  + rules-first `extract_entities(FlattenedDoc) -> list[Entity]`. Section-
+  driven only (`PI` / `PI/Institution` / `Principal Investigator` / `Team` /
+  `Personnel` / `Investigators` / `Co-Investigators` / `Submitted by` /
+  `Applicant`) — deliberately narrow, no free-text prose extraction; the
+  failure mode #18 warns against is exactly guessing at named-person
+  claims. Department-marker filter (`Department|School|College|...`) drops
+  middle comma-parts so `Dr. Alice, Department of X, Riverbend Inst.`
+  yields `affiliation="Riverbend Inst."`, not `"Department of X"`. Every
+  Entity carries an Anchor whose quote is a verbatim substring of
+  FlattenedDoc.text (same discipline as the rest of the model). 10 new
+  tests (single-PI, multi-personnel bullets, no-PI-section → empty,
+  blog-post → empty, anchor-in-text, span-matches-quote, id uniqueness,
+  determinism, end-to-end on harness/fixtures/proposal_climate.md); full
+  suite 462 passed, ruff + mypy clean. Bundled into the Phase 0 PR because
+  Phase 1 introduces no new coordination surface (no shared-model change,
+  no checks/, no renderer) / next: Phase 2 (ProPublica client, cassette-
+  tested) once #127 merges or gets a thumbs-up; still not touching
+  checks/ until Phase 4 / blocked on nothing.
+
+- 18:55 Dan (air) — #18 structured lane Phase 0 up on `danparshall/18-structured-lookups`
+  (fresh branch off origin/main, not stacked on `danparshall/18-background-report` per
+  the split-plan). Added six new types + two StrEnums to `models.py`: `Entity`,
+  `BackgroundFinding` (`source_url` structurally required), `EntityNotFound`
+  (records the query URL that returned nothing — first-class, distinct from
+  a Gap and from silence), `BackgroundGap` (per-entity or whole-registry, with
+  a mandatory `reason`), `BackgroundReport` (model validator enforces referential
+  integrity across findings/not_found/gaps and rejects `confidence="unverified"`
+  findings — the plan's "produced and enumerated; filtered before assembly"
+  rule) plus `EntityKind` and `BackgroundConfidence`. Added
+  `EvidenceReport.background: BackgroundReport | None = None` — optional +
+  default None so `to_report_dict(exclude_none=True)` leaves existing D1
+  storage paths untouched (D1 schema tests still green). 19 new tests, full
+  suite 450 passed / 9 deselected, ruff + mypy clean. Design comments on #3
+  (shape proposal) + #18 (claim + phase order). Common-name disambiguation
+  kept as a lookup-site invariant, not a model rule — different registries
+  have different "corroboration" fields; documented for the client PRs to
+  cover / next: open the Phase 0 PR; then Phase 1 (rules-based entity
+  extraction from FlattenedDoc); will flag Nick on #8 before Phase 4 (checks/)
+  / blocked on nothing.
+
 - 14:53 Nick (claude-code) — #119 shared KV cache landed on
   `nick/119-kv-cache`. Motivation was a comment in `checks_detect.py`: *"no
   `cache_dir` — the server filesystem is ephemeral"* — **Pangram was entirely
