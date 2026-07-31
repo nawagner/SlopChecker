@@ -320,7 +320,7 @@ def _anchor(doc: FlattenedDoc, m: Match) -> Anchor:
 
 @register(
     id="tagging",
-    name="Topic, document-type, and submitter-type tags",
+    name="Topic and document-type tags",
     tier="deterministic",
     timeout_s=5.0,
 )
@@ -329,8 +329,13 @@ def tagging(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
 
     Ledger (machine-scoreable):
       - ``doc_type_confidence`` (float) — kind + matched cues in ``detail``
-      - ``submitter_type_confidence`` (float) — kind in ``detail``
       - ``topic_tags`` (int) — count of topics, names in ``detail``
+
+    Submitter type is deliberately NOT emitted (dropped 2026-07-31, Emerson):
+    on real uploads it was almost always "unknown (no supporting signal)" or
+    a weak guess — a row that never informs a decision is noise in a report
+    whose whole pitch is signal density. ``infer_submitter_type`` and its
+    taxonomy stay for when a consumer earns it.
 
     Findings (the actual categorical tags, quote-anchored where a phrase grounds
     them) carry the values in ``evidence`` so the batch summary (#20) can sort
@@ -338,7 +343,6 @@ def tagging(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
     """
     tax = load_taxonomy()
     doc_type = detect_doc_type(doc, tax)
-    submitter = infer_submitter_type(doc, tax)
     topics = tag_topics(doc, tax)
 
     ledger = [
@@ -347,12 +351,6 @@ def tagging(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
             label="Document type",
             result=round(doc_type.confidence, 2),
             detail=_detail(doc_type.kind, doc_type.matches),
-        ),
-        LedgerRow(
-            check="submitter_type_confidence",
-            label="Submitter type",
-            result=round(submitter.confidence, 2),
-            detail=_detail(submitter.kind, submitter.matches),
         ),
         LedgerRow(
             check="topic_tags",
@@ -373,17 +371,6 @@ def tagging(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
                 "signals": [m.phrase for m in doc_type.matches],
             },
             note=f"inferred document type: {doc_type.kind}",
-        ),
-        Finding(
-            id="tag-submitter-type",
-            label="Submitter type",
-            anchor=_anchor(doc, submitter.matches[0]) if submitter.matches else None,
-            evidence={
-                "kind": submitter.kind,
-                "confidence": round(submitter.confidence, 2),
-                "signals": [m.phrase for m in submitter.matches],
-            },
-            note=f"inferred submitter type: {submitter.kind} (inference — confirm before routing)",
         ),
     ]
     findings.extend(
