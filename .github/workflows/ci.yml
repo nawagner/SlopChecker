@@ -15,7 +15,10 @@ jobs:
           python-version: "3.11"
       - run: pip install -e ".[dev]"
       - run: ruff check .
-      - run: ruff format --check .
+      # Format check is scoped to the package for now. Adopting a formatter
+      # across files that predate it (scripts/) shouldn't be a side effect of
+      # this PR — widen once someone reformats those with their owner's nod.
+      - run: ruff format --check src tests
       - run: pytest
       # Non-blocking to start (#2).
       - run: mypy

@@ -45,6 +45,13 @@
   25 open issues that don't show in `git log`, because a 3-commit repo looks
   empty from the shell.
 
+- **Format check is scoped to `src tests`, not the whole repo.** After merging
+  main, `ruff format --check .` failed on `scripts/transcript_prompt.py` and
+  `scripts/upload_transcript.py` — they predate the formatter config this PR
+  adds. Reformatting them would have put a whitespace diff on etbrooking's
+  files (CLAUDE.md: heads-up first) and muddied review of the transcript
+  script specifically. Scoped instead; widen when someone reformats those.
+
 ## Left to do
 
 - Branch protection so CI is required on PRs — the one unchecked box in #2's
