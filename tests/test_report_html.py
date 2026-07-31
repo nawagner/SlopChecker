@@ -368,6 +368,132 @@ def test_clean_report_gets_ok_verdict():
     assert "No checks failed" in out
 
 
+def _rubric_report() -> dict:
+    """A report shaped like a real `rubric_budget_ceiling` violation (#145)."""
+    return {
+        "document": {
+            "file": "proposal.md",
+            "text": "## Budget\n| Line item | Amount |\n| **Total** | **$90,000** |\n",
+        },
+        "solicitation": "aldergrove-community-climate-rfp.md",
+        "findings": [
+            {
+                "id": "rubric-budget-ceiling-exceeded",
+                "label": "Budget exceeds rubric ceiling",
+                "anchor": {"quote": "| **Total** | **$90,000** |"},
+                "checks": [{"name": "rubric_budget_ceiling", "result": False}],
+                "evidence": {
+                    "rubric_file": "aldergrove-community-climate-rfp.md",
+                    "rubric_quote": (
+                        "- **Maximum award:** $75,000 total costs (direct and indirect combined)"
+                    ),
+                    "ceiling_usd": 75000.0,
+                    "budget_total_usd": 90000.0,
+                },
+            }
+        ],
+        "ledger": [
+            {
+                "check": "rubric_budget_ceiling",
+                "label": "Budget within rubric ceiling",
+                "result": False,
+                "detail": "budget total $90,000 vs ceiling $75,000",
+            }
+        ],
+    }
+
+
+def _card(html: str, fid: str) -> str:
+    return re.search(rf'<div class="anno" id="anno-{fid}".*?\n  </div>', html, re.S).group(0)
+
+
+def test_rubric_evidence_renders_both_quotes_verbatim():
+    out = render_report(_rubric_report())
+    card = _card(out, "rubric-budget-ceiling-exceeded")
+    # The funder's requirement and the proposal's line, both quoted exactly as
+    # they appear in their documents — this pair is the finding.
+    assert (
+        "<blockquote>- **Maximum award:** $75,000 total costs "
+        "(direct and indirect combined)</blockquote>" in card
+    )
+    assert "<blockquote>| **Total** | **$90,000** |</blockquote>" in card
+    # Captioned, and the requirement says which document it came from.
+    assert "The solicitation requires" in card
+    assert '<span class="ev-src">aldergrove-community-climate-rfp.md</span>' in card
+    assert "This proposal says" in card
+    # Funder side keyed to the solicitation, proposal side to the finding's lane.
+    assert '<div class="ev-q req">' in card
+    assert '<div class="ev-q no">' in card
+
+
+def test_rubric_numbers_render_as_facts_not_results():
+    card = _card(render_report(_rubric_report()), "rubric-budget-ceiling-exceeded")
+    # Formatted for a reader, and colourless: an input to the check is not a
+    # second failing check.
+    assert '<tr><td>Rubric ceiling</td><td class="v-fact">$75,000</td></tr>' in card
+    assert '<tr><td>Budget total</td><td class="v-fact">$90,000</td></tr>' in card
+    assert "75000.0" not in card
+    # The check's own result keeps its lane colour.
+    assert '<td class="v-no">NO</td>' in card
+
+
+def test_only_registered_evidence_keys_reach_the_card():
+    """Evidence is rendered by opt-in, not dumped — parse internals stay out."""
+    rep = _rubric_report()
+    rep["findings"][0]["evidence"]["parser_pass"] = "strong-cap-tier"
+    rep["findings"].append(
+        {
+            "id": "CIT1",
+            "label": "Unlinked in-text citation",
+            "anchor": {"quote": "## Budget"},
+            "checks": [{"name": "citation_has_reference", "result": False}],
+            "evidence": {"marker": "[1]", "style": "numeric", "number": 1},
+        }
+    )
+    out = render_report(rep)
+    assert "strong-cap-tier" not in _card(out, "rubric-budget-ceiling-exceeded")
+    # An unregistered evidence dict adds nothing to the card — and no quote
+    # block, since the anchor is already marked in the document beside it.
+    cit = _card(out, "cit1")
+    assert "numeric" not in cit
+    assert "<blockquote>" not in cit
+    # Nothing is lost: the full dict is still on the page, in the report.json.
+    assert "strong-cap-tier" in out
+
+
+def test_header_names_what_the_document_was_checked_against():
+    out = render_report(_rubric_report())
+    assert "Checked against: aldergrove-community-climate-rfp.md" in out
+
+
+def test_header_stays_silent_without_a_solicitation():
+    rep = _rubric_report()
+    del rep["solicitation"]
+    rep["ledger"] = [
+        {
+            "check": "rubric_budget_ceiling",
+            "label": "Budget within rubric ceiling",
+            "status": "skipped",
+            "reason": "no rubric supplied (--rubric) — not checked against a solicitation",
+        }
+    ]
+    out = render_report(rep)
+    assert "Checked against" not in out
+    # The coverage-gap row is where the negative case is stated, once.
+    assert '<td class="r skip">SKIPPED</td>' in out
+    assert "not checked against a solicitation" in out
+
+
+def test_evidence_pair_survives_condensing_and_print():
+    out = render_report(_rubric_report())
+    # The pair is not one of the things the rail hides when it condenses: a
+    # quoted comparison can't be recovered from a one-line summary.
+    assert ".anno:not(.expanded) .ev {" not in out
+    # Print keeps the pair whole on one page (the shipping artifact is a PDF).
+    print_block = out[out.index("@media print") :]
+    assert ".ev, .ev-q { break-inside: avoid; }" in print_block
+
+
 def test_render_file_writes_sibling_html(tmp_path):
     src = tmp_path / "r.json"
     src.write_text(FIXTURE.read_text("utf-8"), encoding="utf-8")

@@ -53,6 +53,10 @@ header .facts { font-family: var(--mono); font-size: .75rem; color: var(--soft);
 /* pre-wrap: the flattened text IS the evidence — line breaks the checkers
    saw (PDF text lines especially) render as the checkers saw them. */
 .doc p { margin: 0 0 1.1rem; white-space: pre-wrap; }
+/* Detected heading in extracted text (PDFs arrive with no markup at all). */
+.doc p.dh { font-family: var(--sans); font-weight: 700; font-size: .95rem;
+            letter-spacing: .01em; margin: 1.5rem 0 .5rem; }
+.doc p.dh + p { margin-top: 0; }
 .doc .pgbrk { font-family: var(--mono); font-size: .72rem; color: var(--soft);
               border-top: 1px dashed var(--rule); margin: 1.6rem 0 1.1rem;
               padding-top: .35rem; text-transform: uppercase; letter-spacing: .08em; }
@@ -78,6 +82,32 @@ mark.active { outline: 2px solid var(--accent); outline-offset: 1px; }
 .rail.condensed .anno:not(.expanded) .a-sum { display: block; }
 .rail.condensed .anno:not(.expanded) .a-head { margin-bottom: .15rem; }
 .a-head { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .45rem; }
+
+/* The evidence pair (#149): the funder's requirement above the proposal line
+   that violates it, both verbatim. Stacked, not side by side — the rail is
+   22rem and quoted lines shouldn't be re-wrapped into two narrow columns.
+   Rule colours reuse the lane tokens: accent = the solicitation's own words,
+   lane colour = the passage in the submission.
+   Deliberately absent above: a `.rail.condensed .anno:not(.expanded) .ev`
+   hide. The pair survives condensing, unlike the kv table — that table is
+   recoverable from the one-line summary, while a quoted comparison *is* the
+   finding, and clamping it to two lines would misrepresent the evidence. It
+   costs the stack a few rem; the placer pushes the cards below it down. */
+.ev { margin: 0 0 .6rem; display: grid; gap: .5rem; }
+.ev-q { border-left: 3px solid var(--rule); padding-left: .6rem; }
+.ev-q.req { border-left-color: var(--accent); }
+.ev-q.no { border-left-color: var(--no); }
+.ev-q.yes { border-left-color: var(--yes); }
+.ev-q.score { border-left-color: var(--score); }
+.ev-q.skip { border-left-color: var(--soft); }
+.ev-cap { display: flex; flex-wrap: wrap; gap: .1rem .45rem; margin: 0 0 .2rem;
+          font-size: .68rem; letter-spacing: .07em; text-transform: uppercase;
+          color: var(--soft); }
+.ev-src { font-family: var(--mono); text-transform: none; letter-spacing: 0; }
+/* pre-wrap for the same reason the document body uses it: a quote is evidence,
+   so it keeps the line breaks the checker saw. */
+.ev blockquote { margin: 0; font-family: var(--serif); font-size: .86rem;
+                 line-height: 1.5; white-space: pre-wrap; }
 .a-id { font-family: var(--mono); font-size: .7rem; font-weight: 700; color: var(--on-strong);
         border-radius: 3px; padding: .1rem .35rem; }
 .a-id.no { background: var(--no); } .a-id.yes { background: var(--yes); }
@@ -93,8 +123,19 @@ mark.active { outline: 2px solid var(--accent); outline-offset: 1px; }
 .v-no { color: var(--no); font-weight: 700; }
 .v-score { color: var(--score); font-weight: 700; }
 .v-skip { color: var(--soft); font-weight: 700; }
+/* An evidence input, not a result — no lane colour, so it can't be misread as
+   a pass or a fail. */
+.v-fact { font-weight: 600; }
 .why { color: var(--soft); font-weight: 400; }
 .a-note { font-size: .76rem; color: var(--soft); margin: .45rem 0 0; }
+
+/* Card <-> passage connection: hovering either side lights the other. */
+.anno.linked { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* A card whose quote wasn't found in the extracted text has no highlight to
+   sit beside; it stacks after the anchored cards, dashed so the difference
+   is visible at a glance. */
+.anno.unanchored { border-style: dashed; }
+.a-loose { font-size: .72rem; color: var(--soft); font-style: italic; margin: .35rem 0 0; }
 
 @media (max-width: 900px) {
   .layout { grid-template-columns: 1fr; }
@@ -144,6 +185,9 @@ table.ledger { border-collapse: collapse; width: 100%; font-size: .84rem; min-wi
   .rail.condensed .anno:not(.expanded) .kv { display: table; }
   .rail.condensed .anno:not(.expanded) .a-note { display: block; }
   .rail.condensed .anno:not(.expanded) .a-sum { display: none; }
+  /* A quoted pair must not be split across a page: half the comparison on
+     page 3 and half on page 4 isn't the comparison. */
+  .ev, .ev-q { break-inside: avoid; }
   mark, .a-id, .verdict, .ledger th {
     -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
@@ -155,9 +199,9 @@ table.ledger { border-collapse: collapse; width: 100%; font-size: .84rem; min-wi
 <header>
   <span class="name">SlopChecker</span>
   <span class="docid">proposal.pdf — “Resilient Information Ecosystems Initiative” (Meridian Policy Group)</span>
-  <span class="facts">OSF-2026-CIV-014 · 2026-07-31 · 10 checks · 41s</span>
+  <span class="facts">Checked against: OSF-2026-CIV-014 · 2026-07-31 · 10 checks · 41s</span>
 </header>
-<p class="hint">Checks appear beside the passages they refer to — click a card or highlight to expand/collapse. Red = failed a check · green = passed · indigo = detector score · gray = could not run.</p>
+<p class="hint">Checks appear beside the passages they refer to — hover either side to see what connects, click to expand/collapse. Red = failed a check · green = passed · indigo = detector score · gray = could not run.</p>
 
 <div class="layout">
 <div class="doc">
@@ -469,22 +513,32 @@ verifiable. Scores are probabilistic and never sufficient on their own.</p>
       document.querySelectorAll('mark[data-anno~="' + id + '"]'));
   }
 
-  // Place every card at its passage's height, pushing down to avoid overlap.
+  // Place every anchored card at its passage's height, pushing down to avoid
+  // overlap. Cards whose quote never landed a highlight stack after the
+  // anchored ones — at top 0 they used to pile on the first paragraph,
+  // looking connected to text they had nothing to do with.
   // Returns the bottom of the stack so the caller can detect overflow.
   function place() {
-    var items = annos.map(function (a) {
+    var anchored = [], loose = [];
+    annos.forEach(function (a) {
       var m = marksFor(a)[0];
-      return { a: a, top: m ? m.getBoundingClientRect().top - layoutEl.getBoundingClientRect().top : 0 };
-    }).sort(function (x, y) { return x.top - y.top; });
-    var prev = 0;
-    items.forEach(function (it) {
-      it.a.style.position = "absolute";
-      it.a.style.left = "0";
-      it.a.style.right = "0";
-      var t = Math.max(it.top, prev);
-      it.a.style.top = t + "px";
-      prev = t + it.a.offsetHeight + 10;
+      if (m) {
+        anchored.push({ a: a, top: m.getBoundingClientRect().top - layoutEl.getBoundingClientRect().top });
+      } else {
+        loose.push(a);
+      }
     });
+    anchored.sort(function (x, y) { return x.top - y.top; });
+    var prev = 0;
+    function put(a, top) {
+      a.style.position = "absolute";
+      a.style.left = "0";
+      a.style.right = "0";
+      a.style.top = top + "px";
+      prev = top + a.offsetHeight + 10;
+    }
+    anchored.forEach(function (it) { put(it.a, Math.max(it.top, prev)); });
+    loose.forEach(function (a) { put(a, prev); });
     return prev;
   }
 
@@ -517,17 +571,37 @@ verifiable. Scores are probabilistic and never sufficient on their own.</p>
 
   annos.forEach(function (a) {
     a.addEventListener("click", function () { toggle(a); });
+    // Hovering a card lights its passage — the "what does this refer to?"
+    // answer without a click.
+    a.addEventListener("mouseenter", function () {
+      marksFor(a).forEach(function (m) { m.classList.add("active"); });
+    });
+    a.addEventListener("mouseleave", function () {
+      if (a.classList.contains("expanded") && rail.classList.contains("condensed")) return;
+      marksFor(a).forEach(function (m) { m.classList.remove("active"); });
+    });
   });
 
-  // A mark click toggles every card it belongs to (overlapping spans).
+  function cardsFor(m) {
+    return (m.getAttribute("data-anno") || "").split(/\s+/).map(function (id) {
+      return document.getElementById("anno-" + id);
+    }).filter(Boolean);
+  }
+
   Array.prototype.slice.call(document.querySelectorAll("mark[data-anno]")).forEach(function (m) {
+    // A mark click toggles every card it belongs to (overlapping spans).
     m.addEventListener("click", function () {
-      (m.getAttribute("data-anno") || "").split(/\s+/).forEach(function (id) {
-        var a = document.getElementById("anno-" + id);
-        if (!a) return;
+      cardsFor(m).forEach(function (a) {
         toggle(a);
         if (!wide()) a.scrollIntoView({ block: "nearest", behavior: "smooth" });
       });
+    });
+    // Hovering a highlight outlines its card(s) — the other direction.
+    m.addEventListener("mouseenter", function () {
+      cardsFor(m).forEach(function (a) { a.classList.add("linked"); });
+    });
+    m.addEventListener("mouseleave", function () {
+      cardsFor(m).forEach(function (a) { a.classList.remove("linked"); });
     });
   });
 
