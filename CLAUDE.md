@@ -9,6 +9,15 @@ ask a teammate for the Google Doc link.
 If you are an AI agent reading this: these conventions are for you too, and
 several exist specifically because agents are committing here.
 
+## Team
+
+GitHub handle → name (for decoding the git log, issues, and PRs):
+
+- `nwagner` — Nick Wagner
+- `etbrooking` — Emerson Brooking
+- `danparshall` — Dan Parshall
+- (Alex, Dominique — handles to be added)
+
 ## Work against issues
 
 - A UserPromptSubmit hook (`scripts/auto_pull.py`) pulls origin/main on
