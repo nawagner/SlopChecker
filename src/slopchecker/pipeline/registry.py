@@ -43,6 +43,7 @@ CHECK_PACKAGES: tuple[str, ...] = (
     "slopchecker.pipeline.checks_rubric",
     "slopchecker.pipeline.checks_llm",
     "slopchecker.pipeline.checks_similarity",
+    "slopchecker.pipeline.checks_topics",
     "slopchecker.pipeline.claim_support",
     "slopchecker.checks",
 )
