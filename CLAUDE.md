@@ -17,7 +17,7 @@ GitHub handle → name (for decoding the git log, issues, and PRs):
 - `etbrooking` — Emerson Brooking
 - `danparshall` — Dan Parshall
 - `dvanderram` — Dominique
-- (Alex — handle to be added)
+- `990991A` — Alex
 
 ## Work against issues
 
