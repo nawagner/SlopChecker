@@ -5,6 +5,16 @@ Append-only. Newest entry on top. One line per entry:
 
 ## Log
 
+- 13:15 Dan (fable) — e2e smoke of the full chain (PDF → `slopcheck run` →
+  report.json/HTML → `render --pdf`) works, but found the PDF leg was dark
+  on every Mac: `find_browser()` had no macOS paths (PDF tests silently
+  skipped) AND Chrome ≥132 new-headless never exits after `--print-to-pdf`
+  on macOS (PDF written at 2s, browser parked at 150s+; no flag fixes it).
+  Fixed in report/pdf.py: macOS candidates + judge completion by
+  size-stable artifact then reap the browser; stderr to file not pipe
+  (same deadlock family as #49). 156 passed, 0 skipped / next: handoff for
+  formal e2e integration harness / blocked on nothing.
+
 - 13:08 Nick — did mint a bucket-scoped R2 API token for `slopchecker-docs`
   (Object Read & Write, scoped to that bucket only, not account-wide) and
   shared it with the team via secure DM / access to shared data storage is
