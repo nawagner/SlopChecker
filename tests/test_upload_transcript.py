@@ -67,9 +67,7 @@ def _make_fake_setup(tmp_path: Path) -> tuple[Path, Path, Path]:
 def _run_script(
     local: Path, transcript: Path, session_id: str = "abcdef012345", push: bool = True
 ) -> subprocess.CompletedProcess[str]:
-    payload = json.dumps(
-        {"transcript_path": str(transcript), "session_id": session_id}
-    )
+    payload = json.dumps({"transcript_path": str(transcript), "session_id": session_id})
     args = [sys.executable, str(SCRIPT)]
     if push:
         args.append("--push")
@@ -113,9 +111,9 @@ def test_pushes_to_ai_log_uploads_branch_when_branch_doesnt_exist(
     assert "ai-log-uploads" in branches, f"branch missing on remote: {branches!r}"
 
     files = _git(remote, "ls-tree", "-r", "--name-only", "ai-log-uploads").splitlines()
-    assert any(
-        f.startswith("ai-log/transcripts/") and f.endswith(".jsonl") for f in files
-    ), f"transcript not found in tree: {files}"
+    assert any(f.startswith("ai-log/transcripts/") and f.endswith(".jsonl") for f in files), (
+        f"transcript not found in tree: {files}"
+    )
 
 
 def test_pushes_appended_when_branch_already_exists(tmp_path: Path) -> None:

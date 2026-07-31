@@ -44,7 +44,9 @@ REDACTIONS = [
     re.compile(r"AKIA[0-9A-Z]{16}"),
     re.compile(r"xox[baprs]-[A-Za-z0-9\-]{10,}"),
     re.compile(r"Bearer\s+[A-Za-z0-9\-._~+/]{20,}"),
-    re.compile(r"(?i)(api[_-]?key|secret|password|token)([\"'\\\s]*[:=][\"'\\\s]*)[A-Za-z0-9\-._]{16,}"),
+    re.compile(
+        r"(?i)(api[_-]?key|secret|password|token)([\"'\\\s]*[:=][\"'\\\s]*)[A-Za-z0-9\-._]{16,}"
+    ),
 ]
 
 UPLOAD_BRANCH = "ai-log-uploads"
@@ -62,9 +64,7 @@ def scrub(text: str) -> str:
 
 
 def git(*args: str) -> str:
-    out = subprocess.run(
-        ["git", *args], capture_output=True, text=True, timeout=60
-    )
+    out = subprocess.run(["git", *args], capture_output=True, text=True, timeout=60)
     return out.stdout.strip()
 
 
@@ -76,9 +76,7 @@ def enabled(root: Path) -> bool:
     return pref.is_file() and pref.read_text().strip() == "1"
 
 
-def push_to_ai_log_uploads(
-    root: Path, dest: Path, rel_path: str, message: str
-) -> None:
+def push_to_ai_log_uploads(root: Path, dest: Path, rel_path: str, message: str) -> None:
     """Commit ``dest`` at ``rel_path`` on ``ai-log-uploads`` and push it.
 
     Uses git plumbing so the current HEAD, index, and working tree are
@@ -180,8 +178,7 @@ def _mark_failed(marker: Path, err: str) -> None:
     try:
         marker.parent.mkdir(parents=True, exist_ok=True)
         marker.write_text(
-            f"Transcript upload failed after {PUSH_ATTEMPTS} attempt(s).\n"
-            f"Last error:\n{err}\n"
+            f"Transcript upload failed after {PUSH_ATTEMPTS} attempt(s).\nLast error:\n{err}\n"
         )
     except Exception:
         pass
