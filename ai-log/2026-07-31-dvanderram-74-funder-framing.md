@@ -92,9 +92,63 @@ narrow layouts.
 ## Left
 
 - Privacy/retention line, once #23 decides it.
-- Citation, quote, and Pangram modules exist but aren't registered as checks,
-  so an upload today returns `has_text`, `word_count`, and `tagging` only. The
-  page describes the intended feature set; #7–#11 need to land before a funder
-  trying it sees citation findings.
+
+### Correction to an earlier claim in this log
+
+I first wrote that only `has_text`, `word_count`, and `tagging` were registered,
+so citation checks weren't live. **That was wrong** — a grep artifact. Those
+modules register with `id=CHECK_ID` module constants, not string literals, so a
+search for `id="..."` missed them. Verified against the live API instead of the
+source: eight checks are registered and running — `all_dois_resolve`,
+`all_urls_resolve`, `citation_identifiers_valid`, `metadata_match`,
+`claim_supported`, `has_text`, `word_count`, `tagging`. (`doi_resolves` in
+`registry.py` is a docstring example, not a real registration.)
+
+So #8, #9 and #11 are live. What's actually still missing: quote-in-source
+(#10, on Dan's unmerged `danparshall/10-fetchers`), Pangram as a registered
+check (#12 — `detect/pangram.py` has no `@register`, and it produces no ledger
+row on a live run), similarity (#14), compliance (#16), budget (#17), and
+background reports (#18).
+
+### Demo-critical findings from live-API runs (not landing-page bugs)
+
+Ran the #22 fixture corpus through `slop-checker.com/api/check` to generate
+real sample reports. Four things surfaced that belong to other people's
+modules:
+
+1. **PDF and Markdown uploads skip every citation check** — ledger reason "no
+   reference list found in the document". DOCX and HTML detect it fine (9
+   identifiers on the same document). Alex flagged the underlying cause on #90
+   and #22: the PDF loader does no heading detection, so `sections=0`. A funder
+   uploading a PDF — the format they will actually use — currently gets zero
+   citation findings. Worth raising against #4/#25 before demo day.
+2. **`metadata_match` skips on every fixture** — "no canonical record for any
+   of N identifier(s) — outside our metadata providers' coverage". That check is
+   the only one that catches the `wrong_paper` defect (real, resolving DOI
+   attributed to the wrong paper), so the corpus's most interesting case
+   currently passes clean.
+3. **`claim_supported` never evaluates** — "no citations with resolved
+   references" on every fixture, so `overclaims` isn't caught either.
+4. **Real DOIs frequently 403.** On the clean `human` fixture all three DOIs
+   came back "blocked or paywalled", so a clean document reports as
+   unverifiable rather than as passing.
+
+Net effect for sample cases: of five candidates I generated, only
+`grant_application__fabricated_citations` produces a report that demonstrates
+the tool working (`all_dois_resolve = false`, 3/9 not found, while
+`citation_identifiers_valid = true` at 9/9 well-formed — precisely the "looks
+perfect, isn't real" story). The other four show the tool missing their planted
+defect. Sample-case selection is parked on Dominique's call rather than shipping
+reports that undersell or misrepresent.
+
+### R2 contents (checked, since sample cases were expected there)
+
+The bucket holds 11 objects and is not a case library: `fixtures/proposal_climate.pdf`
+(one proposal), `rubrics/synthetic/` (3 RFP/rubric docs, md+pdf — Emerson's #90),
+and `unimelb/` (the UniMelb grant-applications CSV dataset + zip). The actual
+case variety is in-repo at `tests/fixtures/synthetic/` — 126 documents, 19
+rendered cases across 4 formats, with planted defects: fabricated citations (12),
+mismatched citations (10), overclaims (11), near-duplicates (6), budget math (3),
+budget inflated (3), missing methods (2).
 - `demo-report.html` still carries the old warm palette — it will look like a
   different product next to the new landing page. Worth a follow-up pass.
