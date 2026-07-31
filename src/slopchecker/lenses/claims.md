@@ -1,7 +1,7 @@
 ---
 id: claims
 issue: 13
-version: 0.1
+version: 0.2
 output: json
 ---
 
@@ -54,8 +54,14 @@ Rules — all of them are hard constraints:
 5. `citation` is the reference marker attached to the claim in the text
    (e.g. `[4]`), or null when the text attaches none. Never infer or
    invent a citation; if the sentence has no marker, the value is null.
-6. Do not assess truth, achievability, or quality. Extraction only.
-7. Output exactly one JSON object matching the Output format section.
+6. `needs_source` is true only when the claim asserts something about
+   the world outside the proposal — prior findings, statistics, the
+   state of the art, third-party facts — that a careful reviewer would
+   expect a citation for. The applicant's own commitments (their
+   budget, deliverables, timeline, team, plans) are theirs to make:
+   `needs_source` is false however many numbers they contain.
+7. Do not assess truth, achievability, or quality. Extraction only.
+8. Output exactly one JSON object matching the Output format section.
    No commentary, no markdown fences, no fields beyond the schema.
 
 ## Output format
@@ -71,7 +77,8 @@ One JSON object with a single `claims` array. Each claim:
       "page": 1,
       "quote": "verbatim contiguous substring of the document text",
       "quantitative": true,
-      "citation": "[4]"
+      "citation": "[4]",
+      "needs_source": true
     }
   ]
 }
@@ -82,6 +89,11 @@ Field notes:
 - `id` — `CL1`, `CL2`, ... in document order. Stable across runs on the
   same document because ordering follows the text.
 - `citation` — string ref marker or `null`.
+- `needs_source` — the lens's judgment call (rule 6). This moved INTO
+  the LLM on 2026-07-31: the mechanical `quantitative && uncited` flag
+  misfired constantly on budget lines and deliverable counts — an
+  applicant's own $429,401 total is not a claim about the world that
+  needs a footnote.
 - No free-text fields. The quote is the claim's evidence; anything the
   reader needs beyond that lives in the renderer, not here.
 
@@ -89,8 +101,10 @@ Field notes:
 
 The pipeline converts each **flagged** claim into a `Finding`
 deterministically — no LLM involved in the mapping. A claim is flagged
-when `quantitative && citation == null` (the unsourced-quantitative
-case, acceptance criterion on #13). Unflagged claims produce **no
+when `quantitative && needs_source && citation == null` (an empirical
+number with no source — the case #13's acceptance criterion is about).
+A missing `needs_source` defaults to false: a misfire in this lane
+costs more credibility than a miss. Unflagged claims produce **no
 Finding** and never appear in the report: attributes like "is this
 quantitative?" are descriptions, not checks, and encoding them as
 pass/fail booleans painted every claim as a failure in the rendered
@@ -119,7 +133,7 @@ the flagged subset.
 The information environment confronting democratic institutions has degraded at a pace that outstrips the capacity of existing civil-society infrastructure to respond. Recent scholarship demonstrates that coordinated inauthentic behavior now shifts measurable public-opinion outcomes in as little as seventy-two hours [1]. As Starbird and colleagues observe, “the velocity of synthetic narratives has rendered traditional fact-checking architectures functionally obsolete” [2]. Our initiative responds directly to this crisis.
 
 [[page 2]]
-Our approach leverages a holistic, multi-stakeholder framework designed to foster synergies across the information resilience landscape. By convening diverse voices and harnessing cutting-edge methodologies, we will unlock transformative capacity at the intersection of technology and civil society. The program builds on findings that prebunking interventions achieve durable attitudinal inoculation across all demographic cohorts [3], and that media-literacy training reduces susceptibility to manipulated content by up to 64 percent [4].
+Our approach leverages a holistic, multi-stakeholder framework designed to foster synergies across the information resilience landscape. By convening diverse voices and harnessing cutting-edge methodologies, we will unlock transformative capacity at the intersection of technology and civil society. The program builds on findings that prebunking interventions achieve durable attitudinal inoculation across all demographic cohorts [3], and that media-literacy training reduces susceptibility to manipulated content by up to 64 percent [4]. Independent assessments find that 78 percent of local newsrooms lack any dedicated verification staff.
 
 Meridian will deliver twelve regional trainings, a 40-country monitoring network, a peer-reviewed evaluation study, and an open-source detection toolkit within the first grant year, at a total cost of $148,000.
 ```
@@ -135,7 +149,8 @@ Meridian will deliver twelve regional trainings, a 40-country monitoring network
       "page": 1,
       "quote": "coordinated inauthentic behavior now shifts measurable public-opinion outcomes in as little as seventy-two hours",
       "quantitative": true,
-      "citation": "[1]"
+      "citation": "[1]",
+      "needs_source": true
     },
     {
       "id": "CL2",
@@ -143,7 +158,8 @@ Meridian will deliver twelve regional trainings, a 40-country monitoring network
       "page": 1,
       "quote": "“the velocity of synthetic narratives has rendered traditional fact-checking architectures functionally obsolete”",
       "quantitative": false,
-      "citation": "[2]"
+      "citation": "[2]",
+      "needs_source": true
     },
     {
       "id": "CL3",
@@ -151,7 +167,8 @@ Meridian will deliver twelve regional trainings, a 40-country monitoring network
       "page": 2,
       "quote": "prebunking interventions achieve durable attitudinal inoculation across all demographic cohorts",
       "quantitative": false,
-      "citation": "[3]"
+      "citation": "[3]",
+      "needs_source": true
     },
     {
       "id": "CL4",
@@ -159,23 +176,35 @@ Meridian will deliver twelve regional trainings, a 40-country monitoring network
       "page": 2,
       "quote": "media-literacy training reduces susceptibility to manipulated content by up to 64 percent",
       "quantitative": true,
-      "citation": "[4]"
+      "citation": "[4]",
+      "needs_source": true
     },
     {
       "id": "CL5",
+      "type": "prior-work",
+      "page": 2,
+      "quote": "Independent assessments find that 78 percent of local newsrooms lack any dedicated verification staff.",
+      "quantitative": true,
+      "citation": null,
+      "needs_source": true
+    },
+    {
+      "id": "CL6",
       "type": "outcome",
       "page": 2,
       "quote": "Meridian will deliver twelve regional trainings, a 40-country monitoring network, a peer-reviewed evaluation study, and an open-source detection toolkit within the first grant year, at a total cost of $148,000.",
       "quantitative": true,
-      "citation": null
+      "citation": null,
+      "needs_source": false
     },
     {
-      "id": "CL6",
+      "id": "CL7",
       "type": "timeline",
       "page": 2,
       "quote": "within the first grant year",
       "quantitative": false,
-      "citation": null
+      "citation": null,
+      "needs_source": false
     }
   ]
 }
@@ -186,11 +215,15 @@ authors — not part of the prompt payload):
 
 - The vague framework sentence on page 2 ("holistic, multi-stakeholder
   framework...") yields no claim: aspiration, not load-bearing.
-- CL5 is the demo case — a quantitative promise (twelve trainings,
-  40 countries, $148,000) with no citation. `citation` stays null;
-  nothing is invented. Downstream this is the only claim here that
-  becomes a Finding ("Unsourced quantitative claim").
-- CL5 and CL6 come from the same sentence: one `outcome` for the
+- CL5 is the demo case — an empirical statistic ("78 percent of local
+  newsrooms") with no citation and `needs_source: true`. Downstream it
+  is the only claim here that becomes a Finding ("Unsourced
+  quantitative claim").
+- CL6 shows the judgment that moved into the lens: a quantitative
+  promise (twelve trainings, 40 countries, $148,000) with no citation —
+  but it is the applicant's own commitment, so `needs_source` is false
+  and it is NOT flagged. This exact line was the flag's worst misfire.
+- CL6 and CL7 come from the same sentence: one `outcome` for the
   deliverables, one `timeline` for the delivery window, each with the
   smallest span that carries it.
 - CL2 keeps the curly quotation marks exactly as they appear in the
