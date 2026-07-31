@@ -40,6 +40,7 @@ Ground rules baked into the types:
 | `findings` | `list[Finding]` | Quote-anchored evidence cards |
 | `ledger` | `list[LedgerRow]` | Document-level all-checks table |
 | `summary` | `Summary` | Recommendation (always advisory) |
+| `background` | `BackgroundReport?` | Structured background lookups on named entities (#18); absent by default |
 
 Methods: `counts()` derives `passed/failed/scores/skipped/errored` tallies
 from the ledger (never stored — Emerson's rule on #3). `to_report_dict()`
@@ -125,6 +126,79 @@ Registry entry so the orchestrator can budget and gate.
 | `tier` | `"deterministic" \| "api" \| "llm"` | The deterministic tier must run with no LLM at all |
 | `est_cost_usd` | `float` (default 0) | Estimated cost per run |
 | `needs_network` | `bool` (default false) | Skip offline |
+
+### `BackgroundReport` and its members (#18)
+
+Structured public-registry lookups (ProPublica / OpenAlex / ORCID) plus the
+optional open-web research pass both write into `BackgroundReport`. Rides on
+`EvidenceReport.background` — optional, absent by default.
+
+Every entry is source-linked. Anything that couldn't be corroborated is
+either an explicit `EntityNotFound` (registry checked, nothing there) or a
+`BackgroundGap` (couldn't check) — silent absence is disallowed, because it
+would be indistinguishable from "checked and clean."
+
+#### `BackgroundReport`
+
+| Field | Type | Meaning |
+|---|---|---|
+| `entities` | `list[Entity]` | Named entities extracted from the proposal (people, orgs) |
+| `findings` | `list[BackgroundFinding]` | Source-linked registry hits — every one carries a `source_url` |
+| `not_found` | `list[EntityNotFound]` | Registry returned nothing — first-class outcome, not silence |
+| `gaps` | `list[BackgroundGap]` | Coverage gaps per (entity, registry) — HTTP failures, no key, etc. |
+| `brief_markdown` | `str?` | Populated only by the open-web lane; structured lane leaves it `None` |
+
+Invariants enforced at construction time:
+
+- Every `finding.entity_id` / `not_found.entity_id` / `gap.entity_id` (when set) resolves to an `Entity.id` in the same report.
+- No finding may have `confidence="unverified"` — that state exists for the lookup layer's own bookkeeping and is filtered before report assembly.
+
+#### `Entity`
+
+| Field | Type | Meaning |
+|---|---|---|
+| `id` | `str` | Stable id used by `BackgroundFinding.entity_id` |
+| `kind` | `"org" \| "person"` (`EntityKind`) | What sort of thing we're looking up |
+| `name` | `str` | Human-readable name as it appears in the proposal |
+| `affiliation` | `str?` | Corroboration hook (org for a person; typically unset for orgs). Common-name disambiguation ("no verified match for a person without an affiliation") is a code-level invariant enforced at the lookup site, not by this model |
+| `anchor` | `Anchor?` | Where in `FlattenedDoc.text` the entity was mentioned |
+
+#### `BackgroundFinding`
+
+| Field | Type | Meaning |
+|---|---|---|
+| `id` | `str` | Short id for the finding |
+| `entity_id` | `str` | Must resolve to an `Entity.id` in the same report |
+| `registry` | `str` | Source registry (`"propublica"`, `"openalex"`, `"orcid"`, ...) |
+| `source_url` | `str` | Required — link to the specific record. No unsourced findings |
+| `confidence` | `"verified" \| "probable" \| "unverified"` (`BackgroundConfidence`) | See below. `"unverified"` never enters a report |
+| `label` | `str?` | Short human-readable claim (`"501(c)(3) since 2011"`) |
+| `data` | `dict` | Raw registry fields so a human can verify without re-running the lookup |
+| `secondary_sources` | `list[str]` | Cross-client dedup — OpenAlex + ORCID hitting the same person become one finding, not two |
+
+`BackgroundConfidence`:
+
+- `verified` — single hit plus corroborating affiliation (or a registry-native unique id like an EIN or ORCID).
+- `probable` — name matches plus one corroborating field, not enough to be sure.
+- `unverified` — a lookup produced it, but it isn't allowed to enter a `BackgroundReport`. The state exists so a client can enumerate ambiguous matches before deciding what to surface; the invariant is *filtering happens*, not that it happens early.
+
+#### `EntityNotFound`
+
+| Field | Type | Meaning |
+|---|---|---|
+| `entity_id` | `str` | Which entity we looked up |
+| `registry` | `str` | Where we looked |
+| `query_url` | `str` | The URL we hit that returned zero results — evidence for the negative |
+
+#### `BackgroundGap`
+
+| Field | Type | Meaning |
+|---|---|---|
+| `entity_id` | `str?` | Set = per-entity gap; `None` = whole-registry gap (no key, network down, ...) |
+| `registry` | `str` | Which registry |
+| `reason` | `str` | Required. `"HTTP 503"`, `"PROPUBLICA_API_KEY not set"`, etc. |
+
+Distinct from `LedgerRow`'s `skipped`/`errored`: `LedgerRow` reports per-check-run; `BackgroundGap` reports per-(entity, registry).
 
 ### `RunInfo` and `Summary`
 
