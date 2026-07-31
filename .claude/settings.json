@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/upload_transcript.py 2>/dev/null || python scripts/upload_transcript.py"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/upload_transcript.py --push 2>/dev/null || python scripts/upload_transcript.py --push"
+          }
+        ]
+      }
+    ]
+  }
+}
