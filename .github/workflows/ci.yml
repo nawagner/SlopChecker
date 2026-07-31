@@ -103,21 +103,21 @@ jobs:
           enable-cache: true
           cache-dependency-glob: pyproject.toml
       - run: uv pip install --system -e ".[web,dev,pdf,docx,similarity,harness]"
-      # -n 4, and only here. The unit suite is CPU-bound (~85% utilisation),
-      # where xdist worker startup eats the gain — that call still stands. This
-      # suite is the opposite: 24 tests, ~10% CPU, all of it waiting on four
-      # third-party hosts, so workers overlap the waiting.
+      # NOT parallelised, and the measurement is why. Locally xdist looked
+      # like a clear win (serial 17.7s -> 10.5s at -n 4), so #143 shipped
+      # `-n 4` to CI — where it came back 15s against 14s serial. No gain,
+      # and it puts four concurrent workers against doi.org/Crossref/OpenAlex
+      # /arXiv for nothing.
       #
-      # 4 is measured, not guessed. Serial 17.7s; n=2 13.5s; n=3 11.7s;
-      # n=4 10.5s; n=6 12.5s; n=8 12.4s. It gets *worse* past 4, which is what
-      # politeness limits and connection contention look like — so treat 4 as a
-      # ceiling, not a starting point, and re-measure before raising it.
+      # The reason is the same one that made #132 look urgent: this sandbox
+      # reaches those hosts through a slow proxy, so locally the suite is
+      # network-bound and workers overlap the waiting. On a GitHub runner the
+      # network is fast enough that the suite isn't waiting much, and xdist's
+      # worker startup is pure overhead.
       #
-      # --dist load (the default) on purpose: every live test is in one file,
-      # so --dist loadfile would pin them all to a single worker and buy
-      # nothing. The module-scoped fixtures get rebuilt per worker as a result;
-      # that duplication is already priced into the 10.5s.
-      - run: pytest -m live -n 4
+      # Don't re-add it on the strength of a local benchmark. Measure on the
+      # runner.
+      - run: pytest -m live
 
   # The D1 report store lives in worker/ and needs Node, so it gets its own
   # job rather than bolting onto `test`. Two things NOT to do here, both of

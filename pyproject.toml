@@ -24,10 +24,7 @@ web = ["fastapi>=0.115", "uvicorn>=0.30", "python-multipart>=0.0.9"]
 harness = ["pyyaml>=6.0"]
 # Corpus similarity check (#14): MinHash + LSH for near-duplicate detection.
 similarity = ["datasketch>=1.6"]
-# pytest-xdist is for the `live` suite only (network-bound, -n 4 in CI).
-# The unit suite stays serial — it is CPU-bound, so workers cost more
-# than they save (#114, #143).
-dev = ["ruff>=0.5", "pytest>=8.2", "mypy>=1.10", "pytest-xdist>=3.6"]
+dev = ["ruff>=0.5", "pytest>=8.2", "mypy>=1.10"]
 
 [project.scripts]
 slopcheck = "slopchecker.cli:main"
