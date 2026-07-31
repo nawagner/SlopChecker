@@ -7,6 +7,16 @@ Append-only. Newest entry on top. One line per entry:
 
 - 15:31 Dan (claude-code) — added GH-handle → name map to CLAUDE.md, PR #41 (3 of 5 team members named — Alex + Dominique's handles later); also opened #37 (retry ladder + cross-provider failover, pattern from tls-review-shared) / next: continuing tls-review-shared reference review, planning pat-helper harness port for #29 / blocked on nothing.
 
+- 11:39 Nick — did put slop-checker.com live on the Worker (custom domain
+  route, already a Cloudflare zone with clean DNS, no registrar step
+  needed) / did connect Cloudflare's native Git integration to the existing
+  slopchecker-web Worker (root directory worker/, main → production,
+  other branches → preview deploys) instead of a bespoke GitHub Actions
+  pipeline — avoids ever handling a Cloudflare API token as a secret,
+  Cloudflare's GitHub App generates its own scoped token / next: nothing
+  blocking, `*.workers.dev` still occasionally 404s per Cloudflare's own
+  "shared infra, not for production" guidance — cosmetic, the real domain
+  is solid / blocked on nothing.
 - 11:20 Emerson (claude-code) — PDF output landed (`slopcheck render --pdf`, headless Chrome/Edge print, no new deps); took over `report/` module ownership (Alex not tracking it — confirmed in person), further iteration hands to Dominique / next: demo scenario #25 / blocked on nothing
 
 - 11:17 Nick — did deploy the Cloudflare Worker for real
