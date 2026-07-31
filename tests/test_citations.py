@@ -226,3 +226,46 @@ def test_fixture_reference_fields_match_labels(name: str):
             assert r.doi == gr["doi"]
         if "arxiv_id" in gr:
             assert r.arxiv_id == gr["arxiv_id"]
+
+
+# ---------------------------------------------------------------------------
+# CRLF line endings (#7, found while red-green testing #8/#9)
+#
+# ingest.normalize() strips CRLF before any loader builds a FlattenedDoc, so
+# the CLI and web paths were never affected. But extract_citations() is a
+# public entry point, and a caller handing it raw Windows-authored text got
+# zero references back with no signal that anything had gone wrong — the
+# heading regex's `$` matches before \n without consuming the preceding \r.
+# ---------------------------------------------------------------------------
+
+CRLF_DOC = (
+    "Prebunking achieves durable inoculation [1]. A second claim follows [2].\r\n"
+    "\r\n"
+    "References\r\n"
+    "\r\n"
+    "[1] Smith, J. (2020). A Title. A Venue. doi:10.1234/one\r\n"
+    "\r\n"
+    "[2] Jones, A. (2021). Another Title. Venue Two. doi:10.1234/two\r\n"
+)
+
+
+def test_crlf_document_parses_identically_to_lf():
+    crlf = extract_citations(CRLF_DOC)
+    lf = extract_citations(CRLF_DOC.replace("\r\n", "\n"))
+
+    assert len(crlf.references) == len(lf.references) == 2
+    assert [r.key for r in crlf.references] == [r.key for r in lf.references]
+    assert [r.doi for r in crlf.references] == [r.doi for r in lf.references]
+    assert [r.year for r in crlf.references] == [r.year for r in lf.references]
+    assert len(crlf.mentions) == len(lf.mentions) == 2
+    assert all(c.reference is not None for c in crlf.citations)
+
+
+def test_crlf_spans_index_the_text_the_caller_passed():
+    """The fix tolerates \\r in the patterns rather than rewriting the text —
+    rewriting would shift every offset out from under the caller's spans."""
+    extraction = extract_citations(CRLF_DOC)
+    for ref in extraction.references:
+        assert CRLF_DOC[ref.span.start : ref.span.end].startswith("[")
+    for mention in extraction.mentions:
+        assert CRLF_DOC[mention.span.start : mention.span.end] == mention.marker

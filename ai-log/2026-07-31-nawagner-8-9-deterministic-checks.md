@@ -179,11 +179,27 @@ bad ISBN checksum is *still* reported", "'non' must not match inside
 
 - **`pipeline/citations/references.py` (#7, Dan):** `_HEADING_RE` ends
   `[ \t]*:?[ \t]*$` under `re.MULTILINE`, and Python's `$` doesn't consume a
-  preceding `\r`. A CRLF document — i.e. anything authored on Windows, which
-  is a lot of grant proposals — never matches the heading, so
-  `find_reference_region` returns None and **all four of my checks report "no
-  reference list found"** on a document that plainly has one. High impact,
-  one-character fix, but it's their module and their fixture P/R numbers.
+  preceding `\r`, so a CRLF heading line never matches and
+  `find_reference_region` returns None.
+
+  **CORRECTION — I initially reported this as high-impact and I was wrong.**
+  I claimed a Windows-authored proposal would get four false "no reference
+  list" rows. It won't: `ingest.normalize()` (`ingest/util.py`) strips CRLF
+  and every one of the five loaders calls it, with offsets computed after
+  normalization by design. Verified end to end — a CRLF file through
+  `ingest()` parses its references correctly. The real defect is narrower:
+  `extract_citations()` is a public entry point that returns zero references,
+  silently, for raw CRLF text. A trap for the next caller, not a live product
+  bug. I checked the loaders only *after* filing, which is backwards.
+
+  Fixed in this branch anyway (with Nick's go-ahead, since it's Dan's
+  module): `\r` added to the trailing character classes in `_HEADING_RE` and
+  the paragraph-split patterns. Deliberately **not** normalizing the text
+  inside the parser — that would shift every offset out from under the
+  caller's spans, silently corrupting anchors. Tolerating `\r` in the
+  patterns leaves the caller's text untouched. `intext.py` needed no change:
+  its `\n\n` paragraph-bound lookups miss under CRLF but degrade to sentence
+  bounds, which is the right answer anyway. Tests in `tests/test_citations.py`.
 - **`checks/tagging.py` (#15, Alex):** registered id is `tagging`, but the
   ledger rows are emitted as `doc_type_confidence`, `submitter_type_confidence`
   and `topic_tags`, so those rows don't trace back to a registry entry the way

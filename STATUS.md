@@ -64,6 +64,20 @@ Append-only. Newest entry on top. One line per entry:
   size-stable artifact then reap the browser; stderr to file not pipe
   (same deadlock family as #49). 156 passed, 0 skipped / next: handoff for
   formal e2e integration harness / blocked on nothing.
+- 18:06 Nick (claude-code) — CORRECTION to 17:52 on the #7 CRLF bug: I called
+  it high-impact ("all four checks report no reference list on anything
+  authored on Windows") and that was wrong — `ingest.normalize()` strips CRLF
+  and all five loaders call it, so the CLI and web paths were never affected;
+  verified a CRLF file end-to-end through `ingest()` parses fine. Real defect
+  is narrower: `extract_citations()` returns zero references silently for raw
+  CRLF text, which is a trap for a direct caller, not a live product bug. I
+  checked the loaders after filing rather than before. Fixed it on the #80
+  branch anyway with Dan's module in mind — `\r` added to the trailing
+  classes in `_HEADING_RE` and the paragraph-split patterns, deliberately NOT
+  normalizing inside the parser since that would shift offsets out from under
+  the caller's spans; `intext.py` needed nothing; tests in test_citations.py,
+  322 green / next: still needs a human to kick CI on #80 / blocked on that.
+
 - 17:52 Nick (claude-code) — ran an independent red-green pass over #8/#9
   before merge: four subagents given only the acceptance criteria + CLAUDE.md
   invariants (not my implementation's reasoning) wrote failing tests from the
