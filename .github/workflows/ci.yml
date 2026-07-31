@@ -13,7 +13,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install -e ".[web,dev]"
+      - run: pip install -e ".[web,dev,pdf,docx]"
       - run: ruff check .
       # Format check is scoped to the package for now. Adopting a formatter
       # across files that predate it (scripts/) shouldn't be a side effect of
