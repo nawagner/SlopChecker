@@ -126,6 +126,44 @@ def test_missing_taxonomy_file_raises_not_silently_ignored(monkeypatch):
         load_taxonomy()
 
 
+def test_string_value_instead_of_list_fails_loudly(tmp_path, monkeypatch):
+    # A bare string would otherwise iterate into single characters and match
+    # nearly everything — must raise, not silently corrupt the vocabulary.
+    bad = tmp_path / "bad.toml"
+    bad.write_text('[topics]\nhousing = "zoning"\n')
+    monkeypatch.setenv("SLOPCHECKER_TAXONOMY", str(bad))
+    with pytest.raises(ValueError, match=r"\[topics\].housing must be a list"):
+        load_taxonomy()
+
+
+@pytest.mark.parametrize(
+    "text, embedded_in",
+    [
+        ("gridlock in congress delayed the vote", "gridlock"),  # not energy ('grid')
+        ("the computer science department", "computer"),  # not ai ('compute')
+        ("the energetic crowd cheered", "energetic"),  # not energy ('energy')
+    ],
+)
+def test_substring_false_positives_are_not_tagged(text, embedded_in):
+    from slopchecker.models import FlattenedDoc
+
+    assert tag_topics(FlattenedDoc(file="x.txt", text=text)) == [], (
+        f"token matched inside '{embedded_in}' — needs whole-word boundaries"
+    )
+
+
+def test_whole_words_and_punctuated_phrases_still_match():
+    from slopchecker.models import FlattenedDoc
+
+    # Standalone tokens match...
+    assert [h.topic for h in tag_topics(FlattenedDoc(file="a.txt", text="the power grid"))] == [
+        "energy"
+    ]
+    # ...and punctuated submitter phrases (parens, dots) survive boundary matching.
+    ngo = FlattenedDoc(file="b.txt", text="Acme Research, a 501(c)(3) nonprofit.")
+    assert infer_submitter_type(ngo).kind == "nonprofit"
+
+
 def test_default_matches_shipped_example_shape():
     assert set(DEFAULT_TAXONOMY) == {"topics", "doc_types", "submitter_types"}
 

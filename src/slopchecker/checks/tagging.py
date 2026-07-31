@@ -36,6 +36,7 @@ import os
 import re
 import tomllib
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 
 from slopchecker.models import Anchor, Finding, FlattenedDoc, LedgerRow, Span
@@ -153,41 +154,58 @@ def load_taxonomy(path: str | os.PathLike[str] | None = None) -> dict[str, dict[
         return DEFAULT_TAXONOMY
     with Path(source).open("rb") as fh:
         loaded = tomllib.load(fh)
-    # Keep only the sections we understand, and coerce shape so a typo'd file
-    # fails here rather than deep inside a matcher.
-    return {
-        section: {str(k): [str(p) for p in v] for k, v in loaded.get(section, {}).items()}
-        for section in ("topics", "doc_types", "submitter_types")
-    }
+    # Keep only the sections we understand, validating shape so a typo'd file
+    # fails here rather than deep inside a matcher. A value must be a list of
+    # phrases: a bare string ("zoning" instead of ["zoning"]) would otherwise
+    # iterate into single characters and match nearly every document — silently.
+    result: dict[str, dict[str, list[str]]] = {}
+    for section in ("topics", "doc_types", "submitter_types"):
+        entries = loaded.get(section, {})
+        parsed: dict[str, list[str]] = {}
+        for key, value in entries.items():
+            if not isinstance(value, list):
+                raise ValueError(
+                    f"taxonomy [{section}].{key} must be a list of phrases, "
+                    f"got {type(value).__name__} ({value!r})"
+                )
+            parsed[str(key)] = [str(phrase) for phrase in value]
+        result[section] = parsed
+    return result
 
 
 # --- matching ---------------------------------------------------------------
 
 
-def _find_matches(text: str, lowered: str, phrases: list[str]) -> list[Match]:
-    """First verbatim occurrence of each phrase, case-insensitive, in order.
+@lru_cache(maxsize=2048)
+def _phrase_re(phrase: str) -> re.Pattern[str]:
+    """Case-insensitive, whole-token match for ``phrase``.
 
-    Matches against a pre-lowered copy of ``text`` (so callers lower once) but
-    slices the quote from the original so the anchor is verbatim, preserving the
-    document's own casing for the reviewer.
+    Boundaries are alphanumeric-based rather than ``\\b`` so punctuated phrases
+    ("501(c)(3)", "inc.", "dual-use research") behave, while a token can't match
+    inside a larger word: "grid" won't fire on "gridlock", "compute" won't fire
+    on "computer". Cached because ``applies_to`` may run the detectors per check.
+    """
+    return re.compile(rf"(?<![A-Za-z0-9]){re.escape(phrase)}(?![A-Za-z0-9])", re.IGNORECASE)
+
+
+def _find_matches(text: str, phrases: list[str]) -> list[Match]:
+    """First whole-token occurrence of each phrase, case-insensitive, in order.
+
+    The quote is sliced from the original text so the anchor is verbatim,
+    preserving the document's own casing for the reviewer.
     """
     found: list[Match] = []
     for phrase in phrases:
-        idx = lowered.find(phrase.lower())
-        if idx != -1:
+        m = _phrase_re(phrase).search(text)
+        if m is not None:
             found.append(
-                Match(
-                    phrase=phrase.lower(),
-                    quote=text[idx : idx + len(phrase)],
-                    start=idx,
-                    end=idx + len(phrase),
-                )
+                Match(phrase=phrase.lower(), quote=m.group(0), start=m.start(), end=m.end())
             )
     return found
 
 
 def _best_category(
-    text: str, lowered: str, categories: dict[str, list[str]], fallback: str
+    text: str, categories: dict[str, list[str]], fallback: str
 ) -> tuple[str, float, list[Match]]:
     """Score each category by distinct phrase hits; return the winner.
 
@@ -200,7 +218,7 @@ def _best_category(
     for kind, phrases in categories.items():
         if not phrases:  # fallback categories carry no signal phrases
             continue
-        matches = _find_matches(text, lowered, phrases)
+        matches = _find_matches(text, phrases)
         if matches:
             earliest = min(m.start for m in matches)
             scored.append((len(matches), -earliest, kind, matches))
@@ -228,8 +246,7 @@ def detect_doc_type(doc: FlattenedDoc, taxonomy: dict | None = None) -> DocTypeR
     """
     tax = taxonomy or load_taxonomy()
     text = doc.text
-    lowered = text.lower()
-    kind, confidence, matches = _best_category(text, lowered, tax["doc_types"], fallback="unknown")
+    kind, confidence, matches = _best_category(text, tax["doc_types"], fallback="unknown")
     if kind == "unknown":
         # No structural markers: call it a blog post only if it's also short.
         if 0 < len(text.split()) <= _BLOG_MAX_WORDS:
@@ -248,10 +265,7 @@ def infer_submitter_type(doc: FlattenedDoc, taxonomy: dict | None = None) -> Sub
     """
     tax = taxonomy or load_taxonomy()
     text = doc.text
-    lowered = text.lower()
-    kind, confidence, matches = _best_category(
-        text, lowered, tax["submitter_types"], fallback="unknown"
-    )
+    kind, confidence, matches = _best_category(text, tax["submitter_types"], fallback="unknown")
     ein = _EIN_RE.search(text)
     if ein:
         m = Match(phrase="ein", quote=ein.group(0), start=ein.start(), end=ein.end())
@@ -271,10 +285,9 @@ def tag_topics(doc: FlattenedDoc, taxonomy: dict | None = None) -> list[TopicHit
     """
     tax = taxonomy or load_taxonomy()
     text = doc.text
-    lowered = text.lower()
     hits: list[TopicHit] = []
     for topic, terms in tax["topics"].items():
-        matches = _find_matches(text, lowered, terms)
+        matches = _find_matches(text, terms)
         if matches:
             hits.append(TopicHit(topic=topic, matches=matches))
     hits.sort(key=lambda h: (len(h.matches), -min(m.start for m in h.matches)), reverse=True)
