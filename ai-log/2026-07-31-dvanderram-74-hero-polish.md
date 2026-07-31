@@ -8,12 +8,19 @@ something" on first view.
 
 `worker/public/index.html` only.
 
-- **Headline reworded.** "Check whether a proposal's sources are real, before
-  you spend an hour reading it." → "A fabricated citation looks exactly like a
-  real one — until someone checks." States the problem the reader actually has
-  instead of describing the feature, and "until someone checks" ties straight
-  into the CTA. Framing rules hold: no claim to detect AI, no verdict language,
-  and the sub still says plainly that it doesn't score or reject.
+- **Headline reworded** for the audience — foundations, donors, government —
+  and widened past citations: "Check whether a proposal's sources are real,
+  before you spend an hour reading it." → "Check whether a grant proposal
+  holds up, before you spend an hour reading it." Says *grant proposal*
+  explicitly, and "holds up" covers every check rather than just sources.
+- **Sub rewritten to state the real scope** — citations against the published
+  record, AI-detection signals, overlap with prior submissions, and topic/type
+  tagging — plus an explicit "A score is a signal, not a verdict: it doesn't
+  rate the proposal and it never rejects anything."
+  Checked against what is actually registered on main before writing it:
+  `pangram_document`, `tagging`, `similar_documents`/`template_cluster` and
+  seven citation checks are live. Solicitation compliance is deliberately
+  **not** claimed — only `rubric_budget_ceiling` exists (#90) and #16 is open.
 - **Headline spans the full measure.** It was capped at `max-width: 36rem` and
   rendered ~40% of a 1440px viewport with the whole right side empty. Now
   `grid-column: 1 / -1` at `clamp(2rem, 5vw, 3.5rem)` — 77% at 1440px, 96% at
