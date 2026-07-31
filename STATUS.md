@@ -5,6 +5,15 @@ Append-only. Newest entry on top. One line per entry:
 
 ## Log
 
+- 12:52 Alex (claude-code) — #22 fixtures: rendered a representative subset into
+  real files (`.md`/`.html`/`.docx`/`.pdf`, `scripts/synth/render_fixtures.py`,
+  12 docs × 4 formats in `tests/fixtures/synthetic/files/`) so ingestion (#4) and
+  checks run on actual documents. Round-tripped all four through `ingest()`:
+  status=ok, DOIs preserved; PDF keeps text but loses heading structure (0
+  sections) — a real gap to test for. PDF is a local browser build step, never
+  CI. Stacked branch `alex/22-fixture-files` on top of #54 / next: "valid DOI →
+  wrong paper" case / blocked on nothing.
+
 - 12:32 Dan (fable) — all three lanes landed: #55 ingestion (#4: PDF/DOCX/MD/HTML→FlattenedDoc+sections+ref-region, scanned-PDF→errored), #53+#56 registry/tiered-runner + `slopcheck run` CLI (#5, #6: one-file-one-decorator checks, gap rows for skip/error/timeout, dry-run/batch), #59 citations+quotecheck (#7, #10: APA/Chicago/IEEE extraction P/R=1.0 on small clean fixtures, quote-match engine, retrieval stubbed behind SourceFetcher) / filed #58 (wire CLI seam to ingest — small, high-value), scoping comments on #15/#23/#24 for fresh sessions / next: #29 harness once assigned / blocked on nothing.
 
 - 12:31 Emerson (claude-code) — skipped/errored checks now render as gray coverage-gap chips (#19, Dan's #45 flag): SKIPPED/ERROR + reason in ledger and cards, not-run rows excluded from tallies (they were silently counted as scores), "could not run — reported as coverage gaps, not passes" line in the verdict / next: regenerate demo-report.html from the updated fixture / blocked on nothing
