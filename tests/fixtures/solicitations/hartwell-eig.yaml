@@ -1,0 +1,43 @@
+# Compiled spec (#16) for the Hartwell Foundation's Education Innovation
+# Grants RFP — see fixtures/rubrics/hartwell-education-innovation-rfp.md for
+# the source document this was hand-transcribed from. Paired proposal:
+# harness/fixtures/proposal_edu.md (fixtures/rubrics/README.md documents its
+# planted violations: missing IRB attachment, budget over ceiling).
+id: hartwell-eig-2026f
+name: "Hartwell Foundation — Education Innovation Grants (HF-EIG-26F)"
+
+required_sections:
+  - name: Title
+    aliases: ["title"]
+  - name: PI/Institution
+    aliases: ["pi/institution", "pi and institution", "principal investigator"]
+  - name: Abstract
+    aliases: ["abstract"]
+  - name: Aims
+    aliases: ["aims", "specific aims"]
+  - name: Background & Prior Work
+    aliases: ["background & prior work", "background and prior work", "background"]
+  - name: Approach
+    aliases: ["approach"]
+  - name: Evaluation Plan
+    aliases: ["evaluation plan"]
+  - name: Budget
+    aliases: ["budget"]
+
+# RFP: "Combined narrative (Abstract through Approach) must not exceed 3,000
+# words... No page-limit or font requirement is imposed; word count governs."
+narrative:
+  start_section: Abstract
+  end_section: Approach
+  max_words: 3000
+
+budget:
+  ceiling_usd: 85000
+
+required_attachments:
+  - name: IRB Approval Letter or Exempt-Determination Letter
+    signals: ["irb approval", "exempt-determination letter", "exempt determination letter"]
+  - name: Letter of Support from each partner district
+    signals: ["letter of support"]
+  - name: One-page CV for the PI
+    signals: ["one-page cv", "curriculum vitae"]

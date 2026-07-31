@@ -1,0 +1,54 @@
+# Compiled spec (#16) for the Aldergrove Resilience Fund's Community Climate
+# Adaptation Grants RFP — see fixtures/rubrics/aldergrove-community-climate-rfp.md
+# for the source document this was hand-transcribed from. Paired proposal:
+# harness/fixtures/proposal_climate.md (fixtures/rubrics/README.md documents its
+# planted violations: missing Data Management Plan, missing Letters of
+# Institutional Commitment, budget over ceiling).
+id: aldergrove-cca-2026
+name: "Aldergrove Resilience Fund — Community Climate Adaptation Grants (ARF-CCA-2026-03)"
+
+# Aliases are matched against each detected heading, case-insensitive,
+# whole-word/phrase — not the RFP's exact wording. A real applicant writes
+# their own headings ("Aims" instead of "Specific Aims"); the check should
+# not manufacture a false "missing section" out of a wording choice.
+required_sections:
+  - name: Title
+    aliases: ["title"]
+  - name: PI and Institutional Affiliation
+    aliases: ["pi and institutional affiliation", "pi/institution", "principal investigator"]
+  - name: Abstract
+    aliases: ["abstract"]
+  - name: Specific Aims
+    aliases: ["specific aims", "aims"]
+  - name: Background and Significance
+    aliases: ["background and significance", "background & prior work", "background"]
+  - name: Approach and Methods
+    aliases: ["approach and methods", "approach", "methods"]
+  - name: Data Management Plan
+    aliases: ["data management plan"]
+  - name: Budget and Budget Justification
+    aliases: ["budget and budget justification", "budget"]
+  - name: References Cited
+    aliases: ["references cited", "references", "bibliography"]
+
+# RFP: "Narrative sections (Abstract through Approach, inclusive) must not
+# exceed 8 pages." No word-count alternative is given. Proposals submitted as
+# markdown/text (no page metadata) can't be checked against this — the check
+# reports that gap rather than guessing pages from a word count.
+narrative:
+  start_section: Abstract
+  end_section: Approach and Methods
+  max_pages: 8
+
+budget:
+  ceiling_usd: 75000
+
+required_attachments:
+  - name: Letters of Institutional Commitment
+    signals: ["letters of institutional commitment", "letter of institutional commitment"]
+  - name: Budget Justification Narrative
+    signals: ["budget justification narrative", "budget justification"]
+  - name: Biosketch or CV for the PI
+    signals: ["biosketch", "curriculum vitae"]
+  - name: Current and Pending Support statement
+    signals: ["current and pending support"]
