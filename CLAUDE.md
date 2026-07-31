@@ -35,7 +35,7 @@ enough — this is a hackathon).
 | `src/slopchecker/pipeline/` | Dan (+ Fable) | pat-helper engine port, loaders, quotecheck |
 | `src/slopchecker/lenses/` | Dan (+ anyone) | lens prompt packs (markdown — low conflict risk, edit away) |
 | `src/slopchecker/checks/` | Nick | deterministic tier: DOI resolution, metadata, dedup |
-| `src/slopchecker/report/` | Alex | evidence report: HTML → PDF rendering, in-line annotation |
+| `src/slopchecker/report/` | Emerson (→ Dominique) | evidence report: HTML + PDF rendering, in-line annotation. Emerson built it and owns it; further iteration hands off to Dominique |
 | `harness/` | Dan (+ Fable) | planted-defect validation, recall scoring |
 | `docs/` narrative + demo | Emerson, Dominique | demo script, framing, README language |
 | `STATUS.md` | everyone | append-only log (see below) |
