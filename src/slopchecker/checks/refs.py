@@ -17,6 +17,7 @@ from functools import lru_cache
 from slopchecker.checks.identifiers import Identifier, identifiers_in
 from slopchecker.models import Anchor, FlattenedDoc, LedgerRow, Span
 from slopchecker.pipeline.citations import CitationExtraction, ReferenceEntry, extract_citations
+from slopchecker.pipeline.citations.references import find_reference_region
 
 # Small: a batch run holds one document at a time, and the entries are the
 # parse of a text we already have in memory.
@@ -75,19 +76,21 @@ def page_of(doc: FlattenedDoc, offset: int) -> int | None:
     return page + 1
 
 
-def no_references_row(check_id: str, label: str) -> LedgerRow:
+def no_references_row(check_id: str, label: str, doc: FlattenedDoc | None = None) -> LedgerRow:
     """The gap row for a document whose reference list we couldn't parse.
 
     "Degrade to gaps, never crash": a proposal with no bibliography section
     is a document we could not check, which is a different report row from a
     document whose citations all check out.
+
+    Pass ``doc`` to distinguish the two ways this happens — no bibliography at
+    all, versus one we found but couldn't read. They send a reader looking in
+    completely different places (#126).
     """
-    return LedgerRow(
-        check=check_id,
-        label=label,
-        status="skipped",
-        reason="no reference list found in the document",
-    )
+    reason = "no reference list found in the document"
+    if doc is not None and find_reference_region(doc.text) is not None:
+        reason = "found a reference list but could not parse any entries from it"
+    return LedgerRow(check=check_id, label=label, status="skipped", reason=reason)
 
 
 def nothing_to_check_row(check_id: str, label: str, what: str) -> LedgerRow:

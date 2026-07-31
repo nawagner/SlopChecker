@@ -74,3 +74,17 @@ def test_registered_via_discovery():
     matches = [rc for rc in all_checks() if rc.meta.id == "citations_linked"]
     assert len(matches) == 1
     assert matches[0].meta.tier == "deterministic"
+
+
+def test_skip_reason_distinguishes_unparseable_from_absent():
+    """A found-but-unreadable reference list is a different report row from
+    no reference list at all (#126) — they send a reader to different places."""
+    from slopchecker.checks.refs import no_references_row
+    from slopchecker.models import FlattenedDoc
+
+    absent = FlattenedDoc(file="a.txt", text="A proposal with no bibliography at all.")
+    assert "no reference list found" in no_references_row("x", "X", absent).reason
+
+    # Region present, entries deliberately unparseable (bare prose lines).
+    present = FlattenedDoc(file="b.txt", text="Body.\n\nReferences\n\nnothing parseable here\n")
+    assert "could not parse any entries" in no_references_row("x", "X", present).reason

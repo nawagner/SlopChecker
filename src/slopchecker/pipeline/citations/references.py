@@ -14,7 +14,12 @@ from slopchecker.pipeline.citations.models import ReferenceEntry
 
 _HEADING_RE = re.compile(
     r"^[ \t]*(?:\d+\.?\s+)?"
-    r"(?:references|bibliography|works cited|reference list|literature cited)"
+    # "sources"/"citations"/"endnotes" are what non-academic documents call
+    # a bibliography, and blog posts / think-tank reports are two of the three
+    # document types this tool screens. Bare "notes" is deliberately out: the
+    # region runs heading-to-end, so a false positive swallows the document.
+    r"(?:references|bibliography|works cited|reference list|literature cited"
+    r"|sources|citations|endnotes|works consulted)"
     # \r is in the trailing class because re.MULTILINE's $ matches before \n
     # but does not consume a preceding \r, so a CRLF heading line never
     # matched and the document read as having no bibliography at all.
@@ -26,7 +31,16 @@ _HEADING_RE = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 
-_NUMBERED_START = re.compile(r"^[ \t]*\[(\d{1,3})\][ \t]+", re.MULTILINE)
+# An entry starts with a bracketed key (`[1] `), optionally preceded by a
+# rendered list ordinal (`1. [1] ` — what a markdown/HTML numbered list
+# becomes once printed to PDF), or with a bare ordinal (`1. `, `1) `) for
+# reference lists that never used brackets. Three digits max, so a bare year
+# at line start can't be mistaken for an entry number.
+_NUMBERED_START = re.compile(
+    r"^[ \t\f]*(?:(?:\d{1,3}[.)]|[-*•])[ \t]*)?\[(?P<key>\d{1,3})\][ \t]+"
+    r"|^[ \t\f]*(?P<ord>\d{1,3})[.)][ \t]+(?=\S)",
+    re.MULTILINE,
+)
 _DOI_RE = re.compile(r"\b10\.\d{4,9}/[^\s\"<>]+")
 _ARXIV_RE = re.compile(r"arxiv(?::|\.org/abs/)\s*(\d{4}\.\d{4,5})(?:v\d+)?", re.IGNORECASE)
 _URL_RE = re.compile(r"https?://[^\s<>\"]+")
@@ -75,7 +89,8 @@ def _split_entries(block: str, base: int) -> list[tuple[int, str, int | None]]:
         for i, m in enumerate(numbered):
             end = numbered[i + 1].start() if i + 1 < len(numbered) else len(block)
             raw = block[m.start() : end].rstrip()
-            out.append((base + m.start(), raw, int(m.group(1))))
+            key = m.group("key") or m.group("ord")
+            out.append((base + m.start(), raw, int(key)))
         return out
     # Same reason \r is allowed here: a CRLF blank line is "\r\n\r\n", so a
     # separator class of [ \t] alone saw no paragraph break and fell through
@@ -84,13 +99,15 @@ def _split_entries(block: str, base: int) -> list[tuple[int, str, int | None]]:
         for m in re.finditer(r"(?s)\S.*?(?=\n[ \t\r]*\n|\Z)", block):
             out.append((base + m.start(), m.group(0).rstrip(), None))
         return out
-    # One entry per line; indented or lowercase-led lines continue the previous entry.
+    # One entry per line; indented or lowercase-led lines continue the previous
+    # entry. A digit or bare URL also starts one — a bibliography of plain DOI
+    # links is still a bibliography.
     pos = 0
     cur_start: int | None = None
     cur: list[str] = []
     for line in block.splitlines(keepends=True):
         stripped = line.strip()
-        if stripped and re.match(r"[A-Z\[]", line):
+        if stripped and re.match(r"[A-Z\[]|\d|https?://", line):
             if cur:
                 out.append((base + (cur_start or 0), "".join(cur).rstrip(), None))
             cur_start, cur = pos, [line]
