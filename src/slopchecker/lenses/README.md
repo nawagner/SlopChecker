@@ -89,9 +89,9 @@ These come from the repo-wide design decisions in `CLAUDE.md`:
 from slopchecker.lenses import list_lenses, load_lens
 
 lens = load_lens("claims")
-lens.meta            # frontmatter dict
-lens.system_prompt   # section text
+lens.meta  # frontmatter dict
+lens.system_prompt  # section text
 lens.output_format
-lens.example_input   # fenced block contents
+lens.example_input  # fenced block contents
 lens.example_output
 ```
