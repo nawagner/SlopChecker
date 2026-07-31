@@ -196,9 +196,7 @@ def test_check_returns_errored_on_client_error_without_retry(
     assert len(transport.calls) == 1
 
 
-def test_check_retries_on_rate_limit_then_returns_ok(
-    doc: FlattenedDoc, api_key: str
-) -> None:
+def test_check_retries_on_rate_limit_then_returns_ok(doc: FlattenedDoc, api_key: str) -> None:
     transport = FakeTransport(
         [
             TransportRateLimit("try again"),
@@ -222,9 +220,7 @@ def test_check_retries_on_rate_limit_then_returns_ok(
 def test_check_returns_errored_after_retry_ceiling_on_server_errors(
     doc: FlattenedDoc, api_key: str
 ) -> None:
-    transport = FakeTransport(
-        [TransportServerError(500, "boom") for _ in range(5)]
-    )
+    transport = FakeTransport([TransportServerError(500, "boom") for _ in range(5)])
     detector = PangramDetector(
         config=PangramConfig(max_attempts=3, initial_backoff_seconds=0.0),
         transport=transport,
@@ -238,9 +234,7 @@ def test_check_returns_errored_after_retry_ceiling_on_server_errors(
     assert len(transport.calls) == 3
 
 
-def test_finding_quotes_are_grounded_in_flattened_text(
-    doc: FlattenedDoc, api_key: str
-) -> None:
+def test_finding_quotes_are_grounded_in_flattened_text(doc: FlattenedDoc, api_key: str) -> None:
     """Quotecheck contract (#3): every quote must slice out of doc.text."""
     transport = FakeTransport([pangram_response()])
     detector = PangramDetector(config=PangramConfig(), transport=transport)
@@ -260,9 +254,7 @@ def test_finding_quotes_are_grounded_in_flattened_text(
         assert span.end > span.start
 
 
-def test_cache_hit_avoids_second_api_call(
-    doc: FlattenedDoc, api_key: str, tmp_path
-) -> None:
+def test_cache_hit_avoids_second_api_call(doc: FlattenedDoc, api_key: str, tmp_path) -> None:
     transport = FakeTransport([pangram_response(fraction_ai=0.1)])
     detector = PangramDetector(
         config=PangramConfig(cache_dir=tmp_path),
@@ -287,9 +279,7 @@ def test_detector_conforms_to_protocol(api_key: str) -> None:
     assert isinstance(detector, Detector)
 
 
-def test_cost_reflects_word_count_billing(
-    doc: FlattenedDoc, api_key: str
-) -> None:
+def test_cost_reflects_word_count_billing(doc: FlattenedDoc, api_key: str) -> None:
     """Cost = ceil(words / 1000) × unit_price (min 1 unit per item, per Pangram bulk billing)."""
     transport = FakeTransport([pangram_response()])
     detector = PangramDetector(
@@ -301,9 +291,7 @@ def test_cost_reflects_word_count_billing(
     assert result.cost_usd == pytest.approx(0.05)
 
 
-def test_estimate_cost_does_not_touch_transport(
-    doc: FlattenedDoc, api_key: str
-) -> None:
+def test_estimate_cost_does_not_touch_transport(doc: FlattenedDoc, api_key: str) -> None:
     """Acceptance criterion: cost per document is visible without spending it."""
     transport = FakeTransport([])  # would fail loudly if the estimator called it
     detector = PangramDetector(
