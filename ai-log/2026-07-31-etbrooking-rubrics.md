@@ -53,3 +53,26 @@ Issues: #90 (filed and claimed this session), touching #16, #27, #74.
 - `slopcheck run --rubric <path>` plumbing
 - `rubric` upload slot on `POST /check` (with the #27 session)
 - Spec-drafting bridge to #16 (rubric doc → draft YAML → human review)
+
+## Second slice (same day, later session state): CLI plumbing + first check
+
+- `CheckContext.rubric: FlattenedDoc | None` (registry.py — Dan's module,
+  one additive field; flagged on #90 and in STATUS).
+- `--rubric <path>` on `slopcheck run`: ingested once per run, fail-fast on
+  a bad path (unlike batch files it applies to every target); rubric
+  filename stamps `report.solicitation` when no explicit label given. The
+  pre-existing `--solicitation` string stays as the label-only channel —
+  nothing consumed `ctx.solicitation` before and nothing does now.
+- `pipeline/checks_rubric.py` — `rubric_budget_ceiling`, deterministic:
+  two-tier cap-phrase parse (strong "may not exceed / maximum award /
+  ceiling", weak "up to") over rubric lines; multiple distinct cap amounts
+  = skipped "ambiguous", not a guess. Proposal side: max $ on a
+  "total"-containing line, span = whole line so the anchor quote
+  string-matches uniquely. Findings carry rubric_quote + both numbers in
+  evidence.
+- Ground truth: tests run the real committed fixtures — Aldergrove vs
+  proposal_climate and Hartwell vs proposal_edu both planted budget
+  violations caught (2/2 of the budget plants; the other 3 planted
+  violations need section/attachment checks, which need the #16 spec).
+- Fallout: none observed; 484 passed, ruff clean. `datasketch` needed a
+  local pip install (Dan's #14 similarity dep) — pre-existing, not mine.
