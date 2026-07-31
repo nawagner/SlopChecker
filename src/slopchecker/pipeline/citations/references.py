@@ -13,13 +13,19 @@ from slopchecker.models import Span
 from slopchecker.pipeline.citations.models import ReferenceEntry
 
 _HEADING_RE = re.compile(
-    r"^[ \t]*(?:\d+\.?\s+)?"
+    # A markdown ATX prefix (`## References`) or bold/emphasis wrapper
+    # (`**References**`) is still a heading. Markdown reaches the parser
+    # verbatim — the loader does not strip the marker — so without this the
+    # region is never found, and the bibliography's own [n] keys then read as
+    # unlinked *in-text* markers and every one becomes a false finding (#156).
+    r"^[ \t]*(?:\#{1,6}[ \t]*)?(?:\d+\.?\s+)?(?:\*\*|__|\*)?"
     # "sources"/"citations"/"endnotes" are what non-academic documents call
     # a bibliography, and blog posts / think-tank reports are two of the three
     # document types this tool screens. Bare "notes" is deliberately out: the
     # region runs heading-to-end, so a false positive swallows the document.
     r"(?:references|bibliography|works cited|reference list|literature cited"
     r"|sources|citations|endnotes|works consulted)"
+    r"(?:\*\*|__|\*)?"
     # \r is in the trailing class because re.MULTILINE's $ matches before \n
     # but does not consume a preceding \r, so a CRLF heading line never
     # matched and the document read as having no bibliography at all.
