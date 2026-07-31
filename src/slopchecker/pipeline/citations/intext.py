@@ -30,6 +30,7 @@ _NARRATIVE_RE = re.compile(
 
 _ABBREVS = {"al", "e.g", "i.e", "cf", "vs", "fig", "no", "pp", "p", "dr", "mr", "ms", "prof"}
 _BOUNDARY_RE = re.compile(r"(?P<punct>[.!?]+[)\"”']*)\s+")
+_PARA_BREAK_RE = re.compile(r"\n[ \t\r]*\n")  # CRLF-tolerant blank line (#98)
 
 
 def sentence_bounds(text: str, start: int, end: int) -> Span:
@@ -38,10 +39,11 @@ def sentence_bounds(text: str, start: int, end: int) -> Span:
     Abbreviation-aware ("et al.", "e.g.", single initials) so claim
     sentences don't get chopped at a fake boundary.
     """
-    para_start = text.rfind("\n\n", 0, start)
-    para_start = 0 if para_start == -1 else para_start + 2
-    para_end = text.find("\n\n", end)
-    para_end = len(text) if para_end == -1 else para_end
+    para_start = 0
+    for pb in _PARA_BREAK_RE.finditer(text, 0, start):
+        para_start = pb.end()
+    next_break = _PARA_BREAK_RE.search(text, end)
+    para_end = len(text) if next_break is None else next_break.start()
 
     sent_start, sent_end = para_start, para_end
     for m in _BOUNDARY_RE.finditer(text, para_start, para_end):
