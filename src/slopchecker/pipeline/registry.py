@@ -46,6 +46,10 @@ class CheckContext:
 
     solicitation: str | None = None
     workdir: Path | None = None
+    # Run-level cache policy for checks that hit the network (#8). Additive
+    # and optional: a check that doesn't cache ignores both fields.
+    no_cache: bool = False
+    cache_dir: Path | None = None
 
 
 @dataclass

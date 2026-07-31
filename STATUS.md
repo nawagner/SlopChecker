@@ -64,6 +64,23 @@ Append-only. Newest entry on top. One line per entry:
   size-stable artifact then reap the browser; stderr to file not pipe
   (same deadlock family as #49). 156 passed, 0 skipped / next: handoff for
   formal e2e integration harness / blocked on nothing.
+- 17:05 Nick (claude-code) — did the deterministic tier, first code in
+  `src/slopchecker/checks/` (#8 + #9): four registered checks —
+  `citation_identifiers_valid` (offline: DOI/arXiv/ISBN/URL well-formedness),
+  `all_dois_resolve` (doi.org, all registries not just Crossref),
+  `all_urls_resolve`, `metadata_match` (Crossref → OpenAlex → arXiv behind one
+  interface, fuzzy title/author/year/venue grading, reverse title lookup that
+  separates "wrong DOI" from "no such paper") / key call: only a 404/410 flips
+  a row false — paywalls, timeouts and 5xx are per-item coverage gaps, and a
+  run where nothing answered is `errored`, never "the citations are fake" /
+  ledger ids match the mock so Emerson's renderer needed no change / small
+  cross-module edits flagged on #8: `--no-cache`/`--cache-dir` on
+  `slopcheck run` plus two optional `CheckContext` fields (Alex's #15 had
+  already loosened the over-specified CLI ledger assertion we both hit —
+  took theirs on rebase) / 261 tests green; `test_checks_live.py` really hits
+  doi.org/Crossref/OpenAlex/arXiv per Nick's call — flagging that a provider
+  outage can redden required CI for everyone, escape hatch documented in the
+  file / next: dedup (#14) is deliberately NOT in this PR / blocked on nothing.
 
 - 13:08 Nick — did mint a bucket-scoped R2 API token for `slopchecker-docs`
   (Object Read & Write, scoped to that bucket only, not account-wide) and
