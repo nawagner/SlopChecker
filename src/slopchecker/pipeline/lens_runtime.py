@@ -291,12 +291,17 @@ CACHE_NAMESPACE = "lens"
 
 
 def _cache_key(lens: Lens, doc: FlattenedDoc, model: str) -> str:
+    """Key over everything that shapes the LLM's answer.
+
+    The prompt payload (system prompt + output format — exactly what
+    ``assemble_messages`` sends) is part of the key so that tuning a lens
+    invalidates its cache slots (#144); before that, a prompt edit kept
+    serving pre-tune payloads until TTL expiry.
+    """
     h = hashlib.sha256()
-    h.update(model.encode())
-    h.update(b"\x00")
-    h.update(lens.id.encode())
-    h.update(b"\x00")
-    h.update(doc.text.encode())
+    for part in (model, lens.id, lens.system_prompt, lens.output_format, doc.text):
+        h.update(part.encode())
+        h.update(b"\x00")
     return h.hexdigest()
 
 

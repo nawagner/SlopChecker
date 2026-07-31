@@ -386,6 +386,32 @@ def test_cache_key_changes_when_lens_changes(sample_doc, tmp_path):
     assert len(client.calls) == 2  # Not de-duplicated across lenses.
 
 
+def test_cache_key_changes_when_prompt_changes(sample_doc, tmp_path):
+    """Editing a lens's prompt must invalidate its cache slot (#144).
+
+    Same lens id, same doc, same model — but a tuned system prompt. Serving
+    the pre-tune payload would make prompt tuning invisible until TTL expiry.
+    """
+    from slopchecker.lenses import load_lens
+
+    (tmp_path / "v1").mkdir()
+    (tmp_path / "v2").mkdir()
+    (tmp_path / "v1" / "claims.md").write_text(CLAIMS_LENS_TEXT, encoding="utf-8")
+    tuned = CLAIMS_LENS_TEXT.replace(
+        "Extract load-bearing claims", "Extract only specific, checkable load-bearing claims"
+    )
+    assert tuned != CLAIMS_LENS_TEXT  # guard: the marker sentence must exist
+    (tmp_path / "v2" / "claims.md").write_text(tuned, encoding="utf-8")
+    lens_v1 = load_lens("claims", directory=tmp_path / "v1")
+    lens_v2 = load_lens("claims", directory=tmp_path / "v2")
+
+    cache = tmp_path / "cache"
+    client = FakeClient(script=[json.dumps({"claims": []}), json.dumps({"claims": []})])
+    run_lens(lens_v1, sample_doc, LensRunConfig(cache_dir=cache), client=client)
+    run_lens(lens_v2, sample_doc, LensRunConfig(cache_dir=cache), client=client)
+    assert len(client.calls) == 2  # Prompt change → cache miss, real second call.
+
+
 def test_cache_does_not_write_on_error(claims_lens, sample_doc, tmp_path):
     """Errored runs must not be cached — a retry with a real key should retry the LLM."""
     err_client = FakeClient(script=[TransportAuthError(401, "bad key")])
