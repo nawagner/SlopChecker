@@ -45,11 +45,19 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# Default run = fast unit suite. Integration (full CLI chain, #81) is opt-in:
-# `pytest -m integration`. CI runs both as separate steps.
-addopts = "-m 'not integration'"
+# Default run = fast unit suite, no network, no subprocesses. Two opt-in
+# families sit outside it; CI runs both, so nothing is lost by deselecting
+# them here (#114):
+#   `pytest -m integration` — full CLI chain (#81), same job as the unit run
+#   `pytest -m live`        — real calls to doi.org/Crossref/OpenAlex/arXiv,
+#                             its own CI job so a third-party outage can't
+#                             red the required check
+# The live tests were 17.6s of a 20.1s default run — 88% of the suite was
+# network wait. Keeping them out of the edit-test loop is the whole point.
+addopts = "-m 'not integration and not live'"
 markers = [
     "integration: full CLI chain in real subprocesses (opt in: pytest -m integration)",
+    "live: really calls third-party APIs (opt in: pytest -m live)",
 ]
 
 [tool.mypy]
