@@ -165,9 +165,7 @@ def main():
             f"{_fmt(m['f1']):>7}{_fmt(m['accuracy']):>7}{m['support']:>9}"
         )
     print("\nsupport = number of docs where the defect is actually present (positives).")
-    print(
-        "prec/recall n/a = no positive predictions or labels for that field."
-    )
+    print("prec/recall n/a = no positive predictions or labels for that field.")
 
 
 if __name__ == "__main__":

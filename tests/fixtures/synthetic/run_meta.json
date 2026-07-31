@@ -1,6 +1,11 @@
 {
-  "generated_utc": "2026-07-31T15:58:16.276572+00:00",
-  "n_records": 60,
+  "generated_utc": "2026-07-31T16:18:48.729338+00:00",
+  "n_records": 120,
+  "doctypes": [
+    "grant_application",
+    "blog_post",
+    "think_tank_report"
+  ],
   "tiers": [
     "R1",
     "R2"
