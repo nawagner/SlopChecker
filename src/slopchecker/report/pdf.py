@@ -30,7 +30,10 @@ def find_browser() -> str | None:
     env = os.environ.get("CHROMIUM")
     if env and Path(env).exists():
         return env
-    for name in ("chrome", "chromium", "chromium-browser", "msedge", "google-chrome"):
+    # google-chrome/chrome before chromium: on Ubuntu, `chromium` is usually a
+    # snap wrapper whose confinement rejects a /tmp --user-data-dir and hangs
+    # headless (exactly what happened on CI runners, which have both).
+    for name in ("google-chrome", "chrome", "msedge", "chromium-browser", "chromium"):
         path = shutil.which(name)
         if path:
             return path
