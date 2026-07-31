@@ -66,9 +66,7 @@ def sentence_bounds(text: str, start: int, end: int) -> Span:
 def _with_claim(text: str, **kwargs) -> InTextCitation:
     span: Span = kwargs["span"]
     claim = sentence_bounds(text, span.start, span.end)
-    return InTextCitation(
-        claim_text=text[claim.start : claim.end], claim_span=claim, **kwargs
-    )
+    return InTextCitation(claim_text=text[claim.start : claim.end], claim_span=claim, **kwargs)
 
 
 def find_intext_citations(text: str, exclude: Span | None = None) -> list[InTextCitation]:

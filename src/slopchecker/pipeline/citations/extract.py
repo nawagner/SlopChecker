@@ -94,9 +94,7 @@ def _unlinked_findings(citations: list[Citation], text: str) -> list[Finding]:
                 id=f"CIT{len(findings) + 1}",
                 target=target,
                 label="Unlinked in-text citation",
-                anchor=Anchor(
-                    quote=text[m.claim_span.start : m.claim_span.end], span=m.claim_span
-                ),
+                anchor=Anchor(quote=text[m.claim_span.start : m.claim_span.end], span=m.claim_span),
                 checks=[CheckResult(name="citation_has_reference", result=False)],
                 evidence=evidence,
                 note="In-text citation has no matching entry in the reference list.",

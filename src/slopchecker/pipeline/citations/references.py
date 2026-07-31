@@ -30,7 +30,9 @@ _APA_PAGES_RE = re.compile(r",\s*(\d+\s*[-–—]\s*\d+)\s*[.,]")
 _PAREN_YEAR_RE = re.compile(r"\((1[89]\d{2}|20\d{2})([a-z])?\)")
 _BARE_YEAR_RE = re.compile(r"\b(1[89]\d{2}|20\d{2})([a-z])?\b")
 _QUOTED_TITLE_RE = re.compile(r"[\"“]([^\"”]{4,}?)[\"”]")
-_CHICAGO_RE = re.compile(r"^(?P<auth>[^.]+?)\.\s+(?P<year>(?:1[89]|20)\d{2})(?P<suffix>[a-z])?\.\s*")
+_CHICAGO_RE = re.compile(
+    r"^(?P<auth>[^.]+?)\.\s+(?P<year>(?:1[89]|20)\d{2})(?P<suffix>[a-z])?\.\s*"
+)
 # "Surname, I. I." (APA) and "I. I. Surname" (IEEE) author shapes
 _APA_AUTHOR_RE = re.compile(r"([A-Z][\w'’-]+),\s*((?:[A-Z]\.[\s-]*)+)")
 _IEEE_AUTHOR_RE = re.compile(r"((?:[A-Z]\.[\s-]*)+)([A-Z][\w'’-]+)")

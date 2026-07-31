@@ -124,8 +124,7 @@ def test_claim_sentence_covers_marker():
 
 def test_no_reference_section_degrades_to_unlinked():
     text = (
-        "Prior work shows the effect is robust (Imaginary, 2020).\n\n"
-        "We build on that result here."
+        "Prior work shows the effect is robust (Imaginary, 2020).\n\nWe build on that result here."
     )
     ext = extract_citations(text)
     assert ext.ref_region is None
@@ -197,9 +196,7 @@ def pr(t: dict[str, int]) -> tuple[float, float]:
 
 
 def test_precision_recall_on_labeled_fixtures():
-    totals = {
-        kind: {"tp": 0, "fp": 0, "fn": 0} for kind in ("mentions", "references", "links")
-    }
+    totals = {kind: {"tp": 0, "fp": 0, "fn": 0} for kind in ("mentions", "references", "links")}
     lines = []
     for name in DOCS:
         tallies = score_doc(name)
