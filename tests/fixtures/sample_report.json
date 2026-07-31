@@ -93,7 +93,8 @@
     { "check": "numbers_in_sources", "label": "Claimed numbers found in sources", "result": false, "detail": "0 / 1 — C4" },
     { "check": "pangram_document", "label": "AI detection (Pangram)", "result": 0.96, "detail": "document score" },
     { "check": "similarity_prior", "label": "Similar to prior submission", "result": 0.87, "detail": "vs. submission #0083" },
-    { "check": "budget_in_range", "label": "Budget within comparable range", "result": false, "detail": "$148k vs. $0.9–2.4M comparables (Candid)" }
+    { "check": "budget_in_range", "label": "Budget within comparable range", "result": false, "detail": "$148k vs. $0.9–2.4M comparables (Candid)" },
+    { "check": "plagiarism_scan", "label": "Plagiarism scan", "status": "skipped", "reason": "no API key configured" }
   ],
   "summary": { "recommendation": "human_review" }
 }

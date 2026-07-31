@@ -5,6 +5,8 @@ Append-only. Newest entry on top. One line per entry:
 
 ## Log
 
+- 12:31 Emerson (claude-code) — skipped/errored checks now render as gray coverage-gap chips (#19, Dan's #45 flag): SKIPPED/ERROR + reason in ledger and cards, not-run rows excluded from tallies (they were silently counted as scores), "could not run — reported as coverage gaps, not passes" line in the verdict / next: regenerate demo-report.html from the updated fixture / blocked on nothing
+
 - 12:25 Emerson (claude-code) — slop-checker.com landing page landed (#27): annotated-specimen hero, upload flow with honest sample-report fallback, live API status strip via the Worker proxy; auto-deploys on merge per Nick's Git integration / next: skipped-check chip in the report renderer (Dan's #45 flag), then wire upload to the real pipeline endpoint / blocked on nothing
 
 - 12:14 Dan (fable) — merged the model spine: #45 `models.py` + `docs/DATA_MODEL.md` (#3 — read that doc for the schema + which tests cover what), #46 claims lens + loader (#13), #49 CI fix (PDF tests deadlocked CI on every run since #40: snap chromium hang + crashpad pipe deadlock; test job now ~25s), #44 handle typo; filed #43 (Nick's Claude flipped it — CI is now a required check) / next: three parallel agent lanes in flight — #4 ingestion, #5+#6 runner+CLI, #7+#10 citations — then #29 harness / blocked on nothing.
