@@ -40,6 +40,7 @@ CHECK_PACKAGES: tuple[str, ...] = (
     "slopchecker.pipeline.checks_builtin",
     "slopchecker.pipeline.checks_citations",
     "slopchecker.pipeline.checks_detect",
+    "slopchecker.pipeline.checks_rubric",
     "slopchecker.pipeline.checks_llm",
     "slopchecker.pipeline.checks_similarity",
     "slopchecker.pipeline.claim_support",
@@ -60,6 +61,11 @@ class CheckContext:
     """
 
     solicitation: str | None = None
+    # Rubric (#90): the funder reference doc (solicitation/RFP, criteria)
+    # this submission is checked against, pre-ingested by the caller.
+    # None = not supplied; rubric-dependent checks must emit a skipped
+    # gap row, never crash.
+    rubric: FlattenedDoc | None = None
     workdir: Path | None = None
     # Run-level cache policy for checks that hit the network (#8). Additive
     # and optional: a check that doesn't cache ignores both fields.
