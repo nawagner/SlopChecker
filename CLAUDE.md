@@ -8,8 +8,10 @@ Team ideation doc: ask a teammate for the Google Doc link. The issue tree
 
 ## Work against issues
 
-- `git pull --rebase` at session start and before opening a PR — five
-  people are working in parallel, and a stale clone is how conflicts happen.
+- A UserPromptSubmit hook (`scripts/auto_pull.py`) pulls origin/main on
+  every turn when it's safe (on main, clean tree, nothing in progress), so
+  clean clones stay fresh automatically. It skips silently mid-work — so
+  still `git pull --rebase` yourself before opening a PR.
 - Main is protected: changes land via pull request (branch → PR → merge).
   Direct pushes to main are rejected.
 - Pick an open issue before writing code. Comment on it when you start (so two
