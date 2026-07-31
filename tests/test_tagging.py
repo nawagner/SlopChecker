@@ -178,11 +178,14 @@ def test_check_emits_rollups_and_quote_anchored_findings():
     assert rows["doc_type_confidence"].result >= 0.75
     assert "grant_application" in rows["doc_type_confidence"].detail
     assert isinstance(rows["topic_tags"].result, int) and rows["topic_tags"].result >= 2
-    assert rows["submitter_type_confidence"].label == "Submitter type"
+    # Submitter type deliberately absent from the report surface (2026-07-31):
+    # a row that is almost always "unknown" informs no decision. The pure
+    # function and taxonomy remain, tested above.
+    assert "submitter_type_confidence" not in rows
+    assert not any(f.id == "tag-submitter-type" for f in out.findings)
 
     tags = {f.id: f for f in out.findings}
     assert tags["tag-doc-type"].evidence["kind"] == "grant_application"
-    assert tags["tag-submitter-type"].evidence["kind"] == "university"
     # Every finding with an anchor is quote-anchored to verbatim source text.
     for f in out.findings:
         if f.anchor is not None:
