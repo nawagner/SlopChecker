@@ -65,8 +65,17 @@ Emerson's renderer needed no change.
   the escape hatch).
 - `tests/test_cli_run.py::test_tier_and_skip_selection` asserted the ledger
   equals `["has_text"]` exactly, so *any* new deterministic check broke it.
-  Loosened to "has_text ran, word_count didn't" — which is what --tier/--skip
-  actually promise.
+  Alex hit the same wall on #15 and loosened it identically; took theirs on
+  rebase.
+
+## Observation for #15 (not fixed from here — Alex's module)
+
+Tagging emits findings with `anchor=None` (e.g. `tag-doc-type` at confidence
+0.4 with an empty `signals` list). CLAUDE.md says every finding is
+quote-anchored, and the renderer has nothing to align an anchorless card
+against. Caught because this PR's `test_every_finding_is_quote_anchored`
+originally asserted over *all* findings in the report; it's now scoped to
+this module's four checks. Worth a look on #15.
 
 ## Tests
 
@@ -100,6 +109,11 @@ ISBN checksum, one non-DOI-shaped DOI. Full tier over it: 4.7s cold, and
   run. Values are wrapped as `{"record": ...}`.
 - Transport errors are deliberately *not* cached — caching "the network was
   down" would poison later runs.
+- **arXiv's export API 503s constantly** (5 hand probes: three 503s). It was
+  the one provider not going through the retry ladder, so roughly half the
+  time an available record read as "no record". `net.get_text` now shares the
+  ladder with `get_json`. Found by a flaky live test — which is the argument
+  for live tests, and also the argument against them.
 
 ## Risk I flagged and Nick accepted
 

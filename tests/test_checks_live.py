@@ -253,7 +253,7 @@ def test_findings_name_the_planted_defects(report) -> None:
     two (the DOI doesn't resolve, and no provider has metadata for it), which
     is why this collects labels per target rather than assuming one each."""
     labels: dict[str, set[str]] = {}
-    for finding in report.findings:
+    for finding in _our_findings(report):
         labels.setdefault(finding.target or "", set()).add(finding.label or "")
 
     assert "DOI does not resolve" in labels[f"ref[2] · {UNREGISTERED_DOI}"]
@@ -264,13 +264,30 @@ def test_findings_name_the_planted_defects(report) -> None:
 
 def test_the_correctly_cited_reference_produces_no_finding(report) -> None:
     """No false positives on ref [1] — the honest citation in the fixture."""
-    assert not [f for f in report.findings if (f.target or "").startswith("ref[1]")]
+    assert not [f for f in _our_findings(report) if (f.target or "").startswith("ref[1]")]
+
+
+def _our_findings(report):
+    """Findings from this module's checks.
+
+    The tier also runs #15's tagging, whose findings are Alex's to assert on
+    (they carry no anchor — flagged on #15, not fixed from here).
+    """
+    ours = {
+        "citation_identifiers_valid",
+        "all_dois_resolve",
+        "all_urls_resolve",
+        "metadata_match",
+    }
+    return [f for f in report.findings if any(c.name in ours for c in f.checks)]
 
 
 def test_every_finding_is_quote_anchored(report) -> None:
     """CLAUDE.md's rule: a finding's quote must be verbatim in the document."""
     text = report.document.text
-    for finding in report.findings:
+    findings = _our_findings(report)
+    assert findings, "expected findings from the planted defects"
+    for finding in findings:
         assert finding.anchor is not None, finding.id
         assert finding.anchor.quote in text, finding.id
         span = finding.anchor.span

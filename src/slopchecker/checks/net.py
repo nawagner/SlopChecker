@@ -172,6 +172,28 @@ def resolve_doi(client: httpx.Client, doi: str) -> Resolution:
     return fetch_status(client, DOI_RESOLVER + doi)
 
 
+def _get_with_retries(
+    client: httpx.Client, url: str, params: dict[str, str] | None, accept: str
+) -> httpx.Response | None:
+    """GET with the transient-failure ladder. None means "gave up", and a 404
+    means "this provider has no record" — both read as "ask the next one"."""
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            response = client.get(url, params=params, headers={"Accept": accept})
+            if response.status_code == 404:
+                return None
+            if _transient(response):
+                raise httpx.HTTPError(f"status {response.status_code}")
+            response.raise_for_status()
+            return response
+        except httpx.HTTPError:
+            if attempt < len(BACKOFF_S):
+                time.sleep(BACKOFF_S[attempt])
+                continue
+            return None
+    return None
+
+
 def get_json(client: httpx.Client, url: str, params: dict[str, str] | None = None) -> dict | None:
     """GET JSON, or None for any failure — callers treat None as "no record".
 
@@ -179,18 +201,21 @@ def get_json(client: httpx.Client, url: str, params: dict[str, str] | None = Non
     record); a timeout is not, but at this layer both mean "ask the next
     provider", and the resolution check is what reports network trouble.
     """
-    for attempt in range(MAX_ATTEMPTS):
-        try:
-            response = client.get(url, params=params, headers={"Accept": "application/json"})
-            if response.status_code == 404:
-                return None
-            if _transient(response):
-                raise httpx.HTTPError(f"status {response.status_code}")
-            response.raise_for_status()
-            return response.json()
-        except (httpx.HTTPError, ValueError):
-            if attempt < len(BACKOFF_S):
-                time.sleep(BACKOFF_S[attempt])
-                continue
-            return None
-    return None
+    response = _get_with_retries(client, url, params, "application/json")
+    if response is None:
+        return None
+    try:
+        return response.json()
+    except ValueError:
+        return None
+
+
+def get_text(client: httpx.Client, url: str, params: dict[str, str] | None = None) -> str | None:
+    """Same ladder, for providers that answer in XML rather than JSON.
+
+    arXiv's export API 503s freely under load — their documented ask is to
+    back off and retry, so a single unretried GET made an available provider
+    look like a missing record perhaps half the time.
+    """
+    response = _get_with_retries(client, url, params, "application/atom+xml, application/xml")
+    return response.text if response is not None else None

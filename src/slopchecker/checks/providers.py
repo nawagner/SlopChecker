@@ -22,7 +22,7 @@ import httpx
 
 from slopchecker.checks.cache import Cache, NullCache
 from slopchecker.checks.identifiers import Identifier
-from slopchecker.checks.net import get_json
+from slopchecker.checks.net import get_json, get_text
 
 CROSSREF_API = "https://api.crossref.org/works"
 OPENALEX_API = "https://api.openalex.org/works"
@@ -208,11 +208,12 @@ class ArxivProvider:
         return self._query(client, {"search_query": f'ti:"{title}"', "max_results": "1"})
 
     def _query(self, client: httpx.Client, params: dict[str, str]) -> SourceRecord | None:
+        payload = get_text(client, ARXIV_API, params)
+        if payload is None:
+            return None
         try:
-            response = client.get(ARXIV_API, params=params)
-            response.raise_for_status()
-            root = ElementTree.fromstring(response.text)
-        except (httpx.HTTPError, ElementTree.ParseError):
+            root = ElementTree.fromstring(payload)
+        except ElementTree.ParseError:
             return None
         entry = root.find("atom:entry", _ARXIV_NS)
         if entry is None:
