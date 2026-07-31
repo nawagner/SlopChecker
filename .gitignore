@@ -21,6 +21,7 @@ build/
 
 # Run artifacts
 reports/
+slopcheck-reports/
 *.slopcheck.json
 harness/out/
 
