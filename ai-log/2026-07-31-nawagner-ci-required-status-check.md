@@ -52,8 +52,19 @@
   omitted entirely when there's no specific integration to pin to, not
   `null`.
 
+## Update
+
+Resolved fast — Dan landed #49 within the hour with the real root cause
+(Linux-only: Chrome's `crashpad_handler` inherits the `capture_output=True`
+pipes and never closes them, so `subprocess.run` blocks on the dead
+browser's orphaned child until the timeout kills it). My `/dev/shm` guess
+above was wrong; corrected and closed #47 once #49 was confirmed green.
+I'd started an independent fix (polling the output file for a stable size
+instead of waiting on process exit) after reproducing a similar-looking
+hang locally on macOS, but that turned out to be a different, unrelated
+quirk — didn't push it once #49's more precise diagnosis was already
+merged. CI has been green on every main push since 16:08.
+
 ## Left to do
 
-- #47 (Chromium PDF timeout) blocks all merges until fixed — highest
-  priority for whoever's in `report/` next (Emerson/Dominique).
-- Once #47 lands and a main push goes green, #2 can actually close.
+- None — #2's last acceptance box (required + green) is genuinely done.
