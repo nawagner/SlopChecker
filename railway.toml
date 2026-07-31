@@ -1,0 +1,14 @@
+# Nixpacks Python provider uses pip here (no uv.lock committed), which
+# sidesteps the UV_PROJECT_ENVIRONMENT / "uvicorn: command not found"
+# boot failure hit on a different uv-managed Railway project. If a uv.lock
+# ever gets added to this repo, revisit that setting first.
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "pip install -e '.[web]'"
+
+[deploy]
+startCommand = "uvicorn slopchecker.web:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"

@@ -25,3 +25,7 @@ reports/
 
 # macOS
 .DS_Store
+
+# Worker
+worker/node_modules/
+worker/.wrangler/

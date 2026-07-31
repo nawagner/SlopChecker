@@ -1,0 +1,17 @@
+name = "slopchecker-web"
+main = "src/index.ts"
+compatibility_date = "2026-07-31"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# Non-secret — the deployed Railway service's base URL. Set the real value
+# once the Railway service exists:
+#   wrangler secret put RAILWAY_API_URL
+# (kept as a secret, not a [vars] plaintext entry, only because the URL isn't
+# decided yet and this avoids a commit to update it later — it's not sensitive)
+
+# Custom domain: run after slop-checker.com's DNS is on Cloudflare —
+#   wrangler deploy
+#   wrangler route add "slop-checker.com/*" slopchecker-web
