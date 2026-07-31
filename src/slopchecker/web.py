@@ -16,6 +16,12 @@ from fastapi import FastAPI
 
 from slopchecker import __version__, config
 
+# Loaded once at import time, like any other server startup config — not on
+# every request. On Railway there's no .env file so this is a no-op there;
+# locally it means a real .env can shadow a test's monkeypatched env vars,
+# but only for the process's lifetime, same as any other Python config load.
+config.load()
+
 app = FastAPI(title="SlopChecker (deploy-target stub)")
 
 
@@ -26,7 +32,6 @@ def health() -> dict:
 
 @app.get("/config")
 def config_status() -> dict:
-    config.load()
     return {
         "llm_model": config.llm_model(),
         "credentials": [

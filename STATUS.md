@@ -5,6 +5,12 @@ Append-only. Newest entry on top. One line per entry:
 
 ## Log
 
+- 11:17 Nick — did deploy the Cloudflare Worker for real
+  (slopchecker-web.nwagner.workers.dev), proxy to Railway verified on all
+  routes / found + fixed a real bug: `/config` reloaded `.env` per-request
+  instead of once at startup, which silently defeated a test's monkeypatched
+  "key unset" scenario once real keys landed locally / next: Wrangler route
+  + slop-checker.com DNS once it's on Cloudflare / blocked on nothing.
 - 11:00 Emerson (claude-code) — #19 report.json → HTML renderer landed as `src/slopchecker/report/` + `slopcheck render`, tests green / next: PDF step (Alex), wire to models.py when #3 lands / blocked on nothing
 - 10:57 Nick — did first real Railway deploy of the #27 stub, hit a
   Nixpacks/hatchling readme-timing build failure, fixed by dropping
