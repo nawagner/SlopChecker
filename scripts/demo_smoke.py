@@ -57,7 +57,13 @@ DEMO_CRITICAL = (
 
 # Reasoned skips we expect on a single fabricated upload; anything else
 # skipping is still a warning, these are just annotated as expected.
-EXPECTED_SKIPS = ("similar_documents", "claim_supported", "metadata_match", "all_urls_resolve")
+EXPECTED_SKIPS = (
+    "similar_documents",
+    "claim_supported",
+    "metadata_match",
+    "all_urls_resolve",
+    "rubric_budget_ceiling",  # web upload has no rubric slot yet (#90)
+)
 
 GREEN, YELLOW, RED, DIM, RESET = "\x1b[32m", "\x1b[33m", "\x1b[31m", "\x1b[2m", "\x1b[0m"
 

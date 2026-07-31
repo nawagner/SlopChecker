@@ -42,7 +42,14 @@ from slopchecker.checks.cache import Cache
 from slopchecker.models import Anchor, CheckResult, Finding, FlattenedDoc, LedgerRow, Span
 
 DEFAULT_BASE_URL = "https://text.external-api.pangram.com"
-DEFAULT_MODEL = "pangram-4"
+# "default" = let Pangram resolve the current model for this API key. We
+# pinned "pangram-4" until 2026-07-31, when production 422'd mid-hackathon:
+# Pangram rewrote the pin to a retired internal id ("unknown model
+# 'pangram-3.3'") for the production key while the same pin worked fine on
+# another key — alias resolution is key-dependent and churns without notice.
+# A screening tool wants "Pangram's current detector", not a stale pin;
+# set PANGRAM_MODEL to pin explicitly (e.g. for a reproducibility study).
+DEFAULT_MODEL = "default"
 
 #: Cache namespace for detector responses (#119).
 CACHE_NAMESPACE = "pangram"
@@ -242,8 +249,10 @@ class DetectorResult:
 class PangramConfig:
     """Knobs for `PangramDetector`.
 
-    - `model` — default `"pangram-4"`; Pangram requires an explicit model
-      after 2026-09-30.
+    - `model` — default: `$PANGRAM_MODEL` if set, else `"default"` (Pangram
+      resolves the current model for the key; see the DEFAULT_MODEL comment
+      for why pinning burned us). Pangram requires an explicit model value
+      after 2026-09-30; `"default"` is an accepted explicit value.
     - `max_attempts` — retry ceiling for 429 / 5xx (client errors and
       auth errors are never retried).
     - `initial_backoff_seconds` — exponential base; attempt N sleeps
@@ -261,7 +270,7 @@ class PangramConfig:
       document level but not turned into evidence cards.
     """
 
-    model: str = DEFAULT_MODEL
+    model: str = field(default_factory=lambda: _config.get("PANGRAM_MODEL") or DEFAULT_MODEL)
     max_attempts: int = 3
     initial_backoff_seconds: float = 0.5
     unit_price_usd: float = 0.0
