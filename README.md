@@ -6,7 +6,7 @@ tagging. It reports evidence for a human reviewer — it never auto-rejects
 anything.
 
 Built by a five-person team at [Hacking the Think Tank](https://hackingthethinktank.com/)
-(2026-07-31).
+(2026-07-31). Live demo: **[slop-checker.com](https://slop-checker.com)**.
 
 ## Quickstart
 
