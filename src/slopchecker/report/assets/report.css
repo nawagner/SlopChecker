@@ -46,6 +46,10 @@ header .facts { font-family: var(--mono); font-size: .75rem; color: var(--soft);
 /* pre-wrap: the flattened text IS the evidence — line breaks the checkers
    saw (PDF text lines especially) render as the checkers saw them. */
 .doc p { margin: 0 0 1.1rem; white-space: pre-wrap; }
+/* Detected heading in extracted text (PDFs arrive with no markup at all). */
+.doc p.dh { font-family: var(--sans); font-weight: 700; font-size: .95rem;
+            letter-spacing: .01em; margin: 1.5rem 0 .5rem; }
+.doc p.dh + p { margin-top: 0; }
 .doc .pgbrk { font-family: var(--mono); font-size: .72rem; color: var(--soft);
               border-top: 1px dashed var(--rule); margin: 1.6rem 0 1.1rem;
               padding-top: .35rem; text-transform: uppercase; letter-spacing: .08em; }
