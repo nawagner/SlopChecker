@@ -20,6 +20,8 @@ docx = ["python-docx>=1.1"]
 llm = ["anthropic>=0.40"]
 # The web layer over the pipeline (#27) — see slopchecker/web.py.
 web = ["fastapi>=0.115", "uvicorn>=0.30", "python-multipart>=0.0.9"]
+# Validation harness (#29): planted-defect injector + recall report.
+harness = ["pyyaml>=6.0"]
 dev = ["ruff>=0.5", "pytest>=8.2", "mypy>=1.10"]
 
 [project.scripts]

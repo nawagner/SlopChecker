@@ -5,6 +5,8 @@ Append-only. Newest entry on top. One line per entry:
 
 ## Log
 
+- 13:20 Dan (fable) — #29 harness landed: pat-helper pattern ported to SlopChecker's data model, MVP corpus of 3 catchable + 2 pending_lens:claims defects, current recall 3/3 on runnable tier, ~0.15s canary test in pytest; direct calls to `extract_citations` / `check_quotes` until #7/#10's registry wiring lands (MATCHERS vocabulary stays either way); DOI-resolution defects deferred to Nick's #8; also filed #71 (post-ingest mutation + Task Exp real-fixture path — the follow-up B path) and landed #72 (Alex → `990991A` in team map) / next: nothing critical, could wire DOI defects once #8 lands / blocked on nothing.
+
 - 13:15 Dan (fable) — e2e smoke of the full chain (PDF → `slopcheck run` →
   report.json/HTML → `render --pdf`) works, but found the PDF leg was dark
   on every Mac: `find_browser()` had no macOS paths (PDF tests silently
