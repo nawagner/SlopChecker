@@ -18,10 +18,30 @@ REFERENCE_HEADING = re.compile(
 )
 
 
+# Typographic ligatures, which PDF extraction preserves verbatim: a
+# browser-printed PDF yields "nonpro\ufb01t" as a single character, so a
+# checker searching for "nonprofit" finds nothing and a quote anchored on it
+# can't be grounded. Expanded to their component letters at load, before any
+# offset is computed.
+_LIGATURES = str.maketrans(
+    {
+        "\ufb00": "ff",
+        "\ufb01": "fi",
+        "\ufb02": "fl",
+        "\ufb03": "ffi",
+        "\ufb04": "ffl",
+        "\ufb05": "st",
+        "\ufb06": "st",
+    }
+)
+
+
 def normalize(text: str) -> str:
-    """Line-ending + BOM normalization. Offsets are computed AFTER this, so
-    every span indexes into exactly the text the caller receives."""
-    return text.replace("\r\n", "\n").replace("\r", "\n").lstrip("\ufeff")
+    """Line-ending, BOM, and ligature normalization. Offsets are computed
+    AFTER this, so every span indexes into exactly the text the caller
+    receives."""
+    text = text.replace("\r\n", "\n").replace("\r", "\n").lstrip("\ufeff")
+    return text.translate(_LIGATURES)
 
 
 def sha256_file(path: Path) -> str:

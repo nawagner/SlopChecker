@@ -124,6 +124,18 @@ class TestMarkdown:
         assert "\r" not in result.document.text
         assert result.find_section("Methods") is not None
 
+    def test_ligatures_expand_so_plain_search_matches(self, tmp_path: Path) -> None:
+        # Browser-printed PDFs emit "nonproﬁt"/"oﬃcer" as single glyphs; a
+        # checker searching for the plain spelling would otherwise miss.
+        body = "# Doc\n\nA nonproﬁt oﬃcer reviewed the ﬀ and ﬂow of ﬃ.\n"
+        result = ingest(write(tmp_path, "lig.md", body))
+        assert result.status == "ok"
+        assert result.document is not None
+        text = result.document.text
+        assert "nonprofit" in text
+        assert "officer" in text
+        assert not any(lig in text for lig in "ﬀﬁﬂﬃﬄ")
+
 
 # --- html -------------------------------------------------------------------
 
