@@ -7,6 +7,25 @@ Append-only. Newest entry on top. One line per entry:
 
 - 17:54 Dan (fable) — #11 claim-support LLM check landed on `danparshall/11-claim-support`: new `pipeline/claim_support/` subpackage, adversarial verify (judge → mechanical `match_quote` grounding → refuter), registered under `tier="llm"` and off by default. Two invariants each covered by a test: every emitted `Finding` carries a passage the LLM claimed *and* verified against the retrieved source; `supported`/`unverifiable`/low-confidence/refuted/no-passage/unavailable-source all silent (bias hard toward silence, per #11). `Anchor.quote` is the claim sentence from `FlattenedDoc.text` (renderer contract — self-code-review caught me anchoring to the source passage); the LLM's source passage rides in `evidence["source_passage"]`. Cost ceiling = `max_citations_per_doc=20` (2N LLM calls worst-case) + `max_source_chars=30_000` head-truncation. All LLM plumbing (Transport protocol, `_call_with_retry` mirroring pangram, `output_config.format` structured output, prompt assembly) private to the subpackage per #37's design comment. Rebased over #93's fetchers; the check uses the `SourceFetcher` protocol so it picks up `build_default_fetcher()` for free once we wire it in. 20 new tests; full suite 228 passed, ruff+mypy clean / next: open PR, follow-up tickets for 20-pair confusion matrix (AC 2), cross-provider refuter, and wiring real fetchers into the registered wrapper / blocked on nothing.
 
+- 17:29 Dan (fable) — #13 runtime half landed on `danparshall/13-lens-runtime`:
+  `pipeline/lens_runtime.py` executes a lens pack against a `FlattenedDoc`
+  via a real Anthropic call (client behind an injectable `LLMClient`
+  protocol; `AnthropicClient` maps SDK exceptions to typed transport
+  errors). Prompt assembly split from the call site (locks in one of
+  #37's shape decisions). Strict-JSON parse tolerant of markdown fences,
+  then mechanical quote-anchoring — claims whose `quote` isn't a verbatim
+  substring of `doc.text` are dropped, not surfaced. Content-hash cache
+  keyed on (model, lens.id, doc.text) — cache is opt-in via
+  `SLOPCHECK_LENS_CACHE_DIR`; skipped when `ANTHROPIC_API_KEY` unset
+  (degrade-to-gaps). `Finding.evidence` carries `{provider, model}` so
+  #37's `rung` extension is a one-line schema-free change. Ships the
+  registered `claims` check in `pipeline/checks_llm.py` mapping each
+  claim → `Finding` per the table in `lenses/claims.md`, plus doc-level
+  `claims` (ran/N) and `claims_quant_unsourced` (count) ledger rows.
+  29 new tests (205 total green), ruff + mypy clean on new code.
+  Deferred to a separate eval ticket: stability diffing + 5-real-proposal
+  manual review. / next: open PR / blocked on nothing.
+
 - 13:02 Alex (claude-code) — #22 fixtures: added the `wrong_paper` defect — a
   citation with a real, *resolving* DOI attributed to the wrong paper
   (`metadata_match=false`, new `has_mismatched_citations` ground truth). It's the
@@ -41,10 +60,6 @@ Append-only. Newest entry on top. One line per entry:
   `npm run db:migrate:remote`; add the `worker` CI job to the mainsaver ruleset
   / blocked on nothing.
 
-- 13:21 Dan (fable) — #37 design conversation, no code: brainstormed retry-ladder shape, concluded it's post-MVP (Pangram already has an inline loop; no chat-model check exists yet to hit the refusal problem); captured two shape decisions as a comment on #37 (check-invoked `LadderExecutor`, `Finding.evidence["rung"]` for provenance) so the fork is settled when someone picks it up post-#13; also posted correction on #13 resolving a mutual-block loop (Dan's earlier "LLM client lives with #37" was wrong under new scoping); ticket parked / next: return to happy-path work / blocked on nothing.
-
-- 13:27 Emerson (claude-code) — PDF text rendering fixed (#19): renderer split paragraphs on `\n\n`, which PDF extraction never emits — a real 120-page NIH R01 rendered as ONE `<p>` wall; now `\f`/blank-line boundaries with offset-exact anchor math, one block per page + `p. N` dividers, pre-wrap line structure / needs a Railway redeploy after merge (Nick) to reach the live site / next: demo scenario #25 / blocked on nothing
-
 - 13:29 Dan (fable) — #81 integration tests landed: `tests/test_integration_e2e.py`,
   9 subprocess-driven tests of the full chain (fabricated PDF → `run` →
   report.json/HTML validating `EvidenceReport` → `render --pdf` → real PDF),
@@ -54,7 +69,11 @@ Append-only. Newest entry on top. One line per entry:
   CI gains an explicit `pytest -m integration` step / next: PR review + merge /
   blocked on nothing.
 
+- 13:27 Emerson (claude-code) — PDF text rendering fixed (#19): renderer split paragraphs on `\n\n`, which PDF extraction never emits — a real 120-page NIH R01 rendered as ONE `<p>` wall; now `\f`/blank-line boundaries with offset-exact anchor math, one block per page + `p. N` dividers, pre-wrap line structure / needs a Railway redeploy after merge (Nick) to reach the live site / next: demo scenario #25 / blocked on nothing
+
 - 13:26 Dominique (claude-code) — picked up #74 (landing/index design-copy-UX lane, handed off from Emerson's #27 first pass); audited slop-checker.com and landed the two structural fixes: hero `mark` had a `nowrap`/`normal` pair fighting each other so a wrapped highlight painted its underline once and split mid-phrase (fixed with `box-decoration-break: clone`), and the page had no `h1` at all — the specimen sentence is now the `h1`, computed styles identical. Measured 4 WCAG AA contrast failures on the shared tokens (worst: white-on-`--accent` at 2.50:1 for the primary CTA in dark mode) and found the `data-theme` blocks in `report.css` are dead — nothing sets the attribute; both written up in the ai-log / next: contrast + focus pass across `index.html` and `report.css` together, then a decision on the theme toggle / blocked on nothing
+
+- 13:21 Dan (fable) — #37 design conversation, no code: brainstormed retry-ladder shape, concluded it's post-MVP (Pangram already has an inline loop; no chat-model check exists yet to hit the refusal problem); captured two shape decisions as a comment on #37 (check-invoked `LadderExecutor`, `Finding.evidence["rung"]` for provenance) so the fork is settled when someone picks it up post-#13; also posted correction on #13 resolving a mutual-block loop (Dan's earlier "LLM client lives with #37" was wrong under new scoping); ticket parked / next: return to happy-path work / blocked on nothing.
 
 - 13:20 Dan (fable) — #29 harness landed: pat-helper pattern ported to SlopChecker's data model, MVP corpus of 3 catchable + 2 pending_lens:claims defects, current recall 3/3 on runnable tier, ~0.15s canary test in pytest; direct calls to `extract_citations` / `check_quotes` until #7/#10's registry wiring lands (MATCHERS vocabulary stays either way); DOI-resolution defects deferred to Nick's #8; also filed #71 (post-ingest mutation + Task Exp real-fixture path — the follow-up B path) and landed #72 (Alex → `990991A` in team map) / next: nothing critical, could wire DOI defects once #8 lands / blocked on nothing.
 
