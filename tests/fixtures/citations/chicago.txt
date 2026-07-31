@@ -1,0 +1,31 @@
+Archival Silence and the Digital Record
+
+Submitted to the Harrington Trust, Documentary Heritage Program
+(fabricated fixture document — every person, work, and finding is invented)
+
+The premise that digitization guarantees preservation has been
+challenged repeatedly (Whitfield 2020). Format obsolescence outpaces
+migration budgets in most public archives (Reyes and Calloway 2018).
+Whitfield (2020) describes the resulting losses as "a slow fire in the
+server room, consuming collections nobody has opened recently." One
+influential account attributes the gap to donor preference for visible
+acquisitions (Bellweather 2017).
+
+As Nakamura (2019a) shows, community archives fill part of the gap,
+though their holdings skew heavily toward the recent past
+(Nakamura 2019b). The proposed survey extends that work to
+born-digital municipal records.
+
+References
+
+Nakamura, Keiko. 2019a. "Community Archives and the Recent Past."
+Archival Practice 31 (2): 88-107. https://doi.org/10.2345/ap.2019.312
+
+Nakamura, Keiko. 2019b. Memory Without Institutions. Portland:
+Cascadia University Press.
+
+Reyes, Marisol, and Duncan Calloway. 2018. "Migration Debt in Public
+Archives." Journal of Digital Preservation 11 (1): 3-29.
+
+Whitfield, Amara. 2020. The Slow Fire: Loss in Born-Digital
+Collections. Chicago: Imagined Press.

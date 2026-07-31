@@ -1,0 +1,11 @@
+Inoculation Theory in Synthetic Media Environments
+J. Smith — fabricated source document for the SlopChecker test corpus.
+
+Abstract. Inoculation against synthetic persuasion behaves like its
+attitudinal ancestor: pre-exposure to weakened arguments confers
+resistance. Our central finding is that durable attitude change
+requires repeated exposure across multiple framings, and that a single
+framing — however strong — decays toward baseline within days.
+
+We further show that inoculation transfers only weakly across topics,
+and that booster exposures restore most of the lost resistance.

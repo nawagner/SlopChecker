@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SlopChecker — Evidence Report — proposal.pdf</title>
+<style>
+:root {
+  --bg: #FCFCFA; --panel: #F3F2EE; --ink: #22262C; --soft: #6B7280;
+  --rule: #DDDAD2; --accent: #33608C;
+  --no: #B3352E; --no-bg: #F8E7E5;
+  --yes: #2F7D52; --yes-bg: #E3F0E8;
+  --score: #6E4FA3; --score-bg: #EDE7F6;
+  --serif: "Charter", "Sitka Text", Cambria, Georgia, serif;
+  --sans: -apple-system, "Segoe UI", system-ui, Roboto, sans-serif;
+  --mono: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16181D; --panel: #1E2127; --ink: #E6E3DC; --soft: #98A0AB;
+    --rule: #33373E; --accent: #7FA8CF;
+    --no: #E2756E; --no-bg: #3A2422;
+    --yes: #6FBE93; --yes-bg: #1E3328;
+    --score: #A98FD6; --score-bg: #2C2438;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #FCFCFA; --panel: #F3F2EE; --ink: #22262C; --soft: #6B7280;
+  --rule: #DDDAD2; --accent: #33608C;
+  --no: #B3352E; --no-bg: #F8E7E5; --yes: #2F7D52; --yes-bg: #E3F0E8;
+  --score: #6E4FA3; --score-bg: #EDE7F6;
+}
+:root[data-theme="dark"] {
+  --bg: #16181D; --panel: #1E2127; --ink: #E6E3DC; --soft: #98A0AB;
+  --rule: #33373E; --accent: #7FA8CF;
+  --no: #E2756E; --no-bg: #3A2422; --yes: #6FBE93; --yes-bg: #1E3328;
+  --score: #A98FD6; --score-bg: #2C2438;
+}
+
+body { background: var(--bg); color: var(--ink); font-family: var(--sans);
+       line-height: 1.55; margin: 0; }
+.wrap { max-width: 72rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem 1.5rem;
+         border-bottom: 1px solid var(--rule); padding-bottom: .8rem; margin-bottom: .6rem; }
+header .name { font-family: var(--mono); font-size: .85rem; font-weight: 700;
+               letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+header .docid { font-size: .95rem; font-weight: 600; }
+header .facts { font-family: var(--mono); font-size: .75rem; color: var(--soft); margin-left: auto; }
+.hint { font-size: .78rem; color: var(--soft); margin: 0 0 1.5rem; }
+
+/* two-column genius layout */
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 22rem; gap: 2.5rem;
+          position: relative; align-items: start; }
+.doc { font-family: var(--serif); font-size: 1.02rem; line-height: 1.75; max-width: 42rem; }
+.doc h3 { font-size: 1.15rem; margin: 0 0 .2rem; }
+.doc .byline { color: var(--soft); font-style: italic; font-size: .92rem; margin: 0 0 1.3rem; }
+.doc p { margin: 0 0 1.1rem; }
+.doc .refs { font-size: .87rem; border-top: 1px solid var(--rule);
+             padding-top: .9rem; margin-top: 1.4rem; }
+.doc .refs p { margin: 0 0 .45rem; }
+
+mark { background: transparent; color: inherit; padding: 0 .08em; cursor: pointer;
+       border-radius: 2px; }
+mark.no    { background: var(--no-bg);    box-shadow: inset 0 -2px 0 var(--no); }
+mark.yes   { background: var(--yes-bg);   box-shadow: inset 0 -2px 0 var(--yes); }
+mark.score { background: var(--score-bg); box-shadow: inset 0 -2px 0 var(--score); }
+mark.skip  { background: var(--panel);    box-shadow: inset 0 -2px 0 var(--soft); }
+mark.active { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.rail { position: relative; min-height: 100%; }
+.anno { background: var(--panel); border: 1px solid var(--rule);
+        border-radius: 4px; padding: .7rem .9rem; font-size: .82rem; cursor: pointer; }
+.a-sum { display: none; font-family: var(--mono); font-size: .76rem; line-height: 1.5; }
+.rail.condensed .anno:not(.expanded) { padding: .45rem .9rem; }
+.rail.condensed .anno:not(.expanded) .kv,
+.rail.condensed .anno:not(.expanded) .a-note { display: none; }
+.rail.condensed .anno:not(.expanded) .a-sum { display: block; }
+.rail.condensed .anno:not(.expanded) .a-head { margin-bottom: .15rem; }
+.a-head { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .45rem; }
+.a-id { font-family: var(--mono); font-size: .7rem; font-weight: 700; color: #fff;
+        border-radius: 3px; padding: .1rem .35rem; }
+.a-id.no { background: var(--no); } .a-id.yes { background: var(--yes); }
+.a-id.score { background: var(--score); }
+.a-id.skip { background: var(--soft); }
+.a-name { font-weight: 600; }
+.kv { font-family: var(--mono); font-size: .78rem; line-height: 1.7;
+      border-collapse: collapse; width: 100%; }
+.kv td { padding: 0; border: none; vertical-align: top; }
+.kv td:first-child { color: var(--soft); padding-right: 1rem; white-space: nowrap; }
+.kv td:last-child { text-align: right; white-space: nowrap; }
+.v-yes { color: var(--yes); font-weight: 700; }
+.v-no { color: var(--no); font-weight: 700; }
+.v-score { color: var(--score); font-weight: 700; }
+.v-skip { color: var(--soft); font-weight: 700; }
+.why { color: var(--soft); font-weight: 400; }
+.a-note { font-size: .76rem; color: var(--soft); margin: .45rem 0 0; }
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  .anno { position: static !important; margin-bottom: .75rem; }
+}
+
+h2 { font-size: .78rem; letter-spacing: .13em; text-transform: uppercase;
+     color: var(--soft); font-weight: 600; border-bottom: 1px solid var(--rule);
+     padding-bottom: .35rem; margin: 3rem 0 1rem; }
+
+.ledgerwrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 4px; }
+table.ledger { border-collapse: collapse; width: 100%; font-size: .84rem; min-width: 38rem; }
+.ledger th, .ledger td { text-align: left; padding: .45rem .8rem;
+                         border-bottom: 1px solid var(--rule); }
+.ledger th { font-size: .68rem; letter-spacing: .1em; text-transform: uppercase;
+             color: var(--soft); background: var(--panel); font-weight: 600; }
+.ledger tbody tr:last-child td { border-bottom: none; }
+.ledger td.r { font-family: var(--mono); font-weight: 700; }
+.ledger td.r.yes { color: var(--yes); } .ledger td.r.no { color: var(--no); }
+.ledger td.r.score { color: var(--score); }
+.ledger td.r.skip { color: var(--soft); }
+.ledger td.d { color: var(--soft); font-size: .8rem; }
+
+.verdict { border: 1px solid var(--no); border-left: 5px solid var(--no);
+           background: var(--no-bg); border-radius: 4px; padding: .9rem 1.2rem;
+           max-width: 46rem; }
+.verdict .headline { font-weight: 700; color: var(--no); margin: 0 0 .4rem; }
+.verdict p { margin: 0; font-size: .9rem; }
+.verdict .counts { font-family: var(--mono); font-size: .8rem; margin-top: .6rem; }
+.verdict.ok { border-color: var(--yes); border-left-color: var(--yes);
+              background: var(--yes-bg); }
+.verdict.ok .headline { color: var(--yes); }
+
+.schema { font-family: var(--mono); font-size: .76rem; line-height: 1.55;
+          background: var(--panel); border: 1px solid var(--rule); border-radius: 4px;
+          padding: .9rem 1.1rem; overflow-x: auto; white-space: pre; max-width: 46rem; }
+.schema .c { color: var(--soft); }
+.foot { font-size: .76rem; color: var(--soft); margin-top: 2rem; max-width: 60ch; }
+
+/* Print-safe fallback: the shipping artifact is a PDF, so the interactive
+   rail must degrade to static, fully-expanded cards after the document. */
+@media print {
+  .hint { display: none; }
+  .layout { display: block; }
+  .anno { position: static !important; margin: .6rem 0 .9rem; break-inside: avoid; }
+  .rail.condensed .anno:not(.expanded) { padding: .7rem .9rem; }
+  .rail.condensed .anno:not(.expanded) .kv { display: table; }
+  .rail.condensed .anno:not(.expanded) .a-note { display: block; }
+  .rail.condensed .anno:not(.expanded) .a-sum { display: none; }
+  mark, .a-id, .verdict, .ledger th {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <span class="name">SlopChecker</span>
+  <span class="docid">proposal.pdf — “Resilient Information Ecosystems Initiative” (Meridian Policy Group)</span>
+  <span class="facts">OSF-2026-CIV-014 · 2026-07-31 · 10 checks · 41s</span>
+</header>
+<p class="hint">Checks appear beside the passages they refer to — click a card or highlight to expand/collapse. Red = failed a check · green = passed · purple = detector score · gray = could not run.</p>
+
+<div class="layout">
+<div class="doc">
+<h3>Resilient Information Ecosystems Initiative</h3>
+<p class="byline">Response to OSF-2026-CIV-014 (excerpt)</p>
+<p>The information environment confronting democratic institutions has degraded at a pace that outstrips the capacity of existing civil-society infrastructure to respond. Recent scholarship demonstrates that <mark class="yes" data-anno="c1">coordinated inauthentic behavior now shifts measurable public-opinion outcomes in as little as seventy-two hours</mark> [1]. As Starbird and colleagues observe, <mark class="no" data-anno="q1">“the velocity of synthetic narratives has rendered traditional fact-checking architectures functionally obsolete”</mark> [2]. Our initiative responds directly to this crisis.</p>
+<p><mark class="score" data-anno="d1">Our approach leverages a holistic, multi-stakeholder framework designed to foster synergies across the information resilience landscape. By convening diverse voices and harnessing cutting-edge methodologies, we will unlock transformative capacity at the intersection of technology and civil society.</mark> The program builds on findings that <mark class="no" data-anno="c3">prebunking interventions achieve durable attitudinal inoculation across all demographic cohorts</mark> [3], and that <mark class="no" data-anno="c4">media-literacy training reduces susceptibility to manipulated content by up to 64 percent</mark> [4].</p>
+<p>Meridian will deliver twelve regional trainings, a 40-country monitoring network, a peer-reviewed evaluation study, and an open-source detection toolkit within the first grant year, at a total cost of $148,000.</p>
+<div class="refs">
+<p>[1] Chen, R. &amp; Okafor, D. (2024). Measuring opinion cascades in networked publics. J. Online Trust &amp; Safety, 3(2). doi:10.54501/jots.v3i2.118</p>
+<p>[2] Starbird, K., West, J., &amp; Moran, R. (2023). Synthetic velocity and the collapse of verification. PNAS. doi:10.1073/pnas.2219998120</p>
+<p>[3] Vraga, E. &amp; Bode, L. (2025). Inoculation at scale. Misinformation Review, 6(1). doi:10.37016/mr-2025-0163</p>
+<p>[4] Guess, A. et al. (2020). A digital media literacy intervention increases discernment. PNAS, 117(27). doi:10.1073/pnas.1920498117</p>
+</div>
+</div>
+
+<div class="rail">
+  <div class="anno" id="anno-c1">
+    <div class="a-head"><span class="a-id yes">C1</span><span class="a-name">Citation [1]</span></div>
+    <div class="a-sum">resolves <span class="v-yes">YES</span> · metadata <span class="v-yes">YES</span></div>
+    <table class="kv">
+      <tr><td>DOI resolves</td><td class="v-yes">YES</td></tr>
+      <tr><td>Metadata match</td><td class="v-yes">YES</td></tr>
+    </table>
+  </div>
+
+  <div class="anno" id="anno-q1">
+    <div class="a-head"><span class="a-id no">Q1</span><span class="a-name">Quote → citation [2]</span></div>
+    <div class="a-sum">resolves <span class="v-yes">YES</span> · metadata <span class="v-yes">YES</span> · quote found <span class="v-no">NO</span></div>
+    <table class="kv">
+      <tr><td>DOI resolves</td><td class="v-yes">YES</td></tr>
+      <tr><td>Metadata match</td><td class="v-yes">YES</td></tr>
+      <tr><td>Quote found in source</td><td class="v-no">NO</td></tr>
+    </table>
+    <p class="a-note">Paper is real. Quoted sentence does not appear in its full text.</p>
+  </div>
+
+  <div class="anno" id="anno-d1">
+    <div class="a-head"><span class="a-id score">D1</span><span class="a-name">AI detection (Pangram)</span></div>
+    <div class="a-sum">span <span class="v-score">0.98</span> · doc <span class="v-score">0.96</span></div>
+    <table class="kv">
+      <tr><td>Span score</td><td class="v-score">0.98</td></tr>
+      <tr><td>Document score</td><td class="v-score">0.96</td></tr>
+    </table>
+    <p class="a-note">Score, not a verdict.</p>
+  </div>
+
+  <div class="anno" id="anno-c3">
+    <div class="a-head"><span class="a-id no">C3</span><span class="a-name">Citation [3]</span></div>
+    <div class="a-sum">resolves <span class="v-no">NO</span> · OpenAlex <span class="v-no">NO</span></div>
+    <table class="kv">
+      <tr><td>DOI resolves</td><td class="v-no">NO</td></tr>
+      <tr><td>Found in OpenAlex</td><td class="v-no">NO</td></tr>
+    </table>
+    <p class="a-note">No such article. Journal exists; record does not.</p>
+  </div>
+
+  <div class="anno" id="anno-c4">
+    <div class="a-head"><span class="a-id no">C4</span><span class="a-name">Claimed number → citation [4]</span></div>
+    <div class="a-sum">resolves <span class="v-yes">YES</span> · metadata <span class="v-yes">YES</span> · number found <span class="v-no">NO</span></div>
+    <table class="kv">
+      <tr><td>DOI resolves</td><td class="v-yes">YES</td></tr>
+      <tr><td>Metadata match</td><td class="v-yes">YES</td></tr>
+      <tr><td>Number found in source</td><td class="v-no">NO</td></tr>
+    </table>
+    <p class="a-note">Source reports 26.5%.</p>
+  </div>
+</div>
+</div>
+
+<h2>All checks</h2>
+<div class="ledgerwrap">
+<table class="ledger">
+  <thead><tr><th>Check</th><th>Result</th><th>Detail</th></tr></thead>
+  <tbody>
+    <tr><td>Within page limit</td><td class="r yes">YES</td><td class="d">14 / 15 pp</td></tr>
+    <tr><td>Required sections present</td><td class="r no">NO</td><td class="d">missing: Budget Justification</td></tr>
+    <tr><td>All DOIs resolve</td><td class="r no">NO</td><td class="d">3 / 4 — ref [3] not found</td></tr>
+    <tr><td>Citation metadata match</td><td class="r yes">YES</td><td class="d">3 / 3 resolving DOIs</td></tr>
+    <tr><td>Quotes found in sources</td><td class="r no">NO</td><td class="d">0 / 1 — Q1</td></tr>
+    <tr><td>Claimed numbers found in sources</td><td class="r no">NO</td><td class="d">0 / 1 — C4</td></tr>
+    <tr><td>AI detection (Pangram)</td><td class="r score">0.96</td><td class="d">document score</td></tr>
+    <tr><td>Similar to prior submission</td><td class="r score">0.87</td><td class="d">vs. submission #0083</td></tr>
+    <tr><td>Budget within comparable range</td><td class="r no">NO</td><td class="d">$148k vs. $0.9–2.4M comparables (Candid)</td></tr>
+    <tr><td>Plagiarism scan</td><td class="r skip">SKIPPED</td><td class="d">no API key configured</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Summary</h2>
+<div class="verdict">
+  <p class="headline">5 checks failed — flag for human review</p>
+  <p>Failed: Required sections present (missing: Budget Justification); All DOIs resolve (3 / 4 — ref [3] not found); Quotes found in sources (0 / 1 — Q1); Claimed numbers found in sources (0 / 1 — C4); Budget within comparable range ($148k vs. $0.9–2.4M comparables (Candid)). 1 check could not run (see ledger) — reported as coverage gaps, not passes. Detector and similarity scores are context, not grounds.</p>
+  <p class="counts">NO ×5 · YES ×2 · scores ×2 · not run ×1</p>
+</div>
+
+<h2>report.json (this page is a render of this)</h2>
+<div class="schema">{
+  &quot;schema_version&quot;: &quot;0.1&quot;,
+  &quot;document&quot;: {
+    &quot;file&quot;: &quot;proposal.pdf&quot;,
+    &quot;sha256&quot;: &quot;9f31c2ae-fabricated-fixture-hash&quot;,
+    &quot;pages&quot;: 14,
+    &quot;title&quot;: &quot;Resilient Information Ecosystems Initiative&quot;,
+    &quot;byline&quot;: &quot;Response to OSF-2026-CIV-014 (excerpt)&quot;,
+    &quot;submitter&quot;: &quot;Meridian Policy Group&quot;,
+    &quot;text&quot;: &quot;The information environment confronting democratic institutions has degraded at a pace that outstrips the capacity of existing civil-society infrastructure to respond. Recent scholarship demonstrates that coordinated inauthentic behavior now shifts measurable public-opinion outcomes in as little as seventy-two hours [1]. As Starbird and colleagues observe, “the velocity of synthetic narratives has rendered traditional fact-checking architectures functionally obsolete” [2]. Our initiative responds directly to this crisis.\n\nOur approach leverages a holistic, multi-stakeholder framework designed to foster synergies across the information resilience landscape. By convening diverse voices and harnessing cutting-edge methodologies, we will unlock transformative capacity at the intersection of technology and civil society. The program builds on findings that prebunking interventions achieve durable attitudinal inoculation across all demographic cohorts [3], and that media-literacy training reduces susceptibility to manipulated content by up to 64 percent [4].\n\nMeridian will deliver twelve regional trainings, a 40-country monitoring network, a peer-reviewed evaluation study, and an open-source detection toolkit within the first grant year, at a total cost of $148,000.\n\n[1] Chen, R. &amp; Okafor, D. (2024). Measuring opinion cascades in networked publics. J. Online Trust &amp; Safety, 3(2). doi:10.54501/jots.v3i2.118\n\n[2] Starbird, K., West, J., &amp; Moran, R. (2023). Synthetic velocity and the collapse of verification. PNAS. doi:10.1073/pnas.2219998120\n\n[3] Vraga, E. &amp; Bode, L. (2025). Inoculation at scale. Misinformation Review, 6(1). doi:10.37016/mr-2025-0163\n\n[4] Guess, A. et al. (2020). A digital media literacy intervention increases discernment. PNAS, 117(27). doi:10.1073/pnas.1920498117&quot;
+  },
+  &quot;solicitation&quot;: &quot;OSF-2026-CIV-014&quot;,
+  &quot;run&quot;: {
+    &quot;date&quot;: &quot;2026-07-31&quot;,
+    &quot;seconds&quot;: 41
+  },
+  &quot;findings&quot;: [
+    {
+      &quot;id&quot;: &quot;C1&quot;,
+      &quot;target&quot;: &quot;ref[1]&quot;,
+      &quot;label&quot;: &quot;Citation [1]&quot;,
+      &quot;anchor&quot;: {
+        &quot;page&quot;: 1,
+        &quot;quote&quot;: &quot;coordinated inauthentic behavior now shifts measurable public-opinion outcomes in as little as seventy-two hours&quot;
+      },
+      &quot;checks&quot;: [
+        {
+          &quot;name&quot;: &quot;doi_resolves&quot;,
+          &quot;result&quot;: true
+        },
+        {
+          &quot;name&quot;: &quot;metadata_match&quot;,
+          &quot;result&quot;: true
+        }
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;Q1&quot;,
+      &quot;target&quot;: &quot;ref[2]&quot;,
+      &quot;label&quot;: &quot;Quote → citation [2]&quot;,
+      &quot;anchor&quot;: {
+        &quot;page&quot;: 1,
+        &quot;quote&quot;: &quot;“the velocity of synthetic narratives has rendered traditional fact-checking architectures functionally obsolete”&quot;
+      },
+      &quot;checks&quot;: [
+        {
+          &quot;name&quot;: &quot;doi_resolves&quot;,
+          &quot;result&quot;: true
+        },
+        {
+          &quot;name&quot;: &quot;metadata_match&quot;,
+          &quot;result&quot;: true
+        },
+        {
+          &quot;name&quot;: &quot;quote_in_source&quot;,
+          &quot;result&quot;: false
+        }
+      ],
+      &quot;note&quot;: &quot;Paper is real. Quoted sentence does not appear in its full text.&quot;
+    },
+    {
+      &quot;id&quot;: &quot;D1&quot;,
+      &quot;target&quot;: &quot;p2&quot;,
+      &quot;label&quot;: &quot;AI detection (Pangram)&quot;,
+      &quot;anchor&quot;: {
+        &quot;page&quot;: 2,
+        &quot;quote&quot;: &quot;Our approach leverages a holistic, multi-stakeholder framework designed to foster synergies across the information resilience landscape. By convening diverse voices and harnessing cutting-edge methodologies, we will unlock transformative capacity at the intersection of technology and civil society.&quot;
+      },
+      &quot;checks&quot;: [
+        {
+          &quot;name&quot;: &quot;pangram_span&quot;,
+          &quot;result&quot;: 0.98
+        },
+        {
+          &quot;name&quot;: &quot;pangram_document&quot;,
+          &quot;result&quot;: 0.96
+        }
+      ],
+      &quot;note&quot;: &quot;Score, not a verdict.&quot;
+    },
+    {
+      &quot;id&quot;: &quot;C3&quot;,
+      &quot;target&quot;: &quot;ref[3]&quot;,
+      &quot;label&quot;: &quot;Citation [3]&quot;,
+      &quot;anchor&quot;: {
+        &quot;page&quot;: 2,
+        &quot;quote&quot;: &quot;prebunking interventions achieve durable attitudinal inoculation across all demographic cohorts&quot;
+      },
+      &quot;checks&quot;: [
+        {
+          &quot;name&quot;: &quot;doi_resolves&quot;,
+          &quot;result&quot;: false
+        },
+        {
+          &quot;name&quot;: &quot;openalex_found&quot;,
+          &quot;result&quot;: false
+        }
+      ],
+      &quot;note&quot;: &quot;No such article. Journal exists; record does not.&quot;
+    },
+    {
+      &quot;id&quot;: &quot;C4&quot;,
+      &quot;target&quot;: &quot;ref[4]&quot;,
+      &quot;label&quot;: &quot;Claimed number → citation [4]&quot;,
+      &quot;anchor&quot;: {
+        &quot;page&quot;: 2,
+        &quot;quote&quot;: &quot;media-literacy training reduces susceptibility to manipulated content by up to 64 percent&quot;
+      },
+      &quot;checks&quot;: [
+        {
+          &quot;name&quot;: &quot;doi_resolves&quot;,
+          &quot;result&quot;: true
+        },
+        {
+          &quot;name&quot;: &quot;metadata_match&quot;,
+          &quot;result&quot;: true
+        },
+        {
+          &quot;name&quot;: &quot;number_in_source&quot;,
+          &quot;result&quot;: false
+        }
+      ],
+      &quot;note&quot;: &quot;Source reports 26.5%.&quot;
+    }
+  ],
+  &quot;ledger&quot;: [
+    {
+      &quot;check&quot;: &quot;within_page_limit&quot;,
+      &quot;label&quot;: &quot;Within page limit&quot;,
+      &quot;result&quot;: true,
+      &quot;detail&quot;: &quot;14 / 15 pp&quot;
+    },
+    {
+      &quot;check&quot;: &quot;required_sections&quot;,
+      &quot;label&quot;: &quot;Required sections present&quot;,
+      &quot;result&quot;: false,
+      &quot;detail&quot;: &quot;missing: Budget Justification&quot;
+    },
+    {
+      &quot;check&quot;: &quot;all_dois_resolve&quot;,
+      &quot;label&quot;: &quot;All DOIs resolve&quot;,
+      &quot;result&quot;: false,
+      &quot;detail&quot;: &quot;3 / 4 — ref [3] not found&quot;
+    },
+    {
+      &quot;check&quot;: &quot;metadata_match&quot;,
+      &quot;label&quot;: &quot;Citation metadata match&quot;,
+      &quot;result&quot;: true,
+      &quot;detail&quot;: &quot;3 / 3 resolving DOIs&quot;
+    },
+    {
+      &quot;check&quot;: &quot;quotes_in_sources&quot;,
+      &quot;label&quot;: &quot;Quotes found in sources&quot;,
+      &quot;result&quot;: false,
+      &quot;detail&quot;: &quot;0 / 1 — Q1&quot;
+    },
+    {
+      &quot;check&quot;: &quot;numbers_in_sources&quot;,
+      &quot;label&quot;: &quot;Claimed numbers found in sources&quot;,
+      &quot;result&quot;: false,
+      &quot;detail&quot;: &quot;0 / 1 — C4&quot;
+    },
+    {
+      &quot;check&quot;: &quot;pangram_document&quot;,
+      &quot;label&quot;: &quot;AI detection (Pangram)&quot;,
+      &quot;result&quot;: 0.96,
+      &quot;detail&quot;: &quot;document score&quot;
+    },
+    {
+      &quot;check&quot;: &quot;similarity_prior&quot;,
+      &quot;label&quot;: &quot;Similar to prior submission&quot;,
+      &quot;result&quot;: 0.87,
+      &quot;detail&quot;: &quot;vs. submission #0083&quot;
+    },
+    {
+      &quot;check&quot;: &quot;budget_in_range&quot;,
+      &quot;label&quot;: &quot;Budget within comparable range&quot;,
+      &quot;result&quot;: false,
+      &quot;detail&quot;: &quot;$148k vs. $0.9–2.4M comparables (Candid)&quot;
+    },
+    {
+      &quot;check&quot;: &quot;plagiarism_scan&quot;,
+      &quot;label&quot;: &quot;Plagiarism scan&quot;,
+      &quot;status&quot;: &quot;skipped&quot;,
+      &quot;reason&quot;: &quot;no API key configured&quot;
+    }
+  ],
+  &quot;summary&quot;: {
+    &quot;recommendation&quot;: &quot;human_review&quot;
+  }
+}
+<span class="c">// results are true | false | number. No prose required from the checker.</span></div>
+
+<p class="foot">Screening aid, not a determination. Boolean findings are independently
+verifiable. Scores are probabilistic and never sufficient on their own.</p>
+
+</div>
+
+<script>
+(function () {
+  var rail = document.querySelector(".rail");
+  var layoutEl = document.querySelector(".layout");
+  var docEl = document.querySelector(".doc");
+  var annos = Array.prototype.slice.call(document.querySelectorAll(".anno"));
+  function wide() { return window.matchMedia("(min-width: 901px)").matches; }
+
+  // A finding may render as several <mark> segments when spans overlap or
+  // cross a paragraph break; data-anno is a space-separated id list.
+  function marksFor(a) {
+    var id = a.id.replace("anno-", "");
+    return Array.prototype.slice.call(
+      document.querySelectorAll('mark[data-anno~="' + id + '"]'));
+  }
+
+  // Place every card at its passage's height, pushing down to avoid overlap.
+  // Returns the bottom of the stack so the caller can detect overflow.
+  function place() {
+    var items = annos.map(function (a) {
+      var m = marksFor(a)[0];
+      return { a: a, top: m ? m.getBoundingClientRect().top - layoutEl.getBoundingClientRect().top : 0 };
+    }).sort(function (x, y) { return x.top - y.top; });
+    var prev = 0;
+    items.forEach(function (it) {
+      it.a.style.position = "absolute";
+      it.a.style.left = "0";
+      it.a.style.right = "0";
+      var t = Math.max(it.top, prev);
+      it.a.style.top = t + "px";
+      prev = t + it.a.offsetHeight + 10;
+    });
+    return prev;
+  }
+
+  function layout() {
+    if (!wide()) {
+      rail.classList.remove("condensed");
+      annos.forEach(function (a) { a.style.position = "static"; });
+      return;
+    }
+    rail.classList.remove("condensed");
+    var bottom = place();
+    if (bottom > docEl.offsetHeight + 60) {  // too many at once: condense to one-liners
+      rail.classList.add("condensed");
+      place();
+    }
+  }
+
+  function toggle(a) {
+    a.classList.toggle("expanded");
+    marksFor(a).forEach(function (m) {
+      m.classList.toggle("active", a.classList.contains("expanded") && rail.classList.contains("condensed"));
+    });
+    var wasCondensed = rail.classList.contains("condensed");
+    layout();
+    if (wasCondensed && a.classList.contains("expanded")) {
+      rail.classList.add("condensed");  // keep condensed mode sticky once triggered
+      place();
+    }
+  }
+
+  annos.forEach(function (a) {
+    a.addEventListener("click", function () { toggle(a); });
+  });
+
+  // A mark click toggles every card it belongs to (overlapping spans).
+  Array.prototype.slice.call(document.querySelectorAll("mark[data-anno]")).forEach(function (m) {
+    m.addEventListener("click", function () {
+      (m.getAttribute("data-anno") || "").split(/\s+/).forEach(function (id) {
+        var a = document.getElementById("anno-" + id);
+        if (!a) return;
+        toggle(a);
+        if (!wide()) a.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      });
+    });
+  });
+
+  window.addEventListener("resize", layout);
+  window.addEventListener("load", layout);
+  layout();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+Prebunking at Platform Scale: A Field Experiment
+Delacroix, Ibarra & Chen — fabricated source document for the
+SlopChecker test corpus.
+
+Across four platform cohorts, prebunked participants retained roughly
+sixty percent of their measured effect at the final follow-up. The
+follow-up was conducted eight weeks after the final exposure, using
+the same instrument as the baseline wave. Retention did not differ
+significantly by cohort age or platform tenure.
