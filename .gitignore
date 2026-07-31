@@ -31,3 +31,7 @@ harness/out/
 # Worker
 worker/node_modules/
 worker/.wrangler/
+
+# Agent worktrees — isolated checkouts some harnesses create for subagents.
+# A full nested clone of this repo; never belongs in a commit.
+.claude/worktrees/
