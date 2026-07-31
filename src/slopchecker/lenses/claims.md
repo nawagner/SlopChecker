@@ -87,22 +87,28 @@ Field notes:
 
 ### Mapping to `Finding` (#3 strawman)
 
-The pipeline converts each claim into a `Finding` deterministically —
-no LLM involved in the mapping:
+The pipeline converts each **flagged** claim into a `Finding`
+deterministically — no LLM involved in the mapping. A claim is flagged
+when `quantitative && citation == null` (the unsourced-quantitative
+case, acceptance criterion on #13). Unflagged claims produce **no
+Finding** and never appear in the report: attributes like "is this
+quantitative?" are descriptions, not checks, and encoding them as
+pass/fail booleans painted every claim as a failure in the rendered
+report. Silence for unflagged claims is the same policy claim_support
+applies to its `supported` verdict.
 
 | Finding field | From claim |
 |---|---|
 | `id` | `id` |
-| `target` | `claim[N]` |
-| `label` | `Claim (<type>)` |
+| `target` | `claim` |
+| `label` | `Unsourced quantitative claim` |
 | `anchor.page` | `page` |
 | `anchor.quote` | `quote` (quotecheck-verified before it reaches the report) |
-| `checks` | `claim_quantitative` = `quantitative`; `claim_cited` = `citation != null`; `quant_unsourced` = `quantitative && citation == null` |
+| `checks` | `quant_claim_sourced` = `false` (False *is* the flag — renders in the failing lane as `quant_claim_sourced: NO`) |
 
-All derived checks are `bool` — the "results are `true | false |
-number`, never free text" rule holds. The report summary counts
-`quant_unsourced == true` findings ("unsourced quantitative claims",
-acceptance criterion on #13).
+The document-level ledger still reports the full extraction: `claims`
+counts every claim the lens returned; `claims_quant_unsourced` counts
+the flagged subset.
 
 ## Example
 
@@ -182,7 +188,8 @@ authors — not part of the prompt payload):
   framework...") yields no claim: aspiration, not load-bearing.
 - CL5 is the demo case — a quantitative promise (twelve trainings,
   40 countries, $148,000) with no citation. `citation` stays null;
-  nothing is invented. Downstream this becomes `quant_unsourced: true`.
+  nothing is invented. Downstream this is the only claim here that
+  becomes a Finding ("Unsourced quantitative claim").
 - CL5 and CL6 come from the same sentence: one `outcome` for the
   deliverables, one `timeline` for the delivery window, each with the
   smallest span that carries it.

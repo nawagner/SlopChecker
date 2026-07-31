@@ -36,7 +36,56 @@ def _patch_runtime(monkeypatch, payload: dict[str, Any], model: str = "claude-te
     monkeypatch.setattr("slopchecker.pipeline.checks_llm.run_lens", fake_run_lens)
 
 
-def test_claims_check_maps_each_claim_to_a_finding(monkeypatch, sample_doc):
+def test_claims_check_maps_only_flagged_claims_to_findings(monkeypatch, sample_doc):
+    """Unflagged claims are silent: an ordinary claim is not a defect, and the
+    first version's descriptive booleans made every claim render as a red
+    failure in the report."""
+    payload = {
+        "claims": [
+            {
+                "id": "CL1",
+                "type": "outcome",
+                "page": 1,
+                "quote": "Meridian will deliver twelve regional trainings within the first grant year",
+                "quantitative": True,
+                "citation": None,  # flagged: quantitative and unsourced
+            },
+            {
+                "id": "CL2",
+                "type": "prior-work",
+                "page": 1,
+                "quote": "The information environment has degraded rapidly",
+                "quantitative": False,
+                "citation": "[1]",  # unflagged → no finding
+            },
+            {
+                "id": "CL3",
+                "type": "prior-work",
+                "page": 1,
+                "quote": "The information environment has degraded rapidly",
+                "quantitative": True,
+                "citation": "[1]",  # quantitative but cited → no finding
+            },
+        ]
+    }
+    _patch_runtime(monkeypatch, payload)
+
+    out = claims_check(sample_doc, CheckContext())
+
+    assert [f.id for f in out.findings] == ["CL1"]
+    f1 = out.findings[0]
+    assert f1.label == "Unsourced quantitative claim"
+    assert f1.anchor is not None
+    assert f1.anchor.quote == payload["claims"][0]["quote"]
+    assert f1.anchor.page == 1
+    # Every finding advertises its provider/model in evidence.
+    assert f1.evidence["provider"] == "anthropic"
+    assert f1.evidence["model"] == "claude-test"
+
+
+def test_flagged_claim_check_polarity_renders_as_failure(monkeypatch, sample_doc):
+    """False IS the flag: the renderer's failing lane keys off result=False,
+    so the one check on a flagged claim must read ``quant_claim_sourced: NO``."""
     payload = {
         "claims": [
             {
@@ -47,68 +96,14 @@ def test_claims_check_maps_each_claim_to_a_finding(monkeypatch, sample_doc):
                 "quantitative": True,
                 "citation": None,
             },
-            {
-                "id": "CL2",
-                "type": "prior-work",
-                "page": 1,
-                "quote": "The information environment has degraded rapidly",
-                "quantitative": False,
-                "citation": "[1]",
-            },
         ]
     }
     _patch_runtime(monkeypatch, payload)
 
     out = claims_check(sample_doc, CheckContext())
 
-    assert len(out.findings) == 2
-    f1, f2 = out.findings
-    assert f1.id == "CL1"
-    assert f1.label == "Claim (outcome)"
-    assert f1.anchor is not None
-    assert f1.anchor.quote == payload["claims"][0]["quote"]
-    assert f1.anchor.page == 1
-    # Every finding advertises its provider/model in evidence.
-    assert f1.evidence["provider"] == "anthropic"
-    assert f1.evidence["model"] == "claude-test"
-
-
-def test_claims_check_emits_derived_bool_checks_per_mapping_table(monkeypatch, sample_doc):
-    payload = {
-        "claims": [
-            {
-                "id": "CL1",
-                "type": "outcome",
-                "page": 1,
-                "quote": "Meridian will deliver twelve regional trainings within the first grant year",
-                "quantitative": True,
-                "citation": None,  # → quant_unsourced: True
-            },
-            {
-                "id": "CL2",
-                "type": "prior-work",
-                "page": 1,
-                "quote": "The information environment has degraded rapidly",
-                "quantitative": False,
-                "citation": "[1]",  # → quant_unsourced: False
-            },
-        ]
-    }
-    _patch_runtime(monkeypatch, payload)
-
-    out = claims_check(sample_doc, CheckContext())
-
-    def _get(finding, name):
-        return next(c.result for c in finding.checks if c.name == name)
-
-    f1, f2 = out.findings
-    assert _get(f1, "claim_quantitative") is True
-    assert _get(f1, "claim_cited") is False
-    assert _get(f1, "quant_unsourced") is True
-
-    assert _get(f2, "claim_quantitative") is False
-    assert _get(f2, "claim_cited") is True
-    assert _get(f2, "quant_unsourced") is False
+    (f1,) = out.findings
+    assert [(c.name, c.result) for c in f1.checks] == [("quant_claim_sourced", False)]
 
 
 def test_claims_check_emits_doc_level_quant_unsourced_ledger_row(monkeypatch, sample_doc):

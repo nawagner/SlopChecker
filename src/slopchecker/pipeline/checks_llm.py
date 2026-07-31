@@ -1,8 +1,9 @@
 """LLM-tier checks registered against the pipeline (#13).
 
 The ``claims`` check binds ``lenses/claims.md`` to ``lens_runtime.run_lens``
-and maps each quote-anchored claim to a ``Finding`` following the mapping
-table in ``lenses/claims.md``. Kept as its own module so the parallel
+and maps each *flagged* quote-anchored claim to a ``Finding`` following the
+mapping table in ``lenses/claims.md``; unflagged claims stay out of the
+report. Kept as its own module so the parallel
 #11 (claim-support) session can build its check in a sibling file
 without stepping on this one.
 """
@@ -43,28 +44,36 @@ def _lens_config(no_cache: bool = False) -> LensRunConfig:
     return LensRunConfig(cache_dir=cache_dir)
 
 
-def _map_claim_to_finding(claim: dict[str, Any], provider: str, model: str | None) -> Finding:
-    """One claim → one quote-anchored Finding, per lenses/claims.md."""
+def _map_claim_to_finding(
+    claim: dict[str, Any], provider: str, model: str | None
+) -> Finding | None:
+    """One *flagged* claim → one quote-anchored Finding, per lenses/claims.md.
+
+    Unflagged claims return None and never reach the report. The first
+    version emitted every claim with three descriptive booleans
+    (quantitative? cited?), and since at least one of the three is False
+    for every possible claim, the renderer painted all ten claims on the
+    demo document as red failures — indistinguishable from fabricated
+    DOIs. Attributes are not checks. A claim that raises no flag is
+    silent, same policy as claim_support's ``supported`` verdict.
+    """
     quantitative = bool(claim.get("quantitative", False))
     citation = claim.get("citation")
-    cited = citation is not None
-    quant_unsourced = quantitative and not cited
+    if not quantitative or citation is not None:
+        return None
     claim_type = claim.get("type", "unknown")
     return Finding(
         id=str(claim["id"]),
         target="claim",
-        label=f"Claim ({claim_type})",
+        label="Unsourced quantitative claim",
         anchor=Anchor(page=claim.get("page"), quote=claim["quote"]),
-        checks=[
-            CheckResult(name="claim_quantitative", result=quantitative),
-            CheckResult(name="claim_cited", result=cited),
-            CheckResult(name="quant_unsourced", result=quant_unsourced),
-        ],
+        # False = the flag, so the renderer's failing lane reads correctly:
+        # "quant_claim_sourced: NO".
+        checks=[CheckResult(name="quant_claim_sourced", result=False)],
         evidence={
             "provider": provider,
             "model": model,
             "type": claim_type,
-            "citation": citation,
         },
     )
 
@@ -102,8 +111,7 @@ def claims(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
         )
 
     claims = (result.payload or {}).get("claims", [])
-    findings = [_map_claim_to_finding(c, result.provider, result.model) for c in claims]
-    quant_unsourced = sum(1 for c in claims if c.get("quantitative") and c.get("citation") is None)
+    findings = [f for c in claims if (f := _map_claim_to_finding(c, result.provider, result.model))]
     return CheckOutput(
         findings=findings,
         ledger=[
@@ -111,13 +119,13 @@ def claims(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
                 check=_LENS_ID,
                 label="Load-bearing claims extraction",
                 result=True,
-                detail=f"{len(findings)} claims extracted",
+                detail=f"{len(claims)} claims extracted",
             ),
             LedgerRow(
                 check="claims_quant_unsourced",
                 label="Unsourced quantitative claims",
-                result=quant_unsourced,
-                detail=f"{quant_unsourced} of {len(findings)} claims",
+                result=len(findings),
+                detail=f"{len(findings)} of {len(claims)} claims",
             ),
         ],
     )
