@@ -348,7 +348,7 @@ def render_report(report: dict) -> str:
     report_json = escape(json.dumps(report, indent=2, ensure_ascii=False))
     hint = (
         "Checks appear beside the passages they refer to — click a card or highlight "
-        "to expand/collapse. Red = failed a check · green = passed · purple = detector score · "
+        "to expand/collapse. Red = failed a check · green = passed · indigo = detector score · "
         "gray = could not run."
     )
     schema_note = (
