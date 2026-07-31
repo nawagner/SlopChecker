@@ -10,6 +10,7 @@ dependencies = [
     "rich>=13.7",
     "httpx>=0.27",
     "python-dotenv>=1.0",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -21,7 +22,10 @@ llm = ["anthropic>=0.40"]
 # The web layer over the pipeline (#27) — see slopchecker/web.py.
 web = ["fastapi>=0.115", "uvicorn>=0.30", "python-multipart>=0.0.9"]
 # Validation harness (#29): planted-defect injector + recall report.
-harness = ["pyyaml>=6.0"]
+# pyyaml moved to base deps for #16's solicitation-spec loader; nothing left
+# here, but the extras group stays as a documented no-op so `pip install
+# .[harness]` in a teammate's notes/scripts keeps working.
+harness = []
 # Corpus similarity check (#14): MinHash + LSH for near-duplicate detection.
 similarity = ["datasketch>=1.6"]
 dev = ["ruff>=0.5", "pytest>=8.2", "mypy>=1.10"]
