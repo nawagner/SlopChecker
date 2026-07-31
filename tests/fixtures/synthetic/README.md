@@ -22,10 +22,11 @@ Tooling lives in `scripts/synth/` (`synth_proposals.py`, `score.py`, `render_fix
 
 `files/` holds a representative subset rendered into **real document formats** —
 `.md`, `.html`, `.docx`, `.pdf` — so the ingestion module (#4) and downstream
-checks can be exercised on actual files, not text-in-JSON. 12 fixtures span the
-three document types and the key cases (clean, fabricated citations, overclaims,
-plus budget-inflated and missing-methods for grants). `files/files_index.csv`
-maps each file back to its `corpus_id` and ground-truth flags.
+checks can be exercised on actual files, not text-in-JSON. 15 fixtures span the
+three document types and the key cases (clean, fabricated citations, wrong paper,
+overclaims, plus budget-inflated and missing-methods for grants).
+`files/files_index.csv` maps each file back to its `corpus_id` and ground-truth
+flags.
 
 Regenerate with `scripts/synth/render_fixtures.py` (see its header). MD/HTML are
 stdlib; DOCX needs `python-docx` (the `[docx]` extra); PDF is a **local build
@@ -56,6 +57,7 @@ The `document_type` dimension covers all three types #22 asks for:
 Each is a ground-truth column in `manifest.csv`:
 
 - `has_fabricated_citations` — one or more cited DOIs do not resolve. **All doc types.**
+- `has_mismatched_citations` — a cited DOI resolves, but to a different paper than cited (the "wrong paper" case). **All doc types.**
 - `overclaims` — grandiose, unsupported claims. **All doc types.**
 - `budget_inflated` — an implausibly large budget. **Grant applications only.**
 - `missing_methods` — a vague, hand-waved methods section. **Grant applications only.**
@@ -74,12 +76,15 @@ Each ground-truth column maps to a `CheckResult.name` in that contract:
 | corpus ground truth | check (per DATA_MODEL.md) |
 |---|---|
 | `has_fabricated_citations` | `doi_resolves` (false) |
+| `has_mismatched_citations` | `doi_resolves` (true) + `metadata_match` (false) |
 | `ai_generated` | `pangram_span` / `pangram_document` (score lane) |
 | `overclaims`, `budget_inflated`, `missing_methods` | quality-tier checks |
 
-The "valid DOI pointing to the wrong paper" case maps to a `Finding.verdict` of
-`overstated` / `unsupported` (with `quote_in_source` / `metadata_match`); not
-generated yet — see Open items.
+The `has_mismatched_citations` "wrong paper" case is the sharp one: the DOI
+*resolves* but points to a different paper than cited (each such citation carries
+`resolves: true`, `metadata_match: false`, and a `cited_source`), mapping to a
+`Finding.verdict` of `overstated` / `unsupported`. A DOI-resolution check alone
+passes it; only a metadata/quote check catches it.
 
 ## Provenance and license
 
@@ -114,6 +119,5 @@ tested against realistic slop.
 
 ## Open items (tracked on #22)
 
-- "Valid DOI pointing to the wrong paper" case.
 - Explicit near-duplicate pairs with linked provenance.
 - A budget with a deliberate arithmetic error.

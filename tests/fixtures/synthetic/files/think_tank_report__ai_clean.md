@@ -1,26 +1,28 @@
-# A Policy Assessment of wastewater surveillance for early outbreak detection in cities
+# Wearable sensors for continuous glucose monitoring in rural clinics: Findings and Recommendations
 
 ## Executive Summary
 
-The evidence base is partial, and important gaps remain. This piece examines wastewater surveillance for early outbreak detection in cities, a question of growing public interest.
+The discussion draws on established throughput methods and current data. Careful framing guards against overstatement.
 
 ## Background
 
-This piece examines wastewater surveillance for early outbreak detection in cities, a question of growing public interest. Careful framing guards against overstatement. The evidence base is partial, and important gaps remain.
+The discussion draws on established throughput methods and current data. The takeaways are meant to inform, not to prescribe. Recent analysis points toward a tractable path forward.
 
 ## Findings
 
-Practitioners and policymakers alike have a role to play here. The discussion draws on established surveillance methods and current data. The takeaways are meant to inform, not to prescribe.
+Practitioners and policymakers alike have a role to play here. The discussion draws on established throughput methods and current data. Careful framing guards against overstatement.
 
 ## Recommendations
 
-The discussion draws on established surveillance methods and current data. This piece examines wastewater surveillance for early outbreak detection in cities, a question of growing public interest.
+Recent analysis points toward a tractable path forward. Practitioners and policymakers alike have a role to play here.
 
 ## Endnotes
 
-- [1] https://doi.org/10.1002/anie.201907688
-- [2] https://doi.org/10.1101/gr.229102
-- [3] https://doi.org/10.1073/pnas.1517384113
-- [4] https://doi.org/10.1093/nar/gky1055
-- [5] https://doi.org/10.1289/ehp.1104477
-- [6] https://doi.org/10.1073/pnas.1517384113
+- [1] https://doi.org/10.1126/science.1259855
+- [2] https://doi.org/10.1021/jacs.9b02765
+- [3] https://doi.org/10.1002/anie.201907688
+- [4] https://doi.org/10.1073/pnas.1517384113
+- [5] https://doi.org/10.1073/pnas.1517384113
+- [6] https://doi.org/10.1371/journal.pone.0173664
+- [7] https://doi.org/10.1126/science.1259855
+- [8] https://doi.org/10.1145/3292500.3330701

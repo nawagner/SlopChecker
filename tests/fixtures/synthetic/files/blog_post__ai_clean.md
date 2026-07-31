@@ -1,25 +1,28 @@
-# Screening pathways for hypertension in underserved populations, Explained
+# Why workforce pathways into the semiconductor manufacturing sector Matters Now
 
 ## Dek
 
-What we know about screening pathways for hypertension in underserved populations, and what to watch.
+What we know about workforce pathways into the semiconductor manufacturing sector, and what to watch.
 
 ## Intro
 
-Careful framing guards against overstatement. This piece examines screening pathways for hypertension in underserved populations, a question of growing public interest. Practitioners and policymakers alike have a role to play here.
+The evidence base is partial, and important gaps remain. The takeaways are meant to inform, not to prescribe. Careful framing guards against overstatement.
 
 ## Body
 
-This piece examines screening pathways for hypertension in underserved populations, a question of growing public interest. Careful framing guards against overstatement. The takeaways are meant to inform, not to prescribe.
+The takeaways are meant to inform, not to prescribe. Practitioners and policymakers alike have a role to play here. This piece examines workforce pathways into the semiconductor manufacturing sector, a question of growing public interest.
 
 ## Takeaway
 
-Practitioners and policymakers alike have a role to play here.
+Recent analysis points toward a tractable path forward.
 
 ## Sources
 
-- [1] https://doi.org/10.1101/gr.229102
-- [2] https://doi.org/10.1289/ehp.1104477
-- [3] https://doi.org/10.1038/s41586-020-2649-2
-- [4] https://doi.org/10.1002/anie.201907688
-- [5] https://doi.org/10.1093/nar/gky1055
+- [1] https://doi.org/10.1371/journal.pone.0173664
+- [2] https://doi.org/10.1016/j.cell.2016.07.054
+- [3] https://doi.org/10.1126/science.1259855
+- [4] https://doi.org/10.1101/gr.229102
+- [5] https://doi.org/10.1056/NEJMoa2034577
+- [6] https://doi.org/10.1038/nature14539
+- [7] https://doi.org/10.1001/jama.2016.9797
+- [8] https://doi.org/10.1371/journal.pone.0173664

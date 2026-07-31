@@ -1,38 +1,35 @@
-# Room-temperature quantum sensing for magnetic imaging: A Multidisciplinary Research Program
+# Toward community-based interventions to reduce childhood asthma disparities
 
 ## Specific Aims
 
-Aim 1: Advance room-temperature quantum sensing for magnetic imaging via a spectroscopy-focused strategy.
-Aim 2: Advance room-temperature quantum sensing for magnetic imaging via a spectroscopy-focused strategy.
-Aim 3: Advance room-temperature quantum sensing for magnetic imaging via a spectroscopy-focused strategy.
+Aim 1: Advance community-based interventions to reduce childhood asthma disparities via a intervention-focused strategy.
+Aim 2: Advance community-based interventions to reduce childhood asthma disparities via a intervention-focused strategy.
+Aim 3: Advance community-based interventions to reduce childhood asthma disparities via a intervention-focused strategy.
 
 ## Background
 
-Rigorous, pre-registered analyses will guard against bias and support reproducibility. Our preliminary data suggest a tractable path toward measurable improvement. We will assemble a multidisciplinary team with complementary expertise. This proposal addresses room-temperature quantum sensing for magnetic imaging, a problem with substantial significance.
+This proposal addresses community-based interventions to reduce childhood asthma disparities, a problem with substantial significance. We will assemble a multidisciplinary team with complementary expertise. The approach integrates established intervention methods with a novel analytical pipeline. Prior work has established a partial understanding, yet key gaps remain.
 
 ## Approach
 
-Prior work has established a partial understanding, yet key gaps remain. This proposal addresses room-temperature quantum sensing for magnetic imaging, a problem with substantial significance. Rigorous, pre-registered analyses will guard against bias and support reproducibility. Our preliminary data suggest a tractable path toward measurable improvement.
+Our preliminary data suggest a tractable path toward measurable improvement. Prior work has established a partial understanding, yet key gaps remain. Findings will be disseminated through peer-reviewed publication and open data release. This proposal addresses community-based interventions to reduce childhood asthma disparities, a problem with substantial significance.
 
 ## Innovation
 
-We will assemble a multidisciplinary team with complementary expertise.
+The approach integrates established intervention methods with a novel analytical pipeline.
 
 ## Investigator Context
 
-The PI's first independent award; strong mentorship is in place. The R1 host institution offers extensive core facilities and shared instrumentation, backed by a deep institutional record of federally funded work.
+Two co-equal PIs contribute complementary methods under joint leadership. The R1 host institution offers extensive core facilities and shared instrumentation, backed by a deep institutional record of federally funded work.
 
 ## Budget Justification
 
-Total requested support is $4,206,600 over 3 years at a R1 institution, covering personnel, materials, and dissemination.
+Total requested support is $8,534,320 over 5 years at a R1 institution, covering personnel, materials, and dissemination.
 
 ## References
 
-- [1] https://doi.org/10.1016/j.cell.2016.07.054
-- [2] https://doi.org/10.1371/journal.pone.0173664
-- [3] https://doi.org/10.1145/3292500.3330701
-- [4] https://doi.org/10.1101/gr.229102
-- [5] https://doi.org/10.1056/NEJMoa2034577
-- [6] https://doi.org/10.1101/gr.229102
-- [7] https://doi.org/10.1016/j.cell.2016.07.054
-- [8] https://doi.org/10.1145/3292500.3330701
+- [1] https://doi.org/10.1038/s41586-020-2649-2
+- [2] https://doi.org/10.1038/s41586-020-2649-2
+- [3] https://doi.org/10.1001/jama.2016.9797
+- [4] https://doi.org/10.1016/j.cell.2016.07.054
+- [5] https://doi.org/10.1002/anie.201907688

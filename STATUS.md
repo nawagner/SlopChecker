@@ -5,6 +5,14 @@ Append-only. Newest entry on top. One line per entry:
 
 ## Log
 
+- 13:02 Alex (claude-code) — #22 fixtures: added the `wrong_paper` defect — a
+  citation with a real, *resolving* DOI attributed to the wrong paper
+  (`metadata_match=false`, new `has_mismatched_citations` ground truth). It's the
+  useful one: DOI-resolution alone passes it (naive demo recall 0.0 on it vs 1.0
+  on fabricated), only a metadata/quote check catches it → `verdict`
+  overstated/unsupported. Corpus + 15×4 rendered files regenerated. Stacked branch
+  `alex/22-wrong-paper` on #68 / next: near-dup pairs / blocked on nothing.
+
 - 12:52 Alex (claude-code) — #22 fixtures: rendered a representative subset into
   real files (`.md`/`.html`/`.docx`/`.pdf`, `scripts/synth/render_fixtures.py`,
   12 docs × 4 formats in `tests/fixtures/synthetic/files/`) so ingestion (#4) and

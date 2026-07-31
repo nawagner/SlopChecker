@@ -1,39 +1,40 @@
 {
   "authorship": {
+    "human": 30,
     "ai_clean": 30,
     "ai_laundered": 30,
-    "human": 30,
     "slop": 30
   },
   "document_type": {
-    "blog_post": 46,
+    "blog_post": 45,
     "grant_application": 42,
-    "think_tank_report": 32
+    "think_tank_report": 33
   },
   "institution_tier": {
-    "R2": 68,
-    "R1": 52
+    "R1": 52,
+    "R2": 68
   },
   "discipline": {
-    "public_health": 31,
-    "engineering": 24,
-    "physical_science": 21,
-    "biomedical": 19,
-    "social_science": 25
+    "engineering": 26,
+    "social_science": 25,
+    "biomedical": 18,
+    "physical_science": 23,
+    "public_health": 28
   },
   "applicant_type": {
-    "small_nonprofit": 35,
-    "established_pi": 31,
-    "early_stage_investigator": 24,
-    "multi_pi_team": 30
+    "multi_pi_team": 32,
+    "small_nonprofit": 33,
+    "established_pi": 29,
+    "early_stage_investigator": 26
   },
   "defect": {
     "none": 90,
-    "budget_inflated": 3,
-    "all": 9,
-    "overclaims": 5,
-    "fabricated_citations": 6,
-    "missing_methods": 7
+    "overclaims": 10,
+    "missing_methods": 2,
+    "all": 2,
+    "wrong_paper": 7,
+    "fabricated_citations": 5,
+    "budget_inflated": 4
   },
   "_tuples": {
     "unique": 120,

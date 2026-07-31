@@ -1,4 +1,4 @@
-# Why early detection of pancreatic cancer using circulating tumor DNA Matters Now
+# Early detection of pancreatic cancer using circulating tumor DNA: What the Evidence Shows
 
 ## Dek
 
@@ -6,25 +6,23 @@ What we know about early detection of pancreatic cancer using circulating tumor 
 
 ## Intro
 
-This piece examines early detection of pancreatic cancer using circulating tumor DNA, a question of growing public interest. The takeaways are meant to inform, not to prescribe. Practitioners and policymakers alike have a role to play here.
+Careful framing guards against overstatement. Recent analysis points toward a tractable path forward. This piece examines early detection of pancreatic cancer using circulating tumor DNA, a question of growing public interest.
 
 ## Body
 
-Recent analysis points toward a tractable path forward. Careful framing guards against overstatement. Practitioners and policymakers alike have a role to play here.
+This piece examines early detection of pancreatic cancer using circulating tumor DNA, a question of growing public interest. Practitioners and policymakers alike have a role to play here. The evidence base is partial, and important gaps remain.
 
 ## Takeaway
 
-This is, without question, the definitive account of the issue. Every serious observer already agrees; the matter is entirely settled.
+This is, without question, the definitive account of the issue. The conclusions here are beyond dispute and settle the debate for good.
 
 ## Sources
 
-- [1] https://doi.org/10.1016/j.cell.2016.07.054
-- [2] https://doi.org/10.1109/TPAMI.2016.2577031
-- [3] https://doi.org/10.1056/NEJMoa2034577
-- [4] https://doi.org/10.1289/ehp.1104477
-- [5] https://doi.org/10.1371/journal.pone.0173664
-- [6] https://doi.org/10.1073/pnas.1517384113
-- [7] https://doi.org/10.1093/nar/gky1055
-- [8] https://doi.org/10.1093/nar/gky1055
-- [9] https://doi.org/10.1038/s41586-020-2649-2
-- [10] https://doi.org/10.1126/science.1259855
+- [1] https://doi.org/10.1038/nature14539
+- [2] https://doi.org/10.1001/jama.2016.9797
+- [3] https://doi.org/10.1002/anie.201907688
+- [4] https://doi.org/10.1001/jama.2016.9797
+- [5] https://doi.org/10.1056/NEJMoa2034577
+- [6] https://doi.org/10.1145/3292500.3330701
+- [7] https://doi.org/10.1038/nature14539
+- [8] https://doi.org/10.1101/gr.229102

@@ -44,14 +44,16 @@ GRANT_CASES = [
     "human",
     "ai_clean",
     "fabricated_citations",
+    "wrong_paper",
     "overclaims",
     "budget_inflated",
     "missing_methods",
 ]
-TEXT_CASES = ["ai_clean", "fabricated_citations", "overclaims"]
+TEXT_CASES = ["ai_clean", "fabricated_citations", "wrong_paper", "overclaims"]
 GROUND_TRUTH_FIELDS = [
     "ai_generated",
     "has_fabricated_citations",
+    "has_mismatched_citations",
     "overclaims",
     "budget_inflated",
     "missing_methods",
