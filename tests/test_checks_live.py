@@ -7,9 +7,24 @@ agrees with our idea of the outside world instead.
 
 The cost is real and worth naming: CI is a required status check on main, so
 an outage or a rate limit at any of these four hosts turns the build red for
-everyone. If that becomes routine, the fix is a marker that skips this file
-unless ``SLOPCHECK_LIVE=1`` — the offline files (identifiers, compare, cache,
-net) already cover every decision this module makes on its own.
+everyone. This file is therefore marked ``live`` and deselected from the
+default run (#114). Run it with ``pytest -m live``; CI runs it in a job of its
+own, so a Crossref blip reds ``live`` and never blocks a merge.
+
+**What this file is and isn't the gate for.** It answers "does our idea of
+Crossref still match Crossref?" — a question only the network can answer, and
+one no merge gate should depend on. It is *not* where the checks' own logic is
+verified. That distinction was nearly lost: when this file moved behind the
+marker, ``metadata_match`` and ``citation_identifiers_valid`` were named in no
+other test, so breaking either left the default suite green. See
+``test_checks_registered.py``, which drives both against a stubbed provider
+chain with no network.
+
+Keep it that way. A registered check whose only coverage lives here is a check
+that is not actually gated — put an offline test on it too.
+
+These 24 tests were 17.6s of a 20.1s default suite, essentially all of it
+spent waiting on the network rather than on CPU.
 
 Identifiers used here are stable on purpose:
 - ``10.1038/nature12373`` — a real, long-published Nature paper
@@ -37,6 +52,8 @@ from slopchecker.checks.resolution import resolve_one
 from slopchecker.models import FlattenedDoc
 from slopchecker.pipeline import CheckContext, all_checks, discover, run_checks, select_checks
 from slopchecker.pipeline.citations import extract_citations
+
+pytestmark = pytest.mark.live
 
 FIXTURE = Path(__file__).parent / "fixtures" / "checks" / "citations-proposal.md"
 

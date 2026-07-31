@@ -113,6 +113,13 @@ def run(
         str | None,
         typer.Option("--solicitation", help="Solicitation the proposal responds to (id or path)"),
     ] = None,
+    rubric: Annotated[
+        Path | None,
+        typer.Option(
+            "--rubric",
+            help="Funder reference doc (RFP/criteria) to check the proposal against (#90)",
+        ),
+    ] = None,
     dry_run: Annotated[
         bool,
         typer.Option("--dry-run", help="List what would run and the estimated cost; run nothing"),
@@ -137,7 +144,7 @@ def run(
     its own. Exit code is nonzero only if the tool itself fails — findings
     are evidence, not errors.
     """
-    from slopchecker.pipeline import CheckContext, all_checks, discover, run_checks, select_checks
+    from slopchecker.pipeline import all_checks, build_context, discover, run_checks, select_checks
     from slopchecker.report import render_report
 
     config.load()
@@ -175,9 +182,27 @@ def run(
 
     out_dir = out or Path("slopcheck-reports")
     out_dir.mkdir(parents=True, exist_ok=True)
-    ctx = CheckContext(solicitation=solicitation, no_cache=no_cache, cache_dir=cache_dir)
 
+    # Rubric (#90): ingest the funder reference doc once for the whole run.
+    # A bad --rubric argument fails fast — unlike a bad batch file it applies
+    # to every target, and silently running without it would report "no
+    # rubric supplied" gaps the user thinks they filled.
+    rubric_doc = None
+    if rubric is not None:
+        rubric_result = ingest(rubric)
+        if rubric_result.status != "ok" or rubric_result.document is None:
+            reason = rubric_result.reason or "unknown ingestion error"
+            console.print(f"[red]--rubric {rubric}: {reason}[/red]")
+            raise typer.Exit(1)
+        rubric_doc = rubric_result.document
+
+    # Two-pass so batch-aware checks (#14 similarity) see the whole batch: (1)
+    # ingest every target and collect its FlattenedDoc; (2) build a single
+    # CheckContext over the collected docs and run checks per-doc. Failed
+    # ingests become gap rows in pass 1 and don't participate in the batch —
+    # they can't be near-duplicates of anything if they never became docs.
     rows: list[dict] = []
+    ingested: list[tuple[Path, object]] = []  # (target, doc); doc is FlattenedDoc
     for target in targets:
         result = ingest(target)
         if result.status != "ok" or result.document is None:
@@ -190,10 +215,20 @@ def run(
             console.print(f"[yellow]skipping {target.name}: {reason}[/yellow]")
             rows.append({"file": target.name, "error": reason})
             continue
-        doc = result.document
+        ingested.append((target, result.document))
 
+    docs = [doc for _, doc in ingested]
+    ctx = build_context(docs, solicitation=solicitation)
+    # Cache policy from #8 and the rubric doc from #90 ride on the same ctx.
+    ctx.no_cache = no_cache
+    ctx.cache_dir = cache_dir
+    ctx.rubric = rubric_doc
+
+    for target, doc in ingested:
         report = run_checks(doc, checks, context=ctx)
-        report.solicitation = solicitation
+        # Record what the run was checked against: the explicit label wins,
+        # else the rubric filename (#90).
+        report.solicitation = solicitation or (rubric.name if rubric is not None else None)
 
         written: list[Path] = []
         if "json" in fmt_list:

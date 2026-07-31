@@ -104,7 +104,7 @@ def run_resolution_check(
     same defect twice under two different names.
     """
     if not references_for(doc):
-        return CheckOutput(ledger=[no_references_row(check_id, label)])
+        return CheckOutput(ledger=[no_references_row(check_id, label, doc)])
 
     targets = [
         (ref, ident)

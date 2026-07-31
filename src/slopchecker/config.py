@@ -37,6 +37,14 @@ CREDENTIALS: tuple[Credential, ...] = (
         secret=False,
     ),
     Credential("CANDID_API_KEY", "Prior-funding lookups against the Candid grants dataset"),
+    # Shared KV cache (#119). Both optional: unset means the run uses the local
+    # disk cache only, which is exactly what a teammate's laptop should do.
+    Credential(
+        "SLOPCHECK_CACHE_URL",
+        "Base URL of the Worker serving /api/cache (optional, shared result cache)",
+        secret=False,
+    ),
+    Credential("SLOPCHECK_CACHE_TOKEN", "Bearer token for the shared result cache (optional)"),
 )
 
 

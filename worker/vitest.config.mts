@@ -31,6 +31,11 @@ export default defineConfig({
       miniflare: {
         bindings: {
           TEST_MIGRATIONS: await readD1Migrations(path.join(process.cwd(), "migrations")),
+          // The real value is a Worker secret (`wrangler secret put`), so it is
+          // absent from wrangler.toml and therefore from the test env too.
+          // Without it every /api/cache test would assert against the 503
+          // "token not set" branch instead of the route.
+          SLOPCHECK_CACHE_TOKEN: "test-cache-token",
         },
       },
     })),

@@ -21,9 +21,10 @@ from __future__ import annotations
 
 import importlib
 import pkgutil
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from slopchecker.models import Check, Finding, FlattenedDoc, LedgerRow, Tier
 
@@ -31,13 +32,17 @@ DEFAULT_TIMEOUT_S = 30.0
 
 # Packages scanned by discover(). pipeline/checks_builtin.py holds the trivial
 # built-ins; slopchecker.checks is Nick's deterministic-tier package (#8 etc.)
-# and is picked up automatically once it exists. pipeline/claim_support is #11's
-# LLM check package (registers under tier="llm").
+# and is picked up automatically once it exists; pipeline/checks_llm.py + the
+# pipeline/claim_support package are #11's LLM check (tier="llm");
+# pipeline/checks_similarity.py is the batch-aware near-dup check (#14) — kept
+# in pipeline/ because it wraps the Dan-owned similarity/ engine.
 CHECK_PACKAGES: tuple[str, ...] = (
     "slopchecker.pipeline.checks_builtin",
     "slopchecker.pipeline.checks_citations",
     "slopchecker.pipeline.checks_detect",
+    "slopchecker.pipeline.checks_rubric",
     "slopchecker.pipeline.checks_llm",
+    "slopchecker.pipeline.checks_similarity",
     "slopchecker.pipeline.claim_support",
     "slopchecker.checks",
 )
@@ -47,14 +52,30 @@ TIER_ORDER: tuple[Tier, ...] = ("deterministic", "api", "llm")
 
 @dataclass
 class CheckContext:
-    """What the runner hands every check besides the document itself."""
+    """What the runner hands every check besides the document itself.
+
+    ``batch`` / ``similarity_index`` (#14) let corpus-level checks (near-dup,
+    template-cluster) see peers in the same run. Both are empty/None by default
+    so single-doc callers and existing tests keep working unchanged. Use
+    ``pipeline.build_context(docs, ...)`` to populate them.
+    """
 
     solicitation: str | None = None
+    # Rubric (#90): the funder reference doc (solicitation/RFP, criteria)
+    # this submission is checked against, pre-ingested by the caller.
+    # None = not supplied; rubric-dependent checks must emit a skipped
+    # gap row, never crash.
+    rubric: FlattenedDoc | None = None
     workdir: Path | None = None
     # Run-level cache policy for checks that hit the network (#8). Additive
     # and optional: a check that doesn't cache ignores both fields.
     no_cache: bool = False
     cache_dir: Path | None = None
+    batch: Sequence[FlattenedDoc] = ()
+    # `Any` avoids importing SimilarityIndex here (would pull `datasketch` in as
+    # a hard dependency of every session that instantiates a CheckContext).
+    # The concrete type is `slopchecker.similarity.index.SimilarityIndex | None`.
+    similarity_index: Any = None
 
 
 @dataclass

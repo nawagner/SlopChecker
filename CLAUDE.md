@@ -45,12 +45,14 @@ enough — this is a hackathon).
 | `src/slopchecker/pipeline/` | Dan (+ Fable) | pat-helper engine port, loaders, quotecheck |
 | `src/slopchecker/lenses/` | Dan (+ anyone) | lens prompt packs (markdown — low conflict risk, edit away) |
 | `src/slopchecker/detect/` | Dan | AI-detection providers behind a `Detector` protocol (currently Pangram) |
+| `src/slopchecker/similarity/` | Dan | corpus similarity (#14): MinHash+LSH near-dup + cluster engine; the registered check lives in `pipeline/checks_similarity.py` |
 | `src/slopchecker/checks/` | Nick | deterministic tier: DOI resolution, metadata, dedup |
 | `src/slopchecker/report/` | Emerson (→ Dominique) | evidence report: HTML + PDF rendering, in-line annotation. Emerson built it and owns it; further iteration hands off to Dominique |
 | `fixtures/rubrics/` | Emerson | synthetic rubric (funder reference doc) fixtures, mirrored to R2 (#90) |
 | `worker/public/` | Dominique | landing page + demo report statics (design/copy/UX, #74). Emerson built the first pass |
 | `worker/src/` + deploy config | Emerson | Cloudflare Worker proxy, Railway API, hosting (#27) |
 | `worker/src/db/`, `worker/src/routes/runs.ts`, `worker/migrations/` | Nick | D1 report history: schema, Drizzle migrations, `/api/runs` (#88). Lives inside Emerson's `worker/src/` — the `WORKER_OWNED` list in `index.ts` is the seam between them |
+| `worker/src/routes/cache.ts`, `src/slopchecker/checks/cache.py` | Nick | Shared KV result cache: `/api/cache` + the Python client (#119). Same `WORKER_OWNED` seam. Reached from Dan's modules via the optional `cache` field on `PangramConfig` / `LensRunConfig` |
 | `harness/` | Dan (+ Fable) | planted-defect validation, recall scoring |
 | `docs/` narrative + demo | Emerson, Dominique | demo script, framing, README language |
 | `STATUS.md` | everyone | append-only log (see below) |
@@ -145,8 +147,9 @@ beat a page of prose. Write it before your final commit of the session.
 
 `.claude/settings.json` (checked in) runs `scripts/upload_transcript.py` on
 every Stop and SessionEnd: it copies your session transcript to
-`ai-log/transcripts/` (Stop) and commits/pushes it (SessionEnd).
-Best-effort — it never blocks your session on failure.
+`ai-log/transcripts/` (Stop) and pushes it to a dedicated
+`ai-log-uploads` branch (SessionEnd) — never to your working branch or
+`main`. Best-effort — it never blocks your session on failure.
 
 - **Opt-in, asked in-session.** On your first session in this repo, a
   SessionStart hook tells Claude to ask you once whether to enable upload;
@@ -164,9 +167,11 @@ Best-effort — it never blocks your session on failure.
 - Transcripts are `.jsonl`, named `<date>-<git-user>-<session8>.jsonl`.
 - Session logs in `ai-log/` (above) stay mandatory either way — that's the
   work trail; transcripts are the raw feed for whoever wants it.
-- **Known broken under protected main** (tracked on #30): the `--push`
-  mode pushes directly to `main`, which is rejected. Local copy on Stop
-  still works either way.
+- **On persistent push failure**, the script drops
+  `ai-log/UPLOAD_FAILED.txt` in the working tree with the last error, so
+  breakage is visible even though the hook wrapper swallows stderr
+  (`2>/dev/null` in `settings.json`). Delete the marker once you've
+  looked; a successful push also clears it.
 
 ## Degrade to gaps, never crash
 

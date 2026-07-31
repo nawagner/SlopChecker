@@ -1,33 +1,28 @@
+/* Palette is shared with worker/public/index.html — the landing page and the
+   evidence report have to read as one artifact, so these values are copied
+   from there rather than derived. Change them in both places or not at all.
+   --on-strong is text sitting on a filled --no/--yes/--score badge: it flips
+   to near-black in dark mode, where those fills invert to light pastels. */
 :root {
-  --bg: #FCFCFA; --panel: #F3F2EE; --ink: #22262C; --soft: #6B7280;
-  --rule: #DDDAD2; --accent: #33608C;
-  --no: #B3352E; --no-bg: #F8E7E5;
-  --yes: #2F7D52; --yes-bg: #E3F0E8;
-  --score: #6E4FA3; --score-bg: #EDE7F6;
+  --bg: #FFFFFF; --panel: #F2F7FB; --ink: #1B2430; --soft: #5C6A7A;
+  --rule: #D6E3EE; --accent: #14568F;
+  --on-strong: #FFFFFF;
+  --no: #B0302A; --no-bg: #FBEAE8;
+  --yes: #1E7A4B; --yes-bg: #E4F2EA;
+  --score: #4A5CA6; --score-bg: #EBEEF9;
   --serif: "Charter", "Sitka Text", Cambria, Georgia, serif;
   --sans: -apple-system, "Segoe UI", system-ui, Roboto, sans-serif;
   --mono: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #16181D; --panel: #1E2127; --ink: #E6E3DC; --soft: #98A0AB;
-    --rule: #33373E; --accent: #7FA8CF;
-    --no: #E2756E; --no-bg: #3A2422;
-    --yes: #6FBE93; --yes-bg: #1E3328;
-    --score: #A98FD6; --score-bg: #2C2438;
+    --bg: #10161D; --panel: #172230; --ink: #E6EDF4; --soft: #9BABBC;
+    --rule: #2B3B4C; --accent: #79B2E3;
+    --on-strong: #10161D;
+    --no: #E3796F; --no-bg: #3A2422;
+    --yes: #6DC194; --yes-bg: #16311F;
+    --score: #9BA9EC; --score-bg: #232B4A;
   }
-}
-:root[data-theme="light"] {
-  --bg: #FCFCFA; --panel: #F3F2EE; --ink: #22262C; --soft: #6B7280;
-  --rule: #DDDAD2; --accent: #33608C;
-  --no: #B3352E; --no-bg: #F8E7E5; --yes: #2F7D52; --yes-bg: #E3F0E8;
-  --score: #6E4FA3; --score-bg: #EDE7F6;
-}
-:root[data-theme="dark"] {
-  --bg: #16181D; --panel: #1E2127; --ink: #E6E3DC; --soft: #98A0AB;
-  --rule: #33373E; --accent: #7FA8CF;
-  --no: #E2756E; --no-bg: #3A2422; --yes: #6FBE93; --yes-bg: #1E3328;
-  --score: #A98FD6; --score-bg: #2C2438;
 }
 
 body { background: var(--bg); color: var(--ink); font-family: var(--sans);
@@ -51,6 +46,10 @@ header .facts { font-family: var(--mono); font-size: .75rem; color: var(--soft);
 /* pre-wrap: the flattened text IS the evidence — line breaks the checkers
    saw (PDF text lines especially) render as the checkers saw them. */
 .doc p { margin: 0 0 1.1rem; white-space: pre-wrap; }
+/* Detected heading in extracted text (PDFs arrive with no markup at all). */
+.doc p.dh { font-family: var(--sans); font-weight: 700; font-size: .95rem;
+            letter-spacing: .01em; margin: 1.5rem 0 .5rem; }
+.doc p.dh + p { margin-top: 0; }
 .doc .pgbrk { font-family: var(--mono); font-size: .72rem; color: var(--soft);
               border-top: 1px dashed var(--rule); margin: 1.6rem 0 1.1rem;
               padding-top: .35rem; text-transform: uppercase; letter-spacing: .08em; }
@@ -76,7 +75,7 @@ mark.active { outline: 2px solid var(--accent); outline-offset: 1px; }
 .rail.condensed .anno:not(.expanded) .a-sum { display: block; }
 .rail.condensed .anno:not(.expanded) .a-head { margin-bottom: .15rem; }
 .a-head { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .45rem; }
-.a-id { font-family: var(--mono); font-size: .7rem; font-weight: 700; color: #fff;
+.a-id { font-family: var(--mono); font-size: .7rem; font-weight: 700; color: var(--on-strong);
         border-radius: 3px; padding: .1rem .35rem; }
 .a-id.no { background: var(--no); } .a-id.yes { background: var(--yes); }
 .a-id.score { background: var(--score); }
@@ -93,6 +92,14 @@ mark.active { outline: 2px solid var(--accent); outline-offset: 1px; }
 .v-skip { color: var(--soft); font-weight: 700; }
 .why { color: var(--soft); font-weight: 400; }
 .a-note { font-size: .76rem; color: var(--soft); margin: .45rem 0 0; }
+
+/* Card <-> passage connection: hovering either side lights the other. */
+.anno.linked { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* A card whose quote wasn't found in the extracted text has no highlight to
+   sit beside; it stacks after the anchored cards, dashed so the difference
+   is visible at a glance. */
+.anno.unanchored { border-style: dashed; }
+.a-loose { font-size: .72rem; color: var(--soft); font-style: italic; margin: .35rem 0 0; }
 
 @media (max-width: 900px) {
   .layout { grid-template-columns: 1fr; }

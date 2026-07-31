@@ -6,7 +6,171 @@ Append-only. Newest entry on top. One line per entry:
 ## Log
 
 - 18:31 Alex (claude-code) — #104 claim-support eval harness landed on `990991A/104-claim-support-eval`: `harness/claim_support_corpus.yaml` (20 fabricated triples, 4/verdict) + `harness/claim_support_eval.py` scoring the **judge stage** (the only place all 5 verdicts exist pre-silence — calls `_judge` against a real transport). Reports 5×5 confusion matrix, per-category precision/recall, `min_confidence` sweep, + an end-to-end silence pass over `harness/claim_support_fixtures/`. Results: judge accuracy **85%** (17/20); 4/4 on supported/unsupported/contradicted/unverifiable; only error = 3/4 overstated→contradicted (directionally-right claims asserting a specific quantity the source refutes — both concern verdicts, so finding still surfaces). **Zero false alarms at every threshold** → no evidence to move min_confidence off 0.6; recommend keep. Silence pass PASS. Posted to #11. harness/ is Dan's module — scoped by #104, flagged on PR / next: PR + merge / blocked on nothing.
+
+- 15:47 Emerson (claude-code) — rail connection pass (#19), from Emerson's live review ("comments should be inline and showing when something connects"): hovering a card now lights its passage and hovering a highlight outlines its card(s); cards whose quote never landed a highlight used to absolute-position at top:0 — a silent pile at the head of the rail looking connected to the first paragraph — now they stack after the anchored cards, dashed, with an explicit "Quote not found in the extracted text" line. Also verified DOI detection consistency across four fixtures live (both fabricated_citations docs → False with per-DOI findings, clean docs → True; it's consistent) and filed #152: metadata_match returns no records on Railway while the identical ProviderChain lookup works locally — set CROSSREF_MAILTO on Railway (dashboard, not a secret) and re-test. Heads-up @danparshall: harness substrate grant_application__human.pdf is a symlink, which Windows checkouts materialize as a 65-byte stub → test_harness_end_to_end fails MISS on cite-orphan-real-pdf locally on Windows (CI/Linux fine) / next: verify claims fix live post-deploy, then #20 / blocked on nothing
+
+- 15:32 Emerson (claude-code) — claims lane de-polluted (#13): the old mapping emitted every extracted claim as a Finding whose three descriptive booleans always contained a False, so all 10 claims on the demo doc rendered as red failures indistinguishable from fabricated DOIs (and the actually-bad case showed a green quant_unsourced: YES chip). Now only flagged claims (quantitative + unsourced) become Findings — "Unsourced quantitative claim", single check quant_claim_sourced: NO — unflagged claims are silent, same policy as claim_support's supported verdict; ledger still carries total extracted + flagged count. Design comment on #13 for Dan / also verified DOI resolution on the live grant app is behaving as designed: 3 real Nature DOIs resolve, 3 fabricated 404 → red findings, PNAS+JAMA 403 bot-walls honestly reported as coverage gaps / next: #20 batch summary / blocked on nothing
+
+- 14:55 Emerson (fable) — rubric plumbing landed (#90): `CheckContext.rubric` (pre-ingested FlattenedDoc; heads-up @danparshall — one field + registry package entry in pipeline/), `slopcheck run --rubric <path>` (fail-fast on bad path; rubric filename stamps `report.solicitation` when no explicit label), and first consumer `rubric_budget_ceiling` (deterministic: conservative cap-phrase parse of rubric text vs proposal budget-total line, every extraction miss → skipped gap row, never a guess; findings quote-anchor the proposal's total line with exact spans). Ground-truth tests catch both planted budget violations (climate $90k>$75k, edu $97k>$85k) using the committed fixtures. 484 passed, ruff clean / next: web `rubric` upload slot, then spec-drafting bridge to #16 / blocked on nothing
+
+- 15:04 Dominique (claude-code) — evidence report brought onto the #106 palette (#74): `report.css` token values swapped to the ones `index.html` uses (a value swap — `report.css` consumes exactly the twelve tokens the new palette already defines, no rule changes), so the sample report and the landing page stop reading as two different products. Found and fixed the same bug Emerson hit on the landing page, still live here: `.a-id` badges hardcoded `color: #fff` over `--no`/`--yes`/`--score`/`--soft` fills, which invert to light pastels in dark mode — 2.16–2.90:1, now 6.26–8.41:1 via a new `--on-strong`. Every colour in `report.css` now goes through a token. The swap also cleared both light-mode AA failures from my earlier audit (`--soft` on `--panel` 4.32→5.13, `--yes` on `--panel` 4.49→4.94, #26). Dead `data-theme` blocks deleted — #106 dropped them from `index.html`, which settles that open question; zero references left in the repo. Legend copy said "purple = detector score" and `--score` is now indigo, corrected in `html.py`. `demo-report.html` regenerated, not hand-edited. 473 passed / **note for everyone: regenerating needs Python 3.11+ (system 3.9 dies on `zip(strict=True)`) and pytest needs the `similarity` extra or `test_batch_ranks_by_concerns` fails on a missing `datasketch` and looks like a real break** / next: nothing claimed — #20 is Emerson's / blocked on nothing
+
+- 19:14 Nick (claude-code) — #118 PDF tests off the unit critical path. The 11s was two cold headless-Chrome launches, and only one was about rendering: `test_render_pdf_default_sibling_path` started a browser to check that `r.json` -> `r.pdf`, which is our path logic, not Chrome's — and it *skipped* wherever Chrome was absent, so that logic went unverified on exactly the machines most likely to get it wrong. Now stubbed at the `html_to_pdf` seam (render_file still runs for real), plus three more plumbing assertions it enables; the single genuine render is marked `integration`. Unit run of that file 2.77s -> 0.03s locally and ~11s -> 0 on CI; proved no browser starts by running the file with subprocess.Popen/run rigged to raise, and red-greened the stub by breaking with_suffix(). Kept the real render inside the required `test` job rather than a parallel one — trading gate coverage for seconds is the mistake #114's review caught, and the PDF is the shipping artifact / next: PR / blocked on nothing.
+
+
+- 19:10 Dan (air) — #18 structured lane Phase 1 stacked on the same PR (#127):
+  `src/slopchecker/background/` skeleton (extract + structured/base with the
+  `RegistryLookup` Protocol for the coming ProPublica/OpenAlex/ORCID clients)
+  + rules-first `extract_entities(FlattenedDoc) -> list[Entity]`. Section-
+  driven only (`PI` / `PI/Institution` / `Principal Investigator` / `Team` /
+  `Personnel` / `Investigators` / `Co-Investigators` / `Submitted by` /
+  `Applicant`) — deliberately narrow, no free-text prose extraction; the
+  failure mode #18 warns against is exactly guessing at named-person
+  claims. Department-marker filter (`Department|School|College|...`) drops
+  middle comma-parts so `Dr. Alice, Department of X, Riverbend Inst.`
+  yields `affiliation="Riverbend Inst."`, not `"Department of X"`. Every
+  Entity carries an Anchor whose quote is a verbatim substring of
+  FlattenedDoc.text (same discipline as the rest of the model). 10 new
+  tests (single-PI, multi-personnel bullets, no-PI-section → empty,
+  blog-post → empty, anchor-in-text, span-matches-quote, id uniqueness,
+  determinism, end-to-end on harness/fixtures/proposal_climate.md); full
+  suite 462 passed, ruff + mypy clean. Bundled into the Phase 0 PR because
+  Phase 1 introduces no new coordination surface (no shared-model change,
+  no checks/, no renderer) / next: Phase 2 (ProPublica client, cassette-
+  tested) once #127 merges or gets a thumbs-up; still not touching
+  checks/ until Phase 4 / blocked on nothing.
+
+- 18:55 Dan (air) — #18 structured lane Phase 0 up on `danparshall/18-structured-lookups`
+  (fresh branch off origin/main, not stacked on `danparshall/18-background-report` per
+  the split-plan). Added six new types + two StrEnums to `models.py`: `Entity`,
+  `BackgroundFinding` (`source_url` structurally required), `EntityNotFound`
+  (records the query URL that returned nothing — first-class, distinct from
+  a Gap and from silence), `BackgroundGap` (per-entity or whole-registry, with
+  a mandatory `reason`), `BackgroundReport` (model validator enforces referential
+  integrity across findings/not_found/gaps and rejects `confidence="unverified"`
+  findings — the plan's "produced and enumerated; filtered before assembly"
+  rule) plus `EntityKind` and `BackgroundConfidence`. Added
+  `EvidenceReport.background: BackgroundReport | None = None` — optional +
+  default None so `to_report_dict(exclude_none=True)` leaves existing D1
+  storage paths untouched (D1 schema tests still green). 19 new tests, full
+  suite 450 passed / 9 deselected, ruff + mypy clean. Design comments on #3
+  (shape proposal) + #18 (claim + phase order). Common-name disambiguation
+  kept as a lookup-site invariant, not a model rule — different registries
+  have different "corroboration" fields; documented for the client PRs to
+  cover / next: open the Phase 0 PR; then Phase 1 (rules-based entity
+  extraction from FlattenedDoc); will flag Nick on #8 before Phase 4 (checks/)
+  / blocked on nothing.
+
+- 15:08 Nick (claude-code) — #74 dropped the API status strip from the
+  landing page (`API live · v0.1.0 · 2/4 credentialed checks armed`). Two
+  problems: the denominator is `len(config.CREDENTIALS)`, which counts
+  `CROSSREF_MAILTO` (not a credential — Crossref needs no auth, and
+  `checks/net.py` forbids gating DOI resolution on it) and `CANDID_API_KEY`
+  (no check uses it yet), so "2/4" undersold a fully-armed pipeline; and
+  "armed" is combat framing on a signals-not-verdicts page. Markup, CSS,
+  and the `/api/health` → `/api/config` fetch all deleted — 20 lines, no
+  other change. `/api/config` still answers server-side for debugging.
+  `worker/public/` is Dominique's module, so this is noted on #74. Next:
+  nothing / blocked on nothing.
+
+- 19:04 Dan (fable) — #71 post-ingest mutation path landed on `danparshall/71-post-ingest-mutation`: new `harness/post_ingest.py::mutate_ingest_result()` sibling of `injector.inject()` — mutates `FlattenedDoc.text` *after* the loader runs, so recall is measured against text that flowed through the real PDF/DOCX/HTML loader instead of hand-authored markdown. Same discipline as injector (missing-original hard-error, deletion via empty `mutated`, sequential apply, first-occurrence match) plus mechanical span shifting for `references`/`sections`/`page_offsets`: entirely-before → unchanged, entirely-after → shift by delta, mutation entirely inside → extend `.end`, partial overlap → hard-error (recall would be meaningless). `run_harness()` extended: `substrate:` defects → post-ingest path, `file:` defects → existing pre-ingest path, both merge back to the same `per_file_findings` map so `MATCHERS` is unchanged; new `--substrates` CLI flag. Ships one demo defect (`cite-orphan-real-pdf`, `[99]` inserted into `Aim 1:` of a real grant PDF symlinked from `tests/fixtures/synthetic/files/`); manual harness now 4/4 recall (was 3/3). 13 new tests, `test_harness.py` canary updated, full suite 523 green (post-rebase over #14 similarity + #119 KV + #74 landing + #19 PDF reflow), ruff+mypy clean on new code. Item 2 of #71 (Task Exposure paper) is a small follow-up now unblocked via route (b) — compile `.tex` → PDF, symlink into `harness/substrates/`, add defects; no new loader needed. / next: open PR / blocked on nothing.
+
+- 15:20 Nick (claude-code) — #25 demo doc picked and written into the README:
+  `tests/fixtures/synthetic/files/grant_application__fabricated_citations.docx`.
+  Went looking in R2 first — listed it directly over S3, **11 objects, exactly
+  one proposal** (`fixtures/proposal_climate.pdf`), so the bucket is a file
+  drop, not a case library (matches `docs/data-storage.md` and Dominique's
+  14:41 line; README now says so, to save the next person the trip). That one
+  R2 proposal is a bad demo pick: as a PDF all four citation checks skip, it
+  tags as `blog_post` (0.4), and it emits a false "0/10 markers linked". Ran
+  the recommended fixture in all four formats — **DOCX and HTML both parse 9/9
+  and give `all_dois_resolve=false`, 3/9 not found; MD and PDF both skip the
+  whole citation tier**, and MD adds nine spurious "unlinked citation"
+  findings. That adds a row to Emerson's #123 table, which lists html/md/pdf
+  but not docx — **docx is the format where the tier is live**, worth knowing
+  before demo day. Two caveats now in the README: 3 of the 6 real DOIs 403 into
+  gray coverage-gap chips, and raw finding counts are unstable run-to-run
+  (17 vs 18) purely on whether Pangram is keyed — the citation numbers are the
+  stable part. Also checked the realistic-prose alternative: `pandoc
+  proposal_climate.md -o .docx` does unlock the tier, but all 3 DOIs are
+  `10.9999/fake-*` so it resolves 0/3 with no real-vs-invented contrast /
+  next: #123 is the demo-critical one — PDF is what funders upload / blocked on
+  nothing. Note: README is Emerson+Dominique's per the ownership table —
+  flagging rather than assuming.
+- 15:08 Emerson (claude-code) — PDF presentation, third pass (#19): extracted PDF text has no markup, so a whole page rendered as one same-weight block; headings are now detected by shape (≤72 chars, ≤8 words, capitalized, no terminal punctuation, not a form field or wrapped line) and rendered bold. Detection self-disables above a 25% heading share — calibrated on measurements, not taste (grant application 0.21, RFPs 0.12/0.07, real NIH R01 face page 0.32, which correctly gets zero). 8 headings on the grant app, 15 on the RFP, 0 on the NIH form / also merged #131 (reference-entry parsing — DOI checks now fire on the grant application and catch all three planted fabricated DOIs) / next: #20 batch summary / blocked on nothing
+
+- 14:53 Nick (claude-code) — #119 shared KV cache landed on
+  `nick/119-kv-cache`. Motivation was a comment in `checks_detect.py`: *"no
+  `cache_dir` — the server filesystem is ephemeral"* — **Pangram was entirely
+  uncached in production**, so every run of the demo doc was a fresh paid call;
+  same for lenses. Worker gets the `CACHE` binding and a bearer-gated
+  `/api/cache` (`routes/cache.ts`); Python gets `HTTPCache` + `TieredCache`
+  (disk L1, KV L2, write-through) in `checks/cache.py`. No Cloudflare API token
+  anywhere — same reasoning as the D1 block in `wrangler.toml` (#23/#65), just
+  one shared secret. Additive in Dan's modules: optional `cache` field on
+  `PangramConfig` / `LensRunConfig`, `cache_dir` untouched. **Derived values
+  only** — Pangram responses pass a field whitelist (so a future
+  `windows[].text` can't leak), lens quotes are stored as `[start, end]` and
+  re-sliced from `doc.text` on read (exact, because a hit means the text hashed
+  to the same key); the 1 MiB cap is a privacy guard rail, not a perf one.
+  Cache keys are hashed too — which DOIs a proposal cites is information about
+  the proposal, and it fixes a real bug where httpx re-normalizes `%2F` to `/`
+  so a URL key lost its query string and collided. Every remote failure is a
+  miss, never a run failure. 33 new Python tests (492 passed after rebasing on
+  #110/#106, ruff clean), 18 new Worker tests (91 passed, tsc clean).
+  `docs/kv-cache.md` + PRIVACY.md updated / next: PR, then Nick sets the secret
+  on the Worker and Railway — until then it's inert and every run behaves
+  exactly as before / blocked on nothing. Heads-up for anyone whose suite is
+  erroring on collection: the shared `.venv` was missing two *declared* extras,
+  `datasketch` (`[similarity]`, #14) and `python-multipart` (`[web]`) — install
+  them and `test_similarity_*` / `test_web` collect fine; nothing was broken.
+
+- 14:41 Dominique (claude-code) — **correction to my 14:02 line**: I said only `has_text`/`word_count`/`tagging` were registered so citation checks weren't live. Wrong — grep artifact, those modules register with `id=CHECK_ID` constants not string literals. Eight checks are live (`all_dois_resolve`, `all_urls_resolve`, `citation_identifiers_valid`, `metadata_match`, `claim_supported`, `has_text`, `word_count`, `tagging`), so #8/#9/#11 have landed; still missing are #10 (Dan's unmerged branch), Pangram-as-a-registered-check (#12 — no `@register` in `detect/pangram.py`, no ledger row on a live run), #14, #16, #17, #18. Verified against the live API, not the source. Also, from running the #22 corpus through `slop-checker.com/api/check` to build sample reports, four things for other owners: (1) **PDF and Markdown uploads skip every citation check** — "no reference list found in the document"; DOCX/HTML find 9 identifiers in the same doc, so the format funders will actually upload yields zero citation findings (#4/#25, root cause is Alex's no-heading-detection note); (2) `metadata_match` skips on every fixture ("outside our metadata providers' coverage") and it's the only check that catches the `wrong_paper` defect, so the corpus's best case passes clean; (3) `claim_supported` never evaluates ("no citations with resolved references") so `overclaims` isn't caught; (4) real DOIs often 403, so the clean `human` fixture reports unverifiable rather than passing. Of 5 candidate sample cases only `grant_application__fabricated_citations` demonstrates the tool working (3/9 DOIs not found while 9/9 well-formed) / next: sample-case selection parked on Dominique's call; #106 open with corrected copy / blocked on nothing
+- 14:58 Emerson (claude-code) — reference-entry parsing fixed (#126, filed off a report Emerson was reading: visible References heading, nine DOIs, every DOI check saying "no reference list found"): entry splitter now tolerates rendered list ordinals/bullets before `[n]`, bare numbered entries, a form feed at a page break mid-list, and digit/URL-led lines; heading vocabulary gains sources/citations/endnotes; skip reason distinguishes "no list" from "list found, no entries parseable" (3 call sites in checks/, heads-up @nawagner). Grant application now parses 9 refs in pdf/md/html alike and `all_dois_resolve` returns False with the three planted fabricated DOIs each getting a finding — the demo works / next: PDF presentation polish, then #20 / blocked on nothing
+
+- 14:55 Emerson (fable) — rubric plumbing landed (#90): `CheckContext.rubric` (pre-ingested FlattenedDoc; heads-up @danparshall — one field + registry package entry in pipeline/), `slopcheck run --rubric <path>` (fail-fast on bad path; rubric filename stamps `report.solicitation` when no explicit label), and first consumer `rubric_budget_ceiling` (deterministic: conservative cap-phrase parse of rubric text vs proposal budget-total line, every extraction miss → skipped gap row, never a guess; findings quote-anchor the proposal's total line with exact spans). Ground-truth tests catch both planted budget violations (climate $90k>$75k, edu $97k>$85k) using the committed fixtures. 484 passed, ruff clean / next: web `rubric` upload slot, then spec-drafting bridge to #16 / blocked on nothing
+
+- 18:44 Dan (air) — #30 transcript upload fix landed on
+  `danparshall/30-transcript-branch`: SessionEnd's `--push` now targets a
+  dedicated `ai-log-uploads` branch instead of the working checkout's
+  branch (usually `main`, which mainsaver rejects — hence the silent
+  break). Built with git plumbing (`hash-object` + `read-tree` +
+  `commit-tree`) so the current HEAD/index/working tree are never touched,
+  meaning any session on any branch (main, feature, other worktree) can
+  push without stepping on the user's edits or each other. Retries up to
+  3× on push race; on persistent failure writes `ai-log/UPLOAD_FAILED.txt`
+  with the last error so future breaks are visible even with the hook's
+  `2>/dev/null` stderr swallow (fix #2 folded in). Fix #3 (drop the
+  `2>/dev/null`) deliberately skipped — separate scope, touches everyone's
+  hook UX. 7 new tests over a bare-repo fixture (RED-first: 6 failed under
+  old script, Stop-copy passed unchanged); 431 total green, ruff clean /
+  next: open PR / blocked on nothing.
+
 - 14:40 Emerson (claude-code) — PDF prose now reflows in the report (#19, second pass): extracted PDF text carries one `\n` per visual line, so even after the page-split fix prose rendered as fragment columns; mid-sentence breaks now render as spaces while headings/`Key: value`/list lines keep hard breaks (NIH R01: 0.97 → 0.6 breaks per 100 chars, remainder is real structure). Trap worth knowing: v1 tested the char immediately before `\n`, which is a *space* on nearly every PDF line — heuristic never fired on real documents while synthetic tests passed / also merged #96 (citations+Pangram registered; live report now 13 ledger rows, real Pangram 1.0 on the fabricated fixture) and #115 (Railway llm extra — claims lens was erroring `ModuleNotFoundError: anthropic` on every live upload) / next: #20 batch summary (claimed, sequenced behind this) / blocked on nothing
+
+- 14:23 Dan (fable) — #14 corpus similarity landed on
+  `danparshall/14-similarity`: new `src/slopchecker/similarity/` module
+  (shingles + MinHash+LSH index via `datasketch` as `[similarity]` extra +
+  union-find clustering + verbatim shared-passage extraction for
+  quote-anchored `Anchor`s); registered check `similar_documents` (counts
+  near-neighbours at Jaccard ≥ 0.5) and cluster ledger row
+  `template_cluster` (only when doc is in a ≥2-doc component) in
+  `pipeline/checks_similarity.py`; extended `CheckContext` with
+  `batch: Sequence[FlattenedDoc]` + `similarity_index` and added
+  `pipeline.build_context(docs, ...)` factory; CLI batch mode restructured
+  as two-pass (ingest all → build ctx → run per-doc) so the check sees the
+  whole batch. Single-file / bare-ctx callers emit a clean `skipped`
+  ledger row. Ownership table gains `similarity/` row. On the current
+  fixture corpus: 0 clusters at 0.5 (no true near-dup pairs are planted
+  yet — Alex's #94 has them); at 0.3 the shared grant-application
+  scaffold over-clusters (33-doc mega-cluster); the check itself fires
+  cleanly on planted-pair E2E test (Jaccard 0.60). 251 unit + 9 integration
+  passed, ruff clean / next: PR, follow-up issues for local embeddings +
+  reviewer-COI + renderer surfacing of cross-doc evidence / blocked on
+  nothing.
+
+- 18:32 Nick (claude-code) — #114 CI/test speed. Measured first: the `test` job was 42s, of which `pip install` 11s and `pytest` 20s. That 20s was only 3.9s of CPU — 88% of the "unit" suite was network wait, essentially all of it `tests/test_checks_live.py` (real doi.org/Crossref/OpenAlex/arXiv calls). Dropping that one file took the suite 20.09s → 2.48s with 391 still passing. Fix is the one its own docstring specced: `pytestmark = pytest.mark.live`, deselected via addopts alongside `integration`, and it now runs in its own parallel CI job. Three wins, and the third is the real one — once #43 makes `test` required, a Crossref rate limit would have blocked everyone's merges; as a separate advisory job it reds `live` and nothing else. **Do not add `live` to the `mainsaver` ruleset** (comment says so in ci.yml). Also swapped pip → uv (measured 2.0s vs 18.0s cold, same extras) and added a concurrency group so superseded pushes stop holding runner slots. Coverage: 24 live + 9 integration just aren't on the critical path. **Correction after independent review** — `metadata_match` and `citation_identifiers_valid` were named in NO test outside the live file, so gating it out let a broken borrowed-DOI check (#9's headline) merge with `test` green; added `tests/test_checks_registered.py` (stubbed provider chain, no network, 8 tests) and verified both sabotages now red the default suite (identifiers_valid 40%->97%, metadata_match 29%->84%). Also: "432 tests in CI" was wrong, 428 — test_harness.py module-skips without pyyaml, so `harness`+`similarity` added to CI extras. Deliberately did NOT add pytest-xdist — at 2.5s wall / 2.3s CPU, worker startup would eat the gain; not waiting on the network was the lever. Local `pytest` 20.1s → 2.7s / next: PR, then watch a real run for the uv + cache numbers / blocked on nothing.
+  - Side finding, not fixed here: `mypy` in CI is a silent no-op — `src/slopchecker/` has no `py.typed`, so it exits "cannot be type checked" and `continue-on-error: true` masks it. Identical under pip and uv, so it predates this change. Worth its own issue; turning it on will surface real errors and that isn't a speed change.
 
 - 17:54 Dan (fable) — #11 claim-support LLM check landed on `danparshall/11-claim-support`: new `pipeline/claim_support/` subpackage, adversarial verify (judge → mechanical `match_quote` grounding → refuter), registered under `tier="llm"` and off by default. Two invariants each covered by a test: every emitted `Finding` carries a passage the LLM claimed *and* verified against the retrieved source; `supported`/`unverifiable`/low-confidence/refuted/no-passage/unavailable-source all silent (bias hard toward silence, per #11). `Anchor.quote` is the claim sentence from `FlattenedDoc.text` (renderer contract — self-code-review caught me anchoring to the source passage); the LLM's source passage rides in `evidence["source_passage"]`. Cost ceiling = `max_citations_per_doc=20` (2N LLM calls worst-case) + `max_source_chars=30_000` head-truncation. All LLM plumbing (Transport protocol, `_call_with_retry` mirroring pangram, `output_config.format` structured output, prompt assembly) private to the subpackage per #37's design comment. Rebased over #93's fetchers; the check uses the `SourceFetcher` protocol so it picks up `build_default_fetcher()` for free once we wire it in. 20 new tests; full suite 228 passed, ruff+mypy clean / next: open PR, follow-up tickets for 20-pair confusion matrix (AC 2), cross-provider refuter, and wiring real fetchers into the registered wrapper / blocked on nothing.
 
@@ -38,7 +202,6 @@ Append-only. Newest entry on top. One line per entry:
   fixture styles, which lock ALL the CRLF behavior down regardless of who
   fixes what; 366 passed / next: merge #105; demo-critical #25 still
   unowned / blocked on nothing.
-
 - 17:39 Dan (fable) — #10 fetchers landed on `danparshall/10-fetchers`: real `SourceFetcher` implementations for arXiv (HTML then PDF-via-pymupdf), PMC-OA (DOI→PMCID→EFetch JATS body), DOAJ (OA gate — indexed DOIs only, then follow `bibjson.link[type=fulltext]`), and plain URL (gray literature); `ChainFetcher` + `build_default_fetcher()` route by `applies_to` with first-hit-wins (arXiv → PMC → DOAJ → URL). Every failure path — 4xx, 5xx, transport error, unparseable JSON, non-OA PMC, missing pymupdf — returns `None` and the check layer maps that to `source_unavailable` (skipped, mandatory reason); an uncheckable quote can never look like a `not_found`. Retries deliberately absent: #37's retry ladder wraps this layer rather than duplicating logic in each fetcher. 30 new tests via `httpx.MockTransport` (suite stays offline). Stayed out of `src/slopchecker/checks/` — Nick's #80 has its own net/cache; consolidation is later work. Full suite: 204 passed, 4 skipped, 9 deselected (integration), 0 failures / next: open PR, wire `build_default_fetcher()` into CLI as a small follow-up / blocked on nothing.
   (Note: this 17:39 entry was dropped from main by an earlier STATUS merge
   resolution — restored here per the append-only rule, corrections get a
@@ -63,6 +226,8 @@ Append-only. Newest entry on top. One line per entry:
   wrong paper" case / blocked on nothing.
 
 - 13:42 Emerson (fable) — "rubrics" named and scoped as the term for funder reference docs, filed + claimed #90 (arrival/storage/ingest; #16 keeps spec + compliance checks); 3 fabricated rubric fixtures landed in `fixtures/rubrics/` (Aldergrove RFP + scoring rubric pairing proposal_climate, Hartwell RFP pairing proposal_edu; 5 planted, verified compliance violations documented in the README) and mirrored md+pdf to R2 `rubrics/synthetic/`; ingest verified on all six files — md gives full section structure, PDF text layer intact but sections=0 (PDF loader does no heading detection — noted on #90 for the spec-drafting path) / next: `--rubric` CLI plumbing, web slot with #27 / blocked on nothing
+- 14:02 Dominique (claude-code) — #74 landing page reframed for funders: plain-language `h1` + CTA with the annotated specimen demoted to a labelled example (opening on raw output read as a claim about the reader's own proposal), long context folded behind a `<details>`, reordered to why → how it works → what it checks → how to read a result → uploader; **corrected copy that overstated the tool** — "the checks don't use AI at all" is false given #11/#13/#14/#18, now "two kinds of check, kept apart" (repeatable lookups vs. model judgements, both quote-anchored), and "we don't judge whether AI was used" is false given #12, now "a score is a signal, not a verdict"; added a "What it checks" section covering the real feature set from the issue tree; blue/green/white trust palette + inline-SVG process diagram and card/lane icons (all `aria-hidden` beside text labels, #26); fixed a dark-mode contrast bug (buttons/badges hardcoded `#fff` over inverted light fills) / next: `demo-report.html` still on the old warm palette and will look like a different product beside the new landing page / blocked on #23 for the privacy-and-retention line a funder will ask for first — deliberately left blank rather than guessed, and note #7–#11 aren't registered as checks yet so an upload today returns `has_text`/`word_count`/`tagging` only.
+
 - 13:45 Nick (claude-code) — did D1 report history + Drizzle Kit schema
   migrations (#88, filed this session): 5 tables mirroring models.py,
   `/api/runs` store+read on the Worker, 72 worker tests + 8 Python schema

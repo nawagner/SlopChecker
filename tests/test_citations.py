@@ -133,6 +133,64 @@ def test_no_reference_section_degrades_to_unlinked():
     assert len(ext.findings) == 1
 
 
+# ------------------------------------------- entry-shape tolerance (#126)
+
+# A rendered numbered list keeps its ordinal when printed to PDF, so the
+# bracketed key is no longer at the start of the line.
+_ORDINAL_PREFIXED = """References
+
+1. [1] https://doi.org/10.1038/s41586-020-2649-2
+2. [2] https://doi.org/10.1073/pnas.1517384113
+3. [3] https://doi.org/10.7274/jlc90oup
+"""
+
+_MARKDOWN_BULLETS = """Sources
+
+- [1] https://doi.org/10.1016/j.cell.2016.07.054
+- [2] https://doi.org/10.3353/uuwzix69
+"""
+
+_PLAIN_NUMBERED = """References
+
+1. Okafor, J. Prebunking at scale. Journal of Applied Studies, 2021.
+2. Reyes, M. Cross-platform replication. Journal of Applied Studies, 2022.
+"""
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (_ORDINAL_PREFIXED, 3),
+        (_MARKDOWN_BULLETS, 2),
+        (_PLAIN_NUMBERED, 2),
+    ],
+    ids=["ordinal-prefixed", "markdown-bullets", "plain-numbered"],
+)
+def test_bare_identifier_reference_shapes_parse(text, expected):
+    """A bibliography of plain DOI links is still a bibliography (#126)."""
+    ext = extract_citations(text)
+    assert len(ext.references) == expected
+
+
+def test_ordinal_prefixed_entries_keep_their_bracketed_key():
+    # The key must come from [n], not the list ordinal, so in-text [3] still
+    # links to the right entry.
+    ext = extract_citations(_ORDINAL_PREFIXED)
+    assert [r.key for r in ext.references] == ["1", "2", "3"]
+
+
+def test_page_break_between_entries_does_not_merge_them():
+    # Extracted PDFs put a form feed at the page boundary, mid reference list.
+    text = "References\n\n1. [1] https://doi.org/10.1/aaa\n\f2. [2] https://doi.org/10.2/bbb\n"
+    assert len(extract_citations(text).references) == 2
+
+
+def test_sources_heading_is_a_reference_section():
+    # Blog posts and think-tank reports say "Sources", not "References".
+    ext = extract_citations(_MARKDOWN_BULLETS)
+    assert ext.ref_region is not None
+
+
 # ------------------------------------------------------------- CRLF (#98)
 
 

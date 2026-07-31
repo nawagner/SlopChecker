@@ -28,16 +28,18 @@ HARNESS_DIR = REPO / "harness"
 FIXTURES = HARNESS_DIR / "fixtures"
 DEFECTS = HARNESS_DIR / "defects.yaml"
 SOURCES = HARNESS_DIR / "sources"
+SUBSTRATES = HARNESS_DIR / "substrates"
 
 
 def test_harness_end_to_end_matches_expected_outcomes(tmp_path):
     """Run the real harness; assert every defect's outcome matches expectation.
 
     This is the canary that flags regressions in the checks under it: if
-    citation extraction stops surfacing unlinked markers, the two
-    cite-* defects flip to MISS. If quote-matching starts fuzzy-passing
-    the mutated quote, the quote-* defect flips to MISS. Either way the
-    test tells you exactly which defect broke.
+    citation extraction stops surfacing unlinked markers, the cite-* defects
+    flip to MISS. If quote-matching starts fuzzy-passing the mutated quote,
+    the quote-* defect flips to MISS. If the PDF loader or post-ingest
+    mutation regresses, the cite-orphan-real-pdf defect (#71) flips to MISS.
+    Either way the test tells you exactly which defect broke.
     """
     summary = run_harness(
         fixtures_dir=FIXTURES,
@@ -45,6 +47,7 @@ def test_harness_end_to_end_matches_expected_outcomes(tmp_path):
         sources_dir=SOURCES,
         out_dir=tmp_path,
         today="0000-00-00",  # deterministic path for the mutated dir
+        substrates_dir=SUBSTRATES,
     )
 
     outcomes = {d["id"]: d["outcome"] for d in summary["per_defect"]}
@@ -52,18 +55,20 @@ def test_harness_end_to_end_matches_expected_outcomes(tmp_path):
         "cite-orphan-climate": "HIT",
         "cite-missing-ref-climate": "HIT",
         "quote-mutated-edu": "HIT",
+        "cite-orphan-real-pdf": "HIT",
         "unsupported-claim-climate": "PENDING",
         "misattr-edu": "PENDING",
     }
-    assert summary["hits"] == 3
+    assert summary["hits"] == 4
     assert summary["misses"] == 0
     assert summary["pending"] == 2
-    assert summary["runnable_total"] == 3
+    assert summary["runnable_total"] == 4
 
     # The recall report file was written and mentions the top-line number.
     report_text = summary["report_path"].read_text()
-    assert "Recall (deterministic tier): 3/3" in report_text
+    assert "Recall (deterministic tier): 4/4" in report_text
     assert "cite-orphan-climate" in report_text
+    assert "cite-orphan-real-pdf" in report_text
 
 
 def test_injector_missing_original_is_hard_error(tmp_path):

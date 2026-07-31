@@ -185,6 +185,109 @@ def _paragraphs(text: str) -> list[tuple[int, str, int]]:
     return out
 
 
+# A heading in extracted PDF text has no markup left — only shape. Short line,
+# no terminal sentence punctuation, not a reference entry, and it isn't the
+# tail of a wrapped sentence (the previous line ended a sentence, or there
+# wasn't one). Display-only: mis-detection costs a font weight, never an
+# anchor, because marks are still cut from the original offsets.
+_MAX_HEADING_CHARS = 72
+_MAX_HEADING_WORDS = 8
+_SENTENCE_END = (".", "!", "?", ":", ";", ",")
+_ENTRY_LEAD = re.compile(r"^(?:\d{1,3}[.)]|[-*•]|https?://)")
+# "PI: Liu", "Received: 04/10/2023" — a form field, not a heading. A real
+# heading may end in a colon, but it doesn't carry a value after one.
+_KEY_VALUE = re.compile(r"^[^:]{1,32}:\s+\S")
+
+
+def _wraps_into(line: str, nxt: str | None) -> bool:
+    """True when ``line`` runs on into ``nxt`` — same test as the soft-join
+    reflow, so a wrapped sentence is never mistaken for a heading."""
+    if nxt is None:
+        return False
+    tail = line.rstrip()
+    head = nxt.lstrip()
+    if not tail or not head:
+        return False
+    return (tail[-1].islower() or tail[-1] in ",;") and head[0].islower()
+
+
+def _is_heading(line: str, prev: str | None, nxt: str | None) -> bool:
+    stripped = line.strip()
+    if not stripped or len(stripped) > _MAX_HEADING_CHARS:
+        return False
+    if len(stripped.split()) > _MAX_HEADING_WORDS:
+        return False
+    if stripped[-1] in _SENTENCE_END and not stripped.endswith(":"):
+        return False
+    if _REF_RE.match(stripped) or _ENTRY_LEAD.match(stripped) or _KEY_VALUE.match(stripped):
+        return False
+    if not any(c.isalpha() for c in stripped):
+        return False
+    # A heading and a wrapped line both end mid-air; what separates them is
+    # that a wrapped line also *starts* mid-sentence. "Background" followed by
+    # lowercase body is a heading; "evidence shows durable" is not.
+    if not stripped[0].isupper():
+        return False
+    # Mid-sentence wrap from above: the previous line didn't finish a thought.
+    return not _wraps_into(prev, line) if prev else True
+
+
+# Above this share of lines, "headings" aren't headings — the document is a
+# form of short labelled fields, and bolding a third of it is worse than
+# bolding none. The heuristic switches itself off rather than making the page
+# unreadable. Measured shares: fabricated grant application 0.21, two
+# fabricated RFPs 0.12 / 0.07, a real 120-page NIH R01 face page 0.32.
+_MAX_HEADING_SHARE = 0.25
+
+
+def _heading_detection_useful(text: str) -> bool:
+    lines = [ln for ln in text.splitlines() if ln.strip()]
+    if len(lines) < 8:
+        return True
+    hits = sum(
+        _is_heading(ln, lines[i - 1] if i else None, lines[i + 1] if i + 1 < len(lines) else None)
+        for i, ln in enumerate(lines)
+    )
+    return hits / len(lines) <= _MAX_HEADING_SHARE
+
+
+def _blocks(text: str) -> list[tuple[int, str, int, bool]]:
+    """(offset, chunk, page, is_heading) — paragraphs split at heading lines.
+
+    Extracted PDF text arrives as one run per page; without this every page
+    renders as a single undifferentiated wall. Offsets come from a running
+    cursor over the original text, so anchors still land exactly.
+    """
+    detect = _heading_detection_useful(text)
+    out: list[tuple[int, str, int, bool]] = []
+    for offset, par, page in _paragraphs(text):
+        lines = par.splitlines(keepends=True)
+        if len(lines) < 2 or not detect:
+            out.append((offset, par, page, False))
+            continue
+        pos = offset
+        run_start = pos
+        run: list[str] = []
+        prev: str | None = None
+        for i, line in enumerate(lines):
+            nxt = lines[i + 1] if i + 1 < len(lines) else None
+            if _is_heading(line, prev, nxt):
+                if run:
+                    out.append((run_start, "".join(run), page, False))
+                    run = []
+                out.append((pos, line.rstrip("\n"), page, True))
+                run_start = pos + len(line)
+            else:
+                if not run:
+                    run_start = pos
+                run.append(line)
+            prev = line
+            pos += len(line)
+        if run:
+            out.append((run_start, "".join(run).rstrip("\n"), page, False))
+    return out
+
+
 def _render_document(doc: dict, findings: list[dict]) -> str:
     text = doc.get("text", "")
     spans = _anchor_spans(text, findings)
@@ -192,11 +295,12 @@ def _render_document(doc: dict, findings: list[dict]) -> str:
     body: list[str] = []
     refs: list[str] = []
     last_page = 1
-    for offset, par, page in _paragraphs(text):
+    for offset, par, page, is_heading in _blocks(text):
         if page != last_page:
             body.append(f'<div class="pgbrk">p. {page}</div>')
             last_page = page
-        html = f"<p>{_mark_paragraph(par, offset, spans)}</p>"
+        marked = _mark_paragraph(par, offset, spans)
+        html = f'<p class="dh">{marked}</p>' if is_heading else f"<p>{marked}</p>"
         (refs if _REF_RE.match(par) else body).append(html)
 
     parts = ['<div class="doc">']
@@ -213,8 +317,9 @@ def _render_document(doc: dict, findings: list[dict]) -> str:
     return "\n".join(parts)
 
 
-def _render_card(finding: dict) -> str:
+def _render_card(finding: dict, anchored: frozenset[str] | None = None) -> str:
     fid = str(finding.get("id", ""))
+    loose = anchored is not None and fid.lower() not in anchored
     lane = _finding_lane(finding)
     label = finding.get("label") or finding.get("target") or fid
     checks = finding.get("checks", [])
@@ -240,11 +345,17 @@ def _render_card(finding: dict) -> str:
     note = ""
     if finding.get("note"):
         note = f'\n    <p class="a-note">{escape(finding["note"])}</p>'
+    if loose:
+        note += (
+            '\n    <p class="a-loose">Quote not found in the extracted text — '
+            "no in-document highlight for this one.</p>"
+        )
 
     head = (
         f'<span class="a-id {lane}">{escape(fid)}</span><span class="a-name">{escape(label)}</span>'
     )
-    return f"""  <div class="anno" id="anno-{escape(fid.lower())}">
+    cls = "anno unanchored" if loose else "anno"
+    return f"""  <div class="{cls}" id="anno-{escape(fid.lower())}">
     <div class="a-head">{head}</div>
     <div class="a-sum">{summary}</div>
     <table class="kv">
@@ -344,12 +455,18 @@ def render_report(report: dict) -> str:
         docid_bits.append(f"({doc['submitter']})")
     docid = " — ".join(docid_bits[:2]) + (f" {docid_bits[2]}" if len(docid_bits) > 2 else "")
 
-    cards = "\n\n".join(_render_card(f) for f in findings)
+    # Which findings actually landed a highlight: their cards align beside the
+    # passage; the rest are labeled and stacked after them instead of piling
+    # at the top of the rail pretending to relate to the first paragraph.
+    anchored = frozenset(
+        str(f.get("id", "")).lower() for _, _, f in _anchor_spans(doc.get("text", ""), findings)
+    )
+    cards = "\n\n".join(_render_card(f, anchored) for f in findings)
     report_json = escape(json.dumps(report, indent=2, ensure_ascii=False))
     hint = (
-        "Checks appear beside the passages they refer to — click a card or highlight "
-        "to expand/collapse. Red = failed a check · green = passed · purple = detector score · "
-        "gray = could not run."
+        "Checks appear beside the passages they refer to — hover either side to see "
+        "what connects, click to expand/collapse. Red = failed a check · green = passed · "
+        "indigo = detector score · gray = could not run."
     )
     schema_note = (
         '<span class="c">// results are true | false | number. '

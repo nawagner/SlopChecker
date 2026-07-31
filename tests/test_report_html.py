@@ -149,6 +149,28 @@ def test_missing_anchor_quote_still_renders_card():
     out = render_report(rep)
     assert 'id="anno-a1"' in out
     assert "<mark" not in out.split('<div class="rail">')[0].split('<div class="doc">')[1]
+    # And it says so, instead of silently floating at the top of the rail.
+    assert 'class="anno unanchored"' in out
+    assert "Quote not found in the extracted text" in out
+
+
+def test_anchored_cards_are_not_marked_unanchored():
+    rep = {
+        "document": {"file": "t.txt", "text": "alpha beta gamma"},
+        "findings": [
+            {
+                "id": "A1",
+                "anchor": {"quote": "beta"},
+                "checks": [{"name": "x", "result": False}],
+            }
+        ],
+        "ledger": [],
+    }
+    out = render_report(rep)
+    # (the inlined stylesheet always mentions .anno.unanchored; the class must
+    # not appear on any card)
+    assert 'class="anno unanchored"' not in out
+    assert "Quote not found" not in out
 
 
 def test_pdf_style_text_splits_into_pages_not_one_wall():
@@ -202,6 +224,59 @@ def test_anchor_across_soft_joined_newline_still_marks():
     out = render_report(rep)
     # The mark wraps the same characters, newline rendered as a space.
     assert '<mark class="no" data-anno="a1">durable gains</mark>' in out
+
+
+def test_headings_in_extracted_text_get_their_own_block():
+    text = (
+        "Specific Aims\n"
+        "We will measure the labor-market effects of remote work policy using a\n"
+        "field experiment.\n"
+        "Background\n"
+        "Prior work has established a partial understanding.\n"
+    )
+    rep = {"document": {"file": "t.pdf", "text": text}, "findings": [], "ledger": []}
+    out = render_report(rep)
+    assert '<p class="dh">Specific Aims</p>' in out
+    assert '<p class="dh">Background</p>' in out
+
+
+def test_form_fields_and_wrapped_lines_are_not_headings():
+    text = (
+        "PI: Liu, George Y\n"
+        "Received: 04/10/2023\n"
+        "the sentence continues\n"
+        "onto the next line here.\n"
+    )
+    rep = {"document": {"file": "t.pdf", "text": text}, "findings": [], "ledger": []}
+    out = render_report(rep)
+    assert 'class="dh"' not in out
+
+
+def test_heading_detection_switches_off_on_form_like_documents():
+    # A federal face page is mostly short labelled fields; bolding 70% of the
+    # lines is worse than bolding none, so the heuristic disables itself.
+    text = "".join(f"Field {n}\n" for n in range(40))
+    rep = {"document": {"file": "form.pdf", "text": text}, "findings": [], "ledger": []}
+    out = render_report(rep)
+    assert 'class="dh"' not in out
+
+
+def test_heading_split_preserves_anchor_offsets():
+    text = "Background\nthe fabricated claim appears here in body text.\n"
+    rep = {
+        "document": {"file": "t.pdf", "text": text},
+        "findings": [
+            {
+                "id": "A1",
+                "anchor": {"quote": "fabricated claim"},
+                "checks": [{"name": "x", "result": False}],
+            }
+        ],
+        "ledger": [],
+    }
+    out = render_report(rep)
+    assert '<mark class="no" data-anno="a1">fabricated claim</mark>' in out
+    assert '<p class="dh">Background</p>' in out
 
 
 def test_paragraph_offsets_survive_mixed_separators():

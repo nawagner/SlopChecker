@@ -4,25 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SlopChecker — screen proposals before you read them</title>
-<meta name="description" content="SlopChecker screens grant proposals for fabricated citations, misquoted sources, and AI-generation signals — and shows the evidence inline.">
+<meta name="description" content="SlopChecker screens grant proposals and blog posts for unverifiable citations, misquoted sources, overlap with other submissions, and AI-generation signals — and shows the evidence inline.">
 <style>
   :root {
-    --bg: #FCFCFA; --panel: #F3F2EE; --ink: #22262C; --soft: #6B7280;
-    --rule: #DDDAD2; --accent: #33608C;
-    --no: #B3352E; --no-bg: #F8E7E5;
-    --yes: #2F7D52; --yes-bg: #E3F0E8;
-    --score: #6E4FA3; --score-bg: #EDE7F6;
+    /* Blue, green, white: the palette a reviewer is asked to trust with an
+       applicant's document. Warm greys were pulled out in favour of cool ones
+       so the whole page reads as one family with the accent. */
+    --bg: #FFFFFF; --bg-tint: #F3F8FC;
+    --panel: #F2F7FB; --panel-2: #E8F1F8;
+    --ink: #1B2430; --soft: #5C6A7A;
+    --rule: #D6E3EE; --accent: #14568F; --accent-soft: #E7F0F8;
+    --on-accent: #FFFFFF; --on-strong: #FFFFFF;
+    --no: #B0302A; --no-bg: #FBEAE8;
+    --yes: #1E7A4B; --yes-bg: #E4F2EA;
+    --score: #4A5CA6; --score-bg: #EBEEF9;
     --serif: "Charter", "Sitka Text", Cambria, Georgia, serif;
     --sans: -apple-system, "Segoe UI", system-ui, Roboto, sans-serif;
     --mono: ui-monospace, "Cascadia Code", Consolas, Menlo, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #16181D; --panel: #1E2127; --ink: #E6E3DC; --soft: #98A0AB;
-      --rule: #33373E; --accent: #7FA8CF;
-      --no: #E2756E; --no-bg: #3A2422;
-      --yes: #6FBE93; --yes-bg: #1E3328;
-      --score: #A98FD6; --score-bg: #2C2438;
+      --bg: #10161D; --bg-tint: #141E28;
+      --panel: #172230; --panel-2: #1D2937;
+      --ink: #E6EDF4; --soft: #9BABBC;
+      --rule: #2B3B4C; --accent: #79B2E3; --accent-soft: #182A3B;
+      --on-accent: #0C141C; --on-strong: #10161D;
+      --no: #E3796F; --no-bg: #3A2422;
+      --yes: #6DC194; --yes-bg: #16311F;
+      --score: #9BA9EC; --score-bg: #232B4A;
     }
   }
 
@@ -32,7 +41,12 @@
   a { color: var(--accent); }
   .wrap { max-width: 62rem; margin: 0 auto; padding: 0 1.25rem; }
 
-  header { border-bottom: 1px solid var(--rule); }
+  /* Icons carry no meaning on their own — every one sits beside its label, so
+     the page still reads with images off, in a screen reader, or in print. */
+  .ico { fill: none; stroke: currentColor; stroke-width: 1.7;
+         stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+  header { border-bottom: 1px solid var(--rule); background: var(--bg); }
   header .wrap { display: flex; align-items: baseline; gap: 1.5rem; padding: 1.1rem 1.25rem; }
   .wordmark { font-family: var(--mono); font-size: .85rem; font-weight: 700;
               letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
@@ -40,10 +54,33 @@
   header nav a { color: var(--soft); text-decoration: none; }
   header nav a:hover, header nav a:focus-visible { color: var(--accent); }
 
-  /* hero: an annotated specimen — the product demonstrated on its own copy */
-  .hero { padding: 4rem 0 3rem; }
-  .specimen { font-family: var(--serif); font-size: clamp(1.5rem, 3.4vw, 2.4rem);
-              line-height: 1.5; max-width: 44rem; margin: 0; font-weight: 400; }
+  /* hero: a plain statement and a way in, THEN the annotated specimen as a
+     labelled example. Opening on raw output read as us asserting something
+     about the reader's own proposal rather than showing what comes back. */
+  .heroband { background: linear-gradient(180deg, var(--bg-tint), var(--bg));
+              border-bottom: 1px solid var(--rule); }
+  .hero { padding: 3.4rem 0 3.2rem; }
+  .hero h1 { font-family: var(--serif); font-weight: 400; letter-spacing: -.01em;
+             font-size: clamp(1.6rem, 3.6vw, 2.3rem); line-height: 1.3;
+             max-width: 36rem; margin: 0; }
+  .sub { color: var(--soft); font-size: 1.02rem; max-width: 38rem; margin: 1.1rem 0 0; }
+  .cta { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1.1rem;
+         margin: 1.7rem 0 0; }
+  a.gobtn { font-size: .9rem; font-weight: 600; background: var(--accent);
+            color: var(--on-accent); text-decoration: none; border-radius: 4px;
+            padding: .62rem 1.15rem; }
+  a.gobtn:hover { filter: brightness(1.1); }
+  a.gobtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .cta .alt { font-size: .87rem; color: var(--soft); }
+
+  /* the specimen, demoted to an example and visually marked as one */
+  .example { max-width: 44rem; margin: 2.8rem 0 0; background: var(--bg);
+             border: 1px solid var(--rule); border-left: 3px solid var(--accent);
+             border-radius: 6px; padding: 1.1rem 1.3rem 1.3rem; }
+  .example figcaption { font-family: var(--mono); font-size: .7rem; letter-spacing: .1em;
+                        text-transform: uppercase; color: var(--soft); margin-bottom: .75rem; }
+  .specimen { font-family: var(--serif); font-size: clamp(1.12rem, 2.2vw, 1.42rem);
+              line-height: 1.5; margin: 0; font-weight: 400; }
   /* A mark that wraps needs its background and rule on every line fragment;
      without clone the inset shadow draws once and the underline is severed
      mid-phrase. (A nowrap/normal pair used to fight over this — normal won,
@@ -53,27 +90,111 @@
                    -webkit-box-decoration-break: clone; box-decoration-break: clone; }
   .specimen mark.no { background: var(--no-bg); box-shadow: inset 0 -3px 0 var(--no); }
   .specimen mark.score { background: var(--score-bg); box-shadow: inset 0 -3px 0 var(--score); }
-  .chips { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: 1.2rem 0 0;
+  .chips { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: 1rem 0 0;
            font-family: var(--mono); font-size: .78rem; color: var(--soft); }
   .chips .chip { display: inline-flex; align-items: baseline; gap: .45rem; }
-  .chip b { font-size: .68rem; font-weight: 700; color: #fff; border-radius: 3px;
-            padding: .1rem .35rem; }
+  .chip b { font-size: .68rem; font-weight: 700; color: var(--on-strong);
+            border-radius: 3px; padding: .1rem .35rem; }
   .chip b.no { background: var(--no); } .chip b.score { background: var(--score); }
   .chip .v-no { color: var(--no); font-weight: 700; }
   .chip .v-score { color: var(--score); font-weight: 700; }
-  .sub { color: var(--soft); font-size: 1.02rem; max-width: 40rem; margin: 1.6rem 0 0; }
+
+  /* funder orientation: the short plain-language answer up top, the full
+     background folded away. A program officer scanning the page should not
+     have to read four paragraphs to reach the upload box. */
+  .context { max-width: 42rem; }
+  .context .lead { font-family: var(--serif); font-size: 1.14rem; line-height: 1.6;
+                   margin: 0 0 1rem; }
+  .context p { margin: 0 0 1rem; font-size: .96rem; }
+  .context p:last-child { margin-bottom: 0; }
+  .context details { margin: 1.5rem 0 0; border-top: 1px solid var(--rule);
+                     padding-top: .9rem; }
+  .context summary { cursor: pointer; font-size: .88rem; font-weight: 600;
+                     color: var(--accent); }
+  .context summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .context details[open] summary { margin-bottom: 1.2rem; }
+  .limits { list-style: none; margin: 1.4rem 0 0; padding: 0; display: grid; gap: 1rem; }
+  .limits li { border-left: 2px solid var(--rule); padding: .05rem 0 .05rem 1rem; }
+  .limits b { display: block; font-size: .93rem; margin-bottom: .1rem; }
+  .limits span { font-size: .88rem; color: var(--soft); }
+  .terms { display: grid; grid-template-columns: max-content 1fr; gap: .6rem 1.2rem;
+           margin: 2.2rem 0 0; }
+  .terms dt { font-family: var(--mono); font-size: .76rem; color: var(--accent);
+              padding-top: .18rem; }
+  .terms dd { margin: 0; font-size: .88rem; color: var(--soft); }
+  @media (max-width: 34rem) {
+    .terms { grid-template-columns: 1fr; gap: .1rem 0; }
+    .terms dd { margin-bottom: .7rem; }
+  }
+
+  h2 { font-size: .78rem; letter-spacing: .13em; text-transform: uppercase;
+       color: var(--soft); font-weight: 600; border-bottom: 1px solid var(--rule);
+       padding-bottom: .35rem; margin: 3.5rem 0 1.4rem; }
+
+  /* process diagram: four stages, ending on the human. Built from HTML + one
+     icon each rather than a single SVG, so it reflows, zooms, and reads
+     aloud. Connectors only appear in the 4-across layout — in the stacked
+     one the numbers carry the sequence. */
+  .flow { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.7rem;
+          grid-template-columns: 1fr; }
+  .flow li { position: relative; }
+  .fbadge { width: 2.75rem; height: 2.75rem; border-radius: 50%;
+            background: var(--accent-soft); border: 1px solid var(--rule);
+            color: var(--accent); display: flex; align-items: center;
+            justify-content: center; position: relative; z-index: 1; }
+  .fbadge .ico { width: 1.3rem; height: 1.3rem; }
+  .flow .n { font-family: var(--mono); font-size: .7rem; letter-spacing: .1em;
+             color: var(--accent); display: block; margin: .8rem 0 .15rem; }
+  .flow h3 { font-size: .93rem; margin: 0 0 .3rem; }
+  .flow p { margin: 0; font-size: .85rem; color: var(--soft); }
+  @media (min-width: 52rem) {
+    .flow { grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+    .flow li:not(:last-child)::after { content: ""; position: absolute;
+      top: 1.32rem; left: 3.25rem; right: -1.5rem; height: 2px;
+      background: var(--rule); }
+  }
+
+  /* what it checks */
+  .features { display: grid; gap: 1rem;
+              grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); }
+  .feat { border: 1px solid var(--rule); border-radius: 8px; background: var(--panel);
+          padding: 1.05rem 1.2rem 1.15rem; }
+  .feat .head { display: flex; align-items: center; gap: .55rem; margin-bottom: .45rem; }
+  .feat .head .ico { width: 1.15rem; height: 1.15rem; color: var(--accent); }
+  .feat h3 { font-size: .92rem; margin: 0; }
+  .feat p { margin: 0; font-size: .85rem; color: var(--soft); }
+  .feat ul { margin: .5rem 0 0; padding-left: 1.05rem; font-size: .84rem; color: var(--soft); }
+  .feat li { margin-bottom: .18rem; }
+  .gapnote { font-size: .87rem; color: var(--soft); max-width: 44rem;
+             margin: 1.3rem 0 0; border-left: 2px solid var(--yes); padding-left: .95rem; }
+  .meta { display: flex; flex-wrap: wrap; gap: .35rem 1.4rem; margin: 1.4rem 0 0;
+          font-family: var(--mono); font-size: .74rem; color: var(--soft); }
+
+  /* three lanes */
+  .lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+           gap: 1rem; }
+  .lane { border: 1px solid var(--rule); border-radius: 8px; padding: 1rem 1.15rem;
+          background: var(--panel); }
+  .lane .tag { display: inline-flex; align-items: center; gap: .4rem;
+               font-family: var(--mono); font-weight: 700; font-size: .8rem; }
+  .lane .tag .ico { width: 1.15rem; height: 1.15rem; stroke-width: 1.9; }
+  .lane.l-no { background: var(--no-bg); } .lane.l-no .tag { color: var(--no); }
+  .lane.l-yes { background: var(--yes-bg); } .lane.l-yes .tag { color: var(--yes); }
+  .lane.l-score { background: var(--score-bg); } .lane.l-score .tag { color: var(--score); }
+  .lane h3 { font-size: .95rem; margin: .4rem 0 .3rem; }
+  .lane p { margin: 0; font-size: .84rem; color: var(--soft); }
 
   /* upload */
-  .uploader { margin: 2.4rem 0 0; max-width: 40rem; }
-  .drop { border: 1.5px dashed var(--rule); border-radius: 6px; background: var(--panel);
+  .uploader { margin: 0; max-width: 40rem; }
+  .drop { border: 1.5px dashed var(--rule); border-radius: 8px; background: var(--panel);
           padding: 1.6rem 1.5rem; display: flex; flex-wrap: wrap; align-items: center;
           gap: 1rem; transition: border-color .15s; }
   .drop.armed { border-color: var(--accent); }
   .drop p { margin: 0; font-size: .9rem; color: var(--soft); flex: 1 1 14rem; }
   .drop p strong { color: var(--ink); font-weight: 600; display: block; margin-bottom: .15rem; }
   button.check { font-family: var(--sans); font-size: .9rem; font-weight: 600;
-                 background: var(--accent); color: #fff; border: none; border-radius: 4px;
-                 padding: .65rem 1.2rem; cursor: pointer; }
+                 background: var(--accent); color: var(--on-accent); border: none;
+                 border-radius: 4px; padding: .65rem 1.2rem; cursor: pointer; }
   button.check:disabled { opacity: .55; cursor: default; }
   button.check:focus-visible, .drop:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
   .status { font-family: var(--mono); font-size: .78rem; margin: .8rem 0 0; min-height: 1.2em; }
@@ -81,35 +202,7 @@
   .status.busy { color: var(--accent); }
   .demolink { font-size: .85rem; margin-top: .9rem; }
 
-  h2 { font-size: .78rem; letter-spacing: .13em; text-transform: uppercase;
-       color: var(--soft); font-weight: 600; border-bottom: 1px solid var(--rule);
-       padding-bottom: .35rem; margin: 3.5rem 0 1.2rem; }
-
-  /* three lanes */
-  .lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-           gap: 1rem; }
-  .lane { border: 1px solid var(--rule); border-radius: 6px; padding: 1rem 1.1rem;
-          background: var(--panel); }
-  .lane .tag { font-family: var(--mono); font-weight: 700; font-size: .8rem; }
-  .lane.l-no .tag { color: var(--no); } .lane.l-yes .tag { color: var(--yes); }
-  .lane.l-score .tag { color: var(--score); }
-  .lane h3 { font-size: .95rem; margin: .35rem 0 .3rem; }
-  .lane p { margin: 0; font-size: .84rem; color: var(--soft); }
-
-  /* how it works */
-  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-           gap: 1.6rem; }
-  .step h3 { font-size: .95rem; margin: 0 0 .3rem; }
-  .step p { margin: 0; font-size: .86rem; color: var(--soft); }
-
-  /* api status strip */
-  .apistrip { font-family: var(--mono); font-size: .76rem; color: var(--soft);
-              border: 1px solid var(--rule); border-radius: 4px; padding: .55rem .9rem;
-              display: none; margin-top: 3.5rem; }
-  .apistrip .dot { display: inline-block; width: .55em; height: .55em; border-radius: 50%;
-                   background: var(--yes); margin-right: .5em; }
-
-  footer { margin-top: 3.5rem; border-top: 1px solid var(--rule); }
+  footer { margin-top: 3.5rem; border-top: 1px solid var(--rule); background: var(--bg-tint); }
   footer .wrap { padding: 1.4rem 1.25rem 2.5rem; font-size: .78rem; color: var(--soft);
                  max-width: 62rem; }
   footer p { max-width: 60ch; margin: 0 0 .5rem; }
@@ -128,98 +221,284 @@
 </head>
 <body>
 
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+  <symbol id="i-doc" viewBox="0 0 24 24">
+    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+    <path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24">
+    <circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></symbol>
+  <symbol id="i-report" viewBox="0 0 24 24">
+    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+    <path d="M14 3v5h5"/><path d="M8.5 14.2l1.9 1.9 3.8-3.8"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24">
+    <circle cx="12" cy="8" r="3.8"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24">
+    <path d="M10.5 13.5a4.5 4.5 0 0 0 6.4 0l2.6-2.6a4.5 4.5 0 0 0-6.4-6.4l-1.1 1.1"/>
+    <path d="M13.5 10.5a4.5 4.5 0 0 0-6.4 0l-2.6 2.6a4.5 4.5 0 0 0 6.4 6.4l1.1-1.1"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24">
+    <rect x="7" y="7" width="10" height="10" rx="2"/>
+    <path d="M10 3v3M14 3v3M10 18v3M14 18v3M3 10h3M3 14h3M18 10h3M18 14h3"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24">
+    <path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="M3 14l9 5 9-5"/></symbol>
+  <symbol id="i-clipboard" viewBox="0 0 24 24">
+    <path d="M9 4H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/>
+    <rect x="9" y="2.5" width="6" height="3" rx="1"/><path d="M9 13l2 2 4-4"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24">
+    <path d="M12 6.5C10 5 7.5 4.5 5 4.5v13c2.5 0 5 .5 7 2 2-1.5 4.5-2 7-2v-13c-2.5 0-5 .5-7 2Z"/>
+    <path d="M12 6.5v13"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24">
+    <path d="M3 3h8l10 10-8 8L3 11V3Z"/><circle cx="7.4" cy="7.4" r="1.4"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="9"/><path d="M8 12.4l2.7 2.7L16 9.5"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24">
+    <path d="M3.5 17a8.5 8.5 0 1 1 17 0"/><path d="M12 17l4.2-4.6"/>
+    <circle cx="12" cy="17" r="1.4"/></symbol>
+</svg>
+
 <header>
   <div class="wrap">
     <span class="wordmark">SlopChecker</span>
     <nav>
+      <a href="#check">Check a proposal</a>
       <a href="/demo-report.html">Sample report</a>
       <a href="https://github.com/nawagner/SlopChecker">GitHub</a>
     </nav>
   </div>
 </header>
 
+<div class="heroband">
+  <div class="wrap">
+    <section class="hero">
+      <h1>Check whether a proposal's sources are real, before you spend an hour
+      reading it.</h1>
+      <p class="sub">Upload a grant application. SlopChecker checks its citations
+      against the published record, compares it with submissions you've already
+      received, and gives you back one page of evidence. It doesn't score the proposal
+      and it doesn't reject anything — that stays with you.</p>
+      <div class="cta">
+        <a class="gobtn" href="#check">Check a proposal</a>
+        <span class="alt">or <a href="/demo-report.html">look at a finished report</a>
+        first.</span>
+      </div>
+
+      <figure class="example">
+        <figcaption>What a finding looks like</figcaption>
+        <p class="specimen">This proposal cites a study that
+          <mark class="no">does not exist</mark>, quotes a paper that
+          <mark class="no">never said it</mark>, and scores
+          <mark class="score">0.96 on an AI detector</mark>.</p>
+        <div class="chips" aria-hidden="true">
+          <span class="chip"><b class="no">C3</b> doi_resolves <span class="v-no">NO</span></span>
+          <span class="chip"><b class="no">Q1</b> quote_in_source <span class="v-no">NO</span></span>
+          <span class="chip"><b class="score">D1</b> pangram_document <span class="v-score">0.96</span></span>
+        </div>
+      </figure>
+    </section>
+  </div>
+</div>
+
 <main class="wrap">
 
-<section class="hero">
-  <h1 class="specimen">This proposal cites a study that
-    <mark class="no">does not exist</mark>, quotes a paper that
-    <mark class="no">never said it</mark>, and scores
-    <mark class="score">0.96 on an AI detector</mark>.</h1>
-  <div class="chips" aria-hidden="true">
-    <span class="chip"><b class="no">C3</b> doi_resolves <span class="v-no">NO</span></span>
-    <span class="chip"><b class="no">Q1</b> quote_in_source <span class="v-no">NO</span></span>
-    <span class="chip"><b class="score">D1</b> pangram_document <span class="v-score">0.96</span></span>
-  </div>
-  <p class="sub">SlopChecker screens grant proposals for fabricated citations, misquoted
-  sources, and AI-generation signals, then puts the evidence beside the passage it
-  refers to. Built for funding-org reviewers drowning in machine-written submissions.</p>
+<h2>Why it exists</h2>
+<section class="context">
+  <p class="lead">Proposals increasingly cite sources that don't exist. The reference
+  looks correct, but the paper isn't there — or it is, and never said what the proposal
+  claims.</p>
 
-  <div class="uploader">
-    <form id="checkform" class="drop" tabindex="-1">
-      <p><strong>Check a proposal</strong>
-        Drop a PDF here or choose a file. It runs the deterministic checks first;
-        nothing is auto-rejected.</p>
-      <input type="file" id="file" accept=".pdf,.docx,.md,.html,.txt" style="position:absolute;width:1px;height:1px;opacity:0" aria-label="Choose a proposal file">
-      <button type="button" class="check" id="choose">Choose file</button>
-      <button type="submit" class="check" id="run" disabled>Run checks</button>
-    </form>
-    <p class="status" id="status" role="status"></p>
-    <p class="demolink">No file handy? <a href="/demo-report.html">Open the sample evidence report</a>.</p>
+  <p>Catching that means looking sources up one at a time, which nobody has time for
+  across a submission window. SlopChecker does it mechanically, and shows you its
+  working: every finding is attached to the sentence it came from, so you can confirm
+  any one of them yourself in about thirty seconds.</p>
+
+  <details>
+    <summary>More on what it does and doesn't do</summary>
+    <ul class="limits">
+      <li><b>It does not decide anything.</b> <span>There is no overall score, no
+      ranking, no flag that removes a proposal from consideration. Findings go to a
+      human reviewer, who decides what they mean. A passage the tool never flags can
+      still be a weak passage.</span></li>
+      <li><b>Two kinds of check, kept apart.</b> <span>Some are lookups anyone can
+      repeat by hand: does the DOI resolve, do the publication details match, does the
+      quoted sentence appear in the source. Others are judgements made with a language
+      model: whether a reference actually supports the claim it's cited for, how closely
+      a submission overlaps another. The report labels which is which, and both kinds
+      are pinned to a quote you can read for yourself.</span></li>
+      <li><b>An AI-detection score is a signal, not a verdict.</b> <span>Passages are
+      scored by Pangram, a third-party detector. The score sits in its own lane, marked
+      as an estimate. An applicant drafting with AI is not what this tool objects to —
+      claims that can't be verified are, regardless of who or what wrote them.</span></li>
+      <li><b>It reports its own blind spots.</b> <span>A paywalled source, a scanned
+      PDF with no readable text, a check that could not run — each is listed as a gap
+      in coverage rather than passed over quietly. You always know what was not
+      checked.</span></li>
+    </ul>
+
+    <dl class="terms">
+      <dt>DOI</dt>
+      <dd>The permanent ID attached to a published paper, like a catalogue number. If a
+      DOI does not resolve to anything, the cited paper does not exist at that
+      address.</dd>
+      <dt>Detector score</dt>
+      <dd>A third-party estimate, from 0 to 1, of how likely a passage is
+      machine-written. An estimate, not a measurement, and never grounds for rejection
+      on its own.</dd>
+      <dt>Evidence report</dt>
+      <dd>What you get back: the proposal with findings marked in place, plus a full
+      list of every check that ran, passed, failed, or was skipped.</dd>
+    </dl>
+  </details>
+</section>
+
+<h2>How it works</h2>
+<ol class="flow">
+  <li>
+    <span class="fbadge"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-doc"/></svg></span>
+    <span class="n">STEP 1</span>
+    <h3>You upload</h3>
+    <p>A grant application or blog post — PDF, Word, Markdown, or HTML. The text comes
+    out with its page positions kept.</p>
+  </li>
+  <li>
+    <span class="fbadge"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg></span>
+    <span class="n">STEP 2</span>
+    <h3>Checks run</h3>
+    <p>Every citation and quotation is looked up. Claims are extracted and compared
+    against your other submissions. Each check records its own result.</p>
+  </li>
+  <li>
+    <span class="fbadge"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-report"/></svg></span>
+    <span class="n">STEP 3</span>
+    <h3>You get evidence</h3>
+    <p>One page, on screen or printed: each finding marked where it occurs, its
+    evidence beside it, and a list of everything that ran.</p>
+  </li>
+  <li>
+    <span class="fbadge"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-user"/></svg></span>
+    <span class="n">STEP 4</span>
+    <h3>You decide</h3>
+    <p>SlopChecker recommends passages for a human to look at. It never accepts or
+    rejects a proposal, and it doesn't rank them.</p>
+  </li>
+</ol>
+
+<h2>What it checks</h2>
+<section class="features">
+  <div class="feat">
+    <div class="head">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-link"/></svg>
+      <h3>Citation integrity</h3>
+    </div>
+    <p>References are pulled out of the document and checked four ways — the last one
+    matters even when a source is perfectly real:</p>
+    <ul>
+      <li>Is the citation validly formed, and does its DOI or link resolve?</li>
+      <li>Do the author, title, and year match the actual source?</li>
+      <li>If a passage is quoted, does that sentence appear in the source?</li>
+      <li>Does the source actually support the claim it's cited for?</li>
+    </ul>
+  </div>
+  <div class="feat">
+    <div class="head">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cpu"/></svg>
+      <h3>AI-generation signals</h3>
+    </div>
+    <p>Passages are scored by Pangram, a third-party detector, through its API. The
+    score is reported as a score — context for a reviewer, in its own lane, never a
+    pass or a fail.</p>
+  </div>
+  <div class="feat">
+    <div class="head">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-layers"/></svg>
+      <h3>Overlap with other submissions</h3>
+    </div>
+    <p>The core claims of a submission are extracted and compared against proposals
+    you've already received — and against your reviewer pool where you have one — so
+    recycled and near-duplicate applications surface.</p>
+  </div>
+  <div class="feat">
+    <div class="head">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-clipboard"/></svg>
+      <h3>Compliance and budget</h3>
+    </div>
+    <p>Where you supply the solicitation, submissions are checked against it: required
+    sections, eligibility, scope. Budget figures are reviewed for internal consistency
+    and plausibility against what's being proposed.</p>
+  </div>
+  <div class="feat">
+    <div class="head">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-book"/></svg>
+      <h3>Background on the applicant</h3>
+    </div>
+    <p>A short report on the submitting team and their topic, assembled from public
+    sources and cited throughout, so every statement in it can be traced back.</p>
+  </div>
+  <div class="feat">
+    <div class="head">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tag"/></svg>
+      <h3>Topics and routing</h3>
+    </div>
+    <p>Each submission is tagged with its topics, document type, and the kind of
+    organisation that sent it — so a large batch can be sorted and routed to the right
+    reviewer.</p>
   </div>
 </section>
+<p class="gapnote">Every run reports which of these checks ran, which were skipped, and
+why. A missing API key, a paywalled source, or an unreachable server is recorded as a
+gap in coverage — never as a quiet pass.</p>
+<p class="meta">
+  <span>Open source · <a href="https://github.com/nawagner/SlopChecker">read the code</a></span>
+  <span>Grant applications and blog posts</span>
+  <span>PDF · Word · Markdown · HTML</span>
+</p>
 
 <h2>How to read a result</h2>
 <section class="lanes">
   <div class="lane l-no">
-    <span class="tag">NO</span>
-    <h3>Failed a verifiable check</h3>
-    <p>The DOI didn't resolve. The quote isn't in the paper. You can check it yourself
-    without trusting this tool.</p>
+    <span class="tag"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-x"/></svg> NO</span>
+    <h3>Failed a check you can repeat</h3>
+    <p>The citation didn't resolve, or the quote isn't in the paper. You can confirm it
+    yourself without taking this tool's word for it.</p>
   </div>
   <div class="lane l-yes">
-    <span class="tag">YES</span>
-    <h3>Passed a verifiable check</h3>
-    <p>The reference exists and its metadata matches. Passing isn't an endorsement of
-    the argument, only of the citation.</p>
+    <span class="tag"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg> YES</span>
+    <h3>Passed a check you can repeat</h3>
+    <p>The source exists and its publication details match. Passing isn't an endorsement
+    of the argument, only of the citation.</p>
   </div>
   <div class="lane l-score">
-    <span class="tag">0.96</span>
+    <span class="tag"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-gauge"/></svg> 0.96</span>
     <h3>A score, not a verdict</h3>
-    <p>Detector and similarity scores render in their own lane. They are context for a
+    <p>AI-detector and similarity scores sit in their own lane. They are context for a
     human reviewer, never grounds for rejection.</p>
   </div>
 </section>
 
-<h2>How it works</h2>
-<section class="steps">
-  <div class="step">
-    <h3>1 · Upload</h3>
-    <p>PDF, DOCX, Markdown, or HTML. The document is flattened to plain text with its
-    page structure kept for anchoring.</p>
-  </div>
-  <div class="step">
-    <h3>2 · Checks run</h3>
-    <p>Cheap deterministic checks first: DOI resolution, metadata match, quote
-    verification, section compliance. Detector scores where keys are configured. A
-    check that can't run reports as skipped, never silently.</p>
-  </div>
-  <div class="step">
-    <h3>3 · Evidence report</h3>
-    <p>One self-contained page — every finding highlighted in the document with its
-    evidence beside it, plus a full check ledger. Exportable to PDF.
-    <a href="/demo-report.html">See a sample</a>.</p>
-  </div>
+<h2 id="check">Check a proposal</h2>
+<section class="uploader">
+  <form id="checkform" class="drop" tabindex="-1">
+    <p><strong>Upload a proposal</strong>
+      Drop a PDF here, or choose a file. You get a report, not a decision —
+      nothing is accepted or rejected automatically.</p>
+    <input type="file" id="file" accept=".pdf,.docx,.md,.html,.txt" style="position:absolute;width:1px;height:1px;opacity:0" aria-label="Choose a proposal file">
+    <button type="button" class="check" id="choose">Choose file</button>
+    <button type="submit" class="check" id="run" disabled>Run checks</button>
+  </form>
+  <p class="status" id="status" role="status"></p>
+  <p class="demolink">Rather not upload anything yet?
+  <a href="/demo-report.html">Open a sample evidence report</a> for a proposal we
+  wrote ourselves.</p>
 </section>
-
-<div class="apistrip" id="apistrip"><span class="dot"></span><span id="apitext"></span></div>
 
 </main>
 
 <footer>
   <div class="wrap">
     <p>SlopChecker is a screening aid, not a determination. It recommends passages for
-    human review; it never auto-rejects. Boolean findings are independently verifiable.
-    Scores are probabilistic and never sufficient on their own.</p>
+    human review; it never auto-rejects. Findings you can repeat by hand are marked as
+    such, judgements made with a language model are labelled and quote-anchored, and
+    scores are probabilistic and never sufficient on their own.</p>
     <p>Open source, built at the Hacking the Think Tank hackathon, 2026.
     <a href="https://github.com/nawagner/SlopChecker">Code and issues</a>.</p>
   </div>
@@ -305,17 +584,6 @@
         setTimeout(function () { window.location.href = "/demo-report.html"; }, 1400);
       });
   });
-
-  // Live API strip: only shown when the health endpoint answers.
-  fetch("/api/health").then(function (r) { return r.json(); }).then(function (h) {
-    return fetch("/api/config").then(function (r) { return r.json(); }).then(function (c) {
-      var armed = c.credentials.filter(function (x) { return x.set; }).length;
-      document.getElementById("apitext").textContent =
-        "API live · v" + h.version + " · " + armed + "/" + c.credentials.length +
-        " credentialed checks armed";
-      document.getElementById("apistrip").style.display = "block";
-    });
-  }).catch(function () { /* offline or local file — leave the strip hidden */ });
 })();
 </script>
 </body>

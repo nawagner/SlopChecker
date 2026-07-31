@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any, Literal, Protocol, runtime_checkable
 
 from slopchecker import config as _config
+from slopchecker.checks.cache import Cache
 from slopchecker.lenses import Lens
 from slopchecker.models import FlattenedDoc
 
@@ -166,6 +167,10 @@ class LensRunConfig:
     - ``cache_dir`` — content-hash cache root; ``None`` disables. Cache
       key covers ``(model, lens.id, doc.text)`` so a model change or
       a different lens invalidates.
+    - ``cache`` — a ``Cache`` (#119), used in preference to ``cache_dir``
+      when both are set. Payloads are span-encoded on the way in (see
+      ``_encode_payload``) because a ``Cache`` may be the shared KV
+      namespace and lens quotes are verbatim document text.
     """
 
     model: str = ""  # empty → resolved to config.llm_model() at call time
@@ -173,6 +178,7 @@ class LensRunConfig:
     max_attempts: int = DEFAULT_MAX_ATTEMPTS
     initial_backoff_seconds: float = DEFAULT_INITIAL_BACKOFF_SECONDS
     cache_dir: Path | None = None
+    cache: Cache | None = None
 
 
 @dataclass(frozen=True)
@@ -280,20 +286,94 @@ def _quote_anchor(payload: dict[str, Any], source_text: str) -> dict[str, Any]:
 
 # --- Cache -----------------------------------------------------------------
 
+#: Cache namespace for lens payloads (#119).
+CACHE_NAMESPACE = "lens"
 
-def _cache_path(config: LensRunConfig, lens: Lens, doc: FlattenedDoc, model: str) -> Path | None:
-    if config.cache_dir is None:
-        return None
+
+def _cache_key(lens: Lens, doc: FlattenedDoc, model: str) -> str:
     h = hashlib.sha256()
     h.update(model.encode())
     h.update(b"\x00")
     h.update(lens.id.encode())
     h.update(b"\x00")
     h.update(doc.text.encode())
-    return config.cache_dir / f"{h.hexdigest()}.json"
+    return h.hexdigest()
 
 
-def _cache_read(path: Path | None) -> dict[str, Any] | None:
+def _cache_path(config: LensRunConfig, lens: Lens, doc: FlattenedDoc, model: str) -> Path | None:
+    if config.cache_dir is None:
+        return None
+    return config.cache_dir / f"{_cache_key(lens, doc, model)}.json"
+
+
+def _encode_payload(payload: dict[str, Any], source_text: str) -> dict[str, Any]:
+    """Replace each claim's ``quote`` with a ``quote_span`` into ``source_text``.
+
+    A ``Cache`` may be the shared KV namespace, and #119 permits only derived
+    values there — offsets are derived, the quote itself is document text.
+
+    Safe because ``_quote_anchor`` has already dropped every claim whose quote
+    isn't a verbatim substring, so ``str.find`` cannot return -1 here; the
+    guard below is belt-and-braces. A quote appearing more than once resolves
+    to its first occurrence, which yields a byte-identical string on decode —
+    the anchoring contract is substring membership, not position.
+    """
+    claims = payload.get("claims", [])
+    if not isinstance(claims, list):
+        return payload
+    encoded = []
+    for claim in claims:
+        if not isinstance(claim, dict) or "quote" not in claim:
+            encoded.append(claim)
+            continue
+        start = source_text.find(claim["quote"])
+        if start < 0:
+            continue  # not anchorable: drop rather than cache un-decodable
+        rest = {k: v for k, v in claim.items() if k != "quote"}
+        encoded.append({**rest, "quote_span": [start, start + len(claim["quote"])]})
+    return {**payload, "claims": encoded}
+
+
+def _decode_payload(payload: dict[str, Any], source_text: str) -> dict[str, Any]:
+    """Inverse of ``_encode_payload``: re-slice each quote out of ``source_text``.
+
+    Exact, not approximate: the cache key is the hash of ``source_text``, so a
+    hit means this is byte-for-byte the document the spans were computed
+    against. A claim whose span falls outside the text is dropped — that can
+    only mean a key collision or a hand-edited entry, and a wrong quote would
+    breach the quote-anchoring contract in DATA_MODEL.md.
+    """
+    claims = payload.get("claims", [])
+    if not isinstance(claims, list):
+        return payload
+    decoded = []
+    for claim in claims:
+        if not isinstance(claim, dict) or "quote_span" not in claim:
+            decoded.append(claim)
+            continue
+        span = claim["quote_span"]
+        if not (isinstance(span, list) and len(span) == 2):
+            continue
+        start, end = span
+        if not (isinstance(start, int) and isinstance(end, int)):
+            continue
+        if not 0 <= start < end <= len(source_text):
+            continue
+        rest = {k: v for k, v in claim.items() if k != "quote_span"}
+        decoded.append({**rest, "quote": source_text[start:end]})
+    return {**payload, "claims": decoded}
+
+
+def _cache_read(
+    config: LensRunConfig, lens: Lens, doc: FlattenedDoc, model: str
+) -> dict[str, Any] | None:
+    """A cached payload for this (model, lens, doc), or None. Never raises."""
+    if config.cache is not None:
+        cached = config.cache.get(CACHE_NAMESPACE, _cache_key(lens, doc, model))
+        if not isinstance(cached, dict):
+            return None
+        return _decode_payload(cached, doc.text)
+    path = _cache_path(config, lens, doc, model)
     if path is None or not path.is_file():
         return None
     try:
@@ -302,7 +382,16 @@ def _cache_read(path: Path | None) -> dict[str, Any] | None:
         return None
 
 
-def _cache_write(path: Path | None, payload: dict[str, Any]) -> None:
+def _cache_write(
+    config: LensRunConfig, lens: Lens, doc: FlattenedDoc, model: str, payload: dict[str, Any]
+) -> None:
+    """Store ``payload``. Span-encoded for a ``Cache``, verbatim on local disk."""
+    if config.cache is not None:
+        config.cache.set(
+            CACHE_NAMESPACE, _cache_key(lens, doc, model), _encode_payload(payload, doc.text)
+        )
+        return
+    path = _cache_path(config, lens, doc, model)
     if path is None:
         return
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -337,8 +426,7 @@ def run_lens(
             )
         client = AnthropicClient(api_key=api_key)
 
-    cache_path = _cache_path(config, lens, doc, model)
-    cached = _cache_read(cache_path)
+    cached = _cache_read(config, lens, doc, model)
     if cached is not None:
         return LensRunResult(status="ok", payload=cached, provider="anthropic", model=model)
 
@@ -381,5 +469,5 @@ def run_lens(
             model=model,
         )
 
-    _cache_write(cache_path, anchored)
+    _cache_write(config, lens, doc, model, anchored)
     return LensRunResult(status="ok", payload=anchored, provider="anthropic", model=model)
