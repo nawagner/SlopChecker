@@ -3,6 +3,9 @@ verify your keys are wired up before any checks are written."""
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Annotated
+
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -39,6 +42,18 @@ def config_cmd() -> None:
     console.print(table)
     console.print(f"\nLLM model: [cyan]{config.llm_model()}[/cyan]")
     console.print("Unset keys aren't fatal — those checks report as skipped.")
+
+
+@app.command()
+def render(
+    report: Annotated[Path, typer.Argument(exists=True, help="Path to a report.json")],
+    out: Annotated[Path | None, typer.Option("--out", "-o", help="Output HTML path")] = None,
+) -> None:
+    """Render a report.json into the self-contained HTML evidence report (#19)."""
+    from slopchecker.report import render_file
+
+    written = render_file(report, out)
+    console.print(f"Wrote [green]{written}[/green]")
 
 
 @app.command()

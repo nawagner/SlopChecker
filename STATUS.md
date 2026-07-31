@@ -5,6 +5,7 @@ Append-only. Newest entry on top. One line per entry:
 
 ## Log
 
+- 11:00 Emerson (claude-code) — #19 report.json → HTML renderer landed as `src/slopchecker/report/` + `slopcheck render`, tests green / next: PDF step (Alex), wire to models.py when #3 lands / blocked on nothing
 - 10:57 Nick — did first real Railway deploy of the #27 stub, hit a
   Nixpacks/hatchling readme-timing build failure, fixed by dropping
   `readme=` from pyproject.toml / live at

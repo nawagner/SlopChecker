@@ -1,0 +1,99 @@
+{
+  "schema_version": "0.1",
+  "document": {
+    "file": "proposal.pdf",
+    "sha256": "9f31c2ae-fabricated-fixture-hash",
+    "pages": 14,
+    "title": "Resilient Information Ecosystems Initiative",
+    "byline": "Response to OSF-2026-CIV-014 (excerpt)",
+    "submitter": "Meridian Policy Group",
+    "text": "The information environment confronting democratic institutions has degraded at a pace that outstrips the capacity of existing civil-society infrastructure to respond. Recent scholarship demonstrates that coordinated inauthentic behavior now shifts measurable public-opinion outcomes in as little as seventy-two hours [1]. As Starbird and colleagues observe, “the velocity of synthetic narratives has rendered traditional fact-checking architectures functionally obsolete” [2]. Our initiative responds directly to this crisis.\n\nOur approach leverages a holistic, multi-stakeholder framework designed to foster synergies across the information resilience landscape. By convening diverse voices and harnessing cutting-edge methodologies, we will unlock transformative capacity at the intersection of technology and civil society. The program builds on findings that prebunking interventions achieve durable attitudinal inoculation across all demographic cohorts [3], and that media-literacy training reduces susceptibility to manipulated content by up to 64 percent [4].\n\nMeridian will deliver twelve regional trainings, a 40-country monitoring network, a peer-reviewed evaluation study, and an open-source detection toolkit within the first grant year, at a total cost of $148,000.\n\n[1] Chen, R. & Okafor, D. (2024). Measuring opinion cascades in networked publics. J. Online Trust & Safety, 3(2). doi:10.54501/jots.v3i2.118\n\n[2] Starbird, K., West, J., & Moran, R. (2023). Synthetic velocity and the collapse of verification. PNAS. doi:10.1073/pnas.2219998120\n\n[3] Vraga, E. & Bode, L. (2025). Inoculation at scale. Misinformation Review, 6(1). doi:10.37016/mr-2025-0163\n\n[4] Guess, A. et al. (2020). A digital media literacy intervention increases discernment. PNAS, 117(27). doi:10.1073/pnas.1920498117"
+  },
+  "solicitation": "OSF-2026-CIV-014",
+  "run": { "date": "2026-07-31", "seconds": 41 },
+  "findings": [
+    {
+      "id": "C1",
+      "target": "ref[1]",
+      "label": "Citation [1]",
+      "anchor": {
+        "page": 1,
+        "quote": "coordinated inauthentic behavior now shifts measurable public-opinion outcomes in as little as seventy-two hours"
+      },
+      "checks": [
+        { "name": "doi_resolves", "result": true },
+        { "name": "metadata_match", "result": true }
+      ]
+    },
+    {
+      "id": "Q1",
+      "target": "ref[2]",
+      "label": "Quote → citation [2]",
+      "anchor": {
+        "page": 1,
+        "quote": "“the velocity of synthetic narratives has rendered traditional fact-checking architectures functionally obsolete”"
+      },
+      "checks": [
+        { "name": "doi_resolves", "result": true },
+        { "name": "metadata_match", "result": true },
+        { "name": "quote_in_source", "result": false }
+      ],
+      "note": "Paper is real. Quoted sentence does not appear in its full text."
+    },
+    {
+      "id": "D1",
+      "target": "p2",
+      "label": "AI detection (Pangram)",
+      "anchor": {
+        "page": 2,
+        "quote": "Our approach leverages a holistic, multi-stakeholder framework designed to foster synergies across the information resilience landscape. By convening diverse voices and harnessing cutting-edge methodologies, we will unlock transformative capacity at the intersection of technology and civil society."
+      },
+      "checks": [
+        { "name": "pangram_span", "result": 0.98 },
+        { "name": "pangram_document", "result": 0.96 }
+      ],
+      "note": "Score, not a verdict."
+    },
+    {
+      "id": "C3",
+      "target": "ref[3]",
+      "label": "Citation [3]",
+      "anchor": {
+        "page": 2,
+        "quote": "prebunking interventions achieve durable attitudinal inoculation across all demographic cohorts"
+      },
+      "checks": [
+        { "name": "doi_resolves", "result": false },
+        { "name": "openalex_found", "result": false }
+      ],
+      "note": "No such article. Journal exists; record does not."
+    },
+    {
+      "id": "C4",
+      "target": "ref[4]",
+      "label": "Claimed number → citation [4]",
+      "anchor": {
+        "page": 2,
+        "quote": "media-literacy training reduces susceptibility to manipulated content by up to 64 percent"
+      },
+      "checks": [
+        { "name": "doi_resolves", "result": true },
+        { "name": "metadata_match", "result": true },
+        { "name": "number_in_source", "result": false }
+      ],
+      "note": "Source reports 26.5%."
+    }
+  ],
+  "ledger": [
+    { "check": "within_page_limit", "label": "Within page limit", "result": true, "detail": "14 / 15 pp" },
+    { "check": "required_sections", "label": "Required sections present", "result": false, "detail": "missing: Budget Justification" },
+    { "check": "all_dois_resolve", "label": "All DOIs resolve", "result": false, "detail": "3 / 4 — ref [3] not found" },
+    { "check": "metadata_match", "label": "Citation metadata match", "result": true, "detail": "3 / 3 resolving DOIs" },
+    { "check": "quotes_in_sources", "label": "Quotes found in sources", "result": false, "detail": "0 / 1 — Q1" },
+    { "check": "numbers_in_sources", "label": "Claimed numbers found in sources", "result": false, "detail": "0 / 1 — C4" },
+    { "check": "pangram_document", "label": "AI detection (Pangram)", "result": 0.96, "detail": "document score" },
+    { "check": "similarity_prior", "label": "Similar to prior submission", "result": 0.87, "detail": "vs. submission #0083" },
+    { "check": "budget_in_range", "label": "Budget within comparable range", "result": false, "detail": "$148k vs. $0.9–2.4M comparables (Candid)" }
+  ],
+  "summary": { "recommendation": "human_review" }
+}
