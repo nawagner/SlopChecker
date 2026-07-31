@@ -7,6 +7,20 @@ Append-only. Newest entry on top. One line per entry:
 
 - 13:20 Dan (fable) — #29 harness landed: pat-helper pattern ported to SlopChecker's data model, MVP corpus of 3 catchable + 2 pending_lens:claims defects, current recall 3/3 on runnable tier, ~0.15s canary test in pytest; direct calls to `extract_citations` / `check_quotes` until #7/#10's registry wiring lands (MATCHERS vocabulary stays either way); DOI-resolution defects deferred to Nick's #8; also filed #71 (post-ingest mutation + Task Exp real-fixture path — the follow-up B path) and landed #72 (Alex → `990991A` in team map) / next: nothing critical, could wire DOI defects once #8 lands / blocked on nothing.
 
+- 13:19 Nick (claude-code) — did diagnose + close out #27's last gap: Railway
+  service had no GitHub source connected (`railway status --json` showed
+  `"source": null`), so it was only ever deployed via manual `railway up`
+  from a stale local checkout — explains why `/check` 404'd 15+ min after
+  #70 merged (deployed build predated the route + the pdf/docx extras).
+  Nick connected the Railway GitHub App to `nawagner/SlopChecker` in the
+  dashboard (OAuth grant, had to be done interactively — not automatable);
+  that alone triggered a fresh deploy off current `main`. Verified live:
+  `/health` 200, `/check` end-to-end with a real PDF → full report.json
+  (`recommendation: human_review`). Railway now auto-deploys `main` same
+  as the Cloudflare Worker does / next: nothing outstanding on #27's
+  deploy-connection gap; CROSSREF_MAILTO + CANDID_API_KEY still unset
+  (pre-existing, non-blocking coverage gap) / blocked on nothing.
+
 - 13:15 Dan (fable) — e2e smoke of the full chain (PDF → `slopcheck run` →
   report.json/HTML → `render --pdf`) works, but found the PDF leg was dark
   on every Mac: `find_browser()` had no macOS paths (PDF tests silently
