@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import csv
-import hashlib
 from pathlib import Path
 from typing import Annotated
 
@@ -12,7 +11,8 @@ from rich.console import Console
 from rich.table import Table
 
 from slopchecker import __version__, config
-from slopchecker.models import EvidenceReport, FlattenedDoc
+from slopchecker.ingest import LOADERS, ingest
+from slopchecker.models import EvidenceReport
 
 app = typer.Typer(
     help=("Automating slop checks for funding proposals. Start with: slopcheck run proposal.md"),
@@ -20,34 +20,6 @@ app = typer.Typer(
     add_completion=False,
 )
 console = Console()
-
-# ---------------------------------------------------------------------------
-# TEMPORARY ingestion seam (#4). Real ingestion (PDF/DOCX -> FlattenedDoc,
-# with pages and offsets) is being built in a parallel lane; when it lands,
-# replace the body of _load_document() with that ingest() and delete
-# _TEXT_SUFFIXES. Until then we accept plain-text .txt/.md only.
-# ---------------------------------------------------------------------------
-_TEXT_SUFFIXES = {".txt": "text/plain", ".md": "text/markdown"}
-
-
-class UnsupportedFormat(Exception):
-    """A file _load_document can't read yet (everything but .txt/.md until #4)."""
-
-
-def _load_document(path: Path) -> FlattenedDoc:
-    media_type = _TEXT_SUFFIXES.get(path.suffix.lower())
-    if media_type is None:
-        raise UnsupportedFormat(
-            f"can't read '{path.suffix}' files yet — PDF/DOCX ingestion lands with #4; "
-            "for now use .txt or .md"
-        )
-    raw = path.read_bytes()
-    return FlattenedDoc(
-        file=path.name,
-        text=raw.decode("utf-8", errors="replace"),
-        sha256=hashlib.sha256(raw).hexdigest(),
-        media_type=media_type,
-    )
 
 
 def _result_text(row) -> str:
@@ -109,7 +81,10 @@ def _dry_run(checks, n_docs: int) -> None:
 def run(
     path: Annotated[
         Path,
-        typer.Argument(exists=True, help="A proposal file (.txt/.md for now), or a folder of them"),
+        typer.Argument(
+            exists=True,
+            help="A proposal file (.pdf/.docx/.md/.html/.txt) or a folder of them",
+        ),
     ],
     tier: Annotated[
         str,
@@ -175,11 +150,10 @@ def run(
         raise typer.Exit(2)
 
     if path.is_dir():
-        targets = sorted(
-            p for p in path.iterdir() if p.is_file() and p.suffix.lower() in _TEXT_SUFFIXES
-        )
+        targets = sorted(p for p in path.iterdir() if p.is_file() and p.suffix.lower() in LOADERS)
         if not targets:
-            console.print(f"[red]no readable proposals (.txt/.md) found in {path}[/red]")
+            exts = ", ".join(sorted(LOADERS))
+            console.print(f"[red]no readable proposals ({exts}) found in {path}[/red]")
             raise typer.Exit(1)
     else:
         targets = [path]
@@ -194,16 +168,18 @@ def run(
 
     rows: list[dict] = []
     for target in targets:
-        try:
-            doc = _load_document(target)
-        except (UnsupportedFormat, OSError) as exc:
+        result = ingest(target)
+        if result.status != "ok" or result.document is None:
+            # ingest() is total: errored results always carry an actionable reason.
+            reason = result.reason or "unknown ingestion error"
             if len(targets) == 1:
-                console.print(f"[red]{exc}[/red]")
-                raise typer.Exit(1) from exc
+                console.print(f"[red]{reason}[/red]")
+                raise typer.Exit(1)
             # batch: a bad file is a gap, not a crash — record it and move on
-            console.print(f"[yellow]skipping {target.name}: {exc}[/yellow]")
-            rows.append({"file": target.name, "error": str(exc)})
+            console.print(f"[yellow]skipping {target.name}: {reason}[/yellow]")
+            rows.append({"file": target.name, "error": reason})
             continue
+        doc = result.document
 
         report = run_checks(doc, checks, context=ctx)
         report.solicitation = solicitation
