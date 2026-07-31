@@ -474,14 +474,14 @@ def test_header_stays_silent_without_a_solicitation():
             "check": "rubric_budget_ceiling",
             "label": "Budget within rubric ceiling",
             "status": "skipped",
-            "reason": "no rubric supplied (--rubric) — not checked against a solicitation",
+            "reason": "no solicitation or rubric supplied — compliance not checked",
         }
     ]
     out = render_report(rep)
     assert "Checked against" not in out
     # The coverage-gap row is where the negative case is stated, once.
     assert '<td class="r skip">SKIPPED</td>' in out
-    assert "not checked against a solicitation" in out
+    assert "no solicitation or rubric supplied — compliance not checked" in out
 
 
 def test_evidence_pair_survives_condensing_and_print():

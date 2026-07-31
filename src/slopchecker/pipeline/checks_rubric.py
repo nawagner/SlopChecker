@@ -100,7 +100,11 @@ def _gap(reason: str) -> CheckOutput:
 )
 def rubric_budget_ceiling(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
     if ctx.rubric is None:
-        return _gap("no rubric supplied (--rubric) — not checked against a solicitation")
+        # No CLI flag in the reason: since #148 this row is read by funders on
+        # the website, where "--rubric" names nothing they can see. The reason
+        # has to make sense on whichever surface supplied (or didn't supply)
+        # the rubric.
+        return _gap("no solicitation or rubric supplied — compliance not checked")
 
     ceiling = _find_ceiling(ctx.rubric.text)
     if ceiling is None:

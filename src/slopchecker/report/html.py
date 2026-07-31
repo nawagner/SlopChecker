@@ -346,7 +346,10 @@ def _render_document(doc: dict, findings: list[dict]) -> str:
 
 
 def _quote_block(caption: str, text: str, source: str | None, lane: str) -> str:
-    src = f'<span class="ev-src">{escape(source)}</span>' if source else ""
+    # The space before the source is inside the markup, not only in the flex
+    # gap: copy-paste, a screen reader, and the PDF text layer all read the
+    # source code, and "requiresaldergrove-rfp.md" is what they'd get without it.
+    src = f' <span class="ev-src">{escape(source)}</span>' if source else ""
     return (
         f'\n      <div class="ev-q {lane}">'
         f'<p class="ev-cap">{escape(caption)}{src}</p>'
