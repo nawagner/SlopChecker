@@ -64,6 +64,11 @@ Each is a ground-truth column in `manifest.csv`:
 
 The `all` defect sets every *applicable* flag for that document type at once.
 
+Separately, **near-duplicate** clones (`is_near_duplicate` / `duplicate_of` in
+`manifest.csv`) are light paraphrases of another record — a relational property
+for the similarity / duplication check ("similar to existing submissions"), not a
+per-document `defect` value. Add them with `--near-dups N`.
+
 ## Mapping to the data model
 
 These fixtures are *inputs*: a loader or the ingestion module (#4) turns each
@@ -79,6 +84,7 @@ Each ground-truth column maps to a `CheckResult.name` in that contract:
 | `has_mismatched_citations` | `doi_resolves` (true) + `metadata_match` (false) |
 | `ai_generated` | `pangram_span` / `pangram_document` (score lane) |
 | `overclaims`, `budget_inflated`, `missing_methods` | quality-tier checks |
+| `is_near_duplicate` | similarity / embedding check vs the rest of the corpus |
 
 The `has_mismatched_citations` "wrong paper" case is the sharp one: the DOI
 *resolves* but points to a different paper than cited (each such citation carries
@@ -98,7 +104,7 @@ that mode is for local use and is intentionally not committed here.
 Deterministic with the seed. From the repo root:
 
 ```bash
-python3 scripts/synth/synth_proposals.py --n 120 --offline --seed 42 --out tests/fixtures/synthetic
+python3 scripts/synth/synth_proposals.py --n 120 --offline --seed 42 --near-dups 6 --out tests/fixtures/synthetic
 ```
 
 Restrict to some document types with `--doctypes grant_application blog_post`.
@@ -119,5 +125,4 @@ tested against realistic slop.
 
 ## Open items (tracked on #22)
 
-- Explicit near-duplicate pairs with linked provenance.
 - A budget with a deliberate arithmetic error.

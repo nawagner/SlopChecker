@@ -31,6 +31,7 @@ FIELDS = [
     "overclaims",
     "budget_inflated",
     "missing_methods",
+    "is_near_duplicate",
 ]
 
 OVERCLAIM_MARKERS = [
@@ -93,6 +94,9 @@ def demo_checker(corpus_dir):
             "overclaims": any(m in text for m in OVERCLAIM_MARKERS),
             "budget_inflated": budget > BUDGET_INFLATED_THRESHOLD,
             "missing_methods": "appropriate methods to achieve the aims" in text,
+            # near-duplicate is a cross-document similarity property; a per-doc
+            # text scan can't see it -> always misses (recall 0).
+            "is_near_duplicate": False,
         }
     return preds
 

@@ -5,6 +5,14 @@ Append-only. Newest entry on top. One line per entry:
 
 ## Log
 
+- 13:11 Alex (claude-code) — #22 fixtures: added near-duplicate pairs
+  (`--near-dups N`): light-paraphrase clones flagged `is_near_duplicate` +
+  `duplicate_of`, for the similarity/dedup check. A relational property, not a
+  `defect` — separate phase after the grid. Corpus now 126 (120 + 6). Naive demo
+  recall 0.0 on it (needs cross-doc embedding). Stacked branch `alex/22-near-dups`
+  on #73 / next: budget arithmetic-error case (last #22 open item) / blocked on
+  nothing.
+
 - 13:02 Alex (claude-code) — #22 fixtures: added the `wrong_paper` defect — a
   citation with a real, *resolving* DOI attributed to the wrong paper
   (`metadata_match=false`, new `has_mismatched_citations` ground truth). It's the

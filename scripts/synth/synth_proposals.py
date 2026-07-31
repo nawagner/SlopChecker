@@ -503,6 +503,9 @@ def _defect_flags(dims):
         "overclaims": d == "overclaims" or is_all,
         "budget_inflated": (d == "budget_inflated" or is_all) and grant,
         "missing_methods": (d == "missing_methods" or is_all) and grant,
+        # Set only on near-duplicate clones (see add_near_duplicates); a relational
+        # property, not derivable from this record's own dimensions.
+        "is_near_duplicate": False,
     }
 
 
@@ -718,6 +721,7 @@ def build_record(idx, dims, seed, backend, model, rng):
         "n_citations": len(cites),
         "n_unresolvable_citations": n_unresolvable,
         "n_mismatched_citations": n_mismatched,
+        "duplicate_of": None,  # set on near-duplicate clones
     }
     return Record(
         id=f"synth_{idx:05d}",
@@ -823,6 +827,33 @@ def coverage_report(records):
     return report
 
 
+def add_near_duplicates(records, k, rng):
+    """Append k near-duplicate clones: each is a light paraphrase of an existing
+    record, flagged is_near_duplicate with duplicate_of pointing at its original.
+    Exercises the similarity/duplication check ("similar to existing submissions").
+    """
+    base_n = len(records)
+    clones = []
+    for i in range(k):
+        orig = rng.choice(records)
+        clones.append(
+            Record(
+                id=f"synth_{base_n + i:05d}",
+                label=orig.label,
+                dimensions=dict(orig.dimensions),
+                title=orig.title,
+                topic=orig.topic,
+                sections=dict(orig.sections),
+                text=_launder(orig.text, rng),  # light paraphrase -> near, not exact
+                citations=[dict(c) for c in orig.citations],
+                ground_truth={**orig.ground_truth, "is_near_duplicate": True},
+                provenance=dict(orig.provenance),
+                meta={**orig.meta, "duplicate_of": orig.id},
+            )
+        )
+    return clones
+
+
 # --------------------------------------------------------------------------- #
 # Driver
 # --------------------------------------------------------------------------- #
@@ -852,6 +883,12 @@ def main():
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--out", default="./synthetic_proposals")
     ap.add_argument(
+        "--near-dups",
+        type=int,
+        default=0,
+        help="append N near-duplicate clones (is_near_duplicate + duplicate_of)",
+    )
+    ap.add_argument(
         "--verify-dois", action="store_true", help="HEAD-check each DOI (slow, network)"
     )
     args = ap.parse_args()
@@ -870,6 +907,9 @@ def main():
         bucket = seed_buckets.get(dims["institution_tier"]) or next(iter(seed_buckets.values()))
         seed = rng.choice(bucket)
         records.append(build_record(idx, dims, seed, args.backend, args.model, rng))
+
+    if args.near_dups:
+        records += add_near_duplicates(records, args.near_dups, rng)
 
     if args.verify_dois:
         _verify_dois(records)
@@ -902,9 +942,11 @@ def _write_outputs(args, records, tiers):
                 "overclaims",
                 "budget_inflated",
                 "missing_methods",
+                "is_near_duplicate",
                 "n_citations",
                 "n_unresolvable_citations",
                 "n_mismatched_citations",
+                "duplicate_of",
                 "backend",
                 "seed_source",
             ]
@@ -927,9 +969,11 @@ def _write_outputs(args, records, tiers):
                     g["overclaims"],
                     g["budget_inflated"],
                     g["missing_methods"],
+                    g["is_near_duplicate"],
                     r.meta["n_citations"],
                     r.meta["n_unresolvable_citations"],
                     r.meta["n_mismatched_citations"],
+                    r.meta["duplicate_of"] or "",
                     r.provenance["backend"],
                     r.provenance["seed_source"],
                 ]
@@ -945,6 +989,7 @@ def _write_outputs(args, records, tiers):
             {
                 "generated_utc": datetime.now(UTC).isoformat(),
                 "n_records": len(records),
+                "near_dups": args.near_dups,
                 "doctypes": args.doctypes,
                 "tiers": tiers,
                 "backend": args.backend,
