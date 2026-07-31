@@ -47,6 +47,7 @@ enough — this is a hackathon).
 | `src/slopchecker/detect/` | Dan | AI-detection providers behind a `Detector` protocol (currently Pangram) |
 | `src/slopchecker/checks/` | Nick | deterministic tier: DOI resolution, metadata, dedup |
 | `src/slopchecker/report/` | Emerson (→ Dominique) | evidence report: HTML + PDF rendering, in-line annotation. Emerson built it and owns it; further iteration hands off to Dominique |
+| `fixtures/rubrics/` | Emerson | synthetic rubric (funder reference doc) fixtures, mirrored to R2 (#90) |
 | `worker/public/` | Dominique | landing page + demo report statics (design/copy/UX, #74). Emerson built the first pass |
 | `worker/src/` + deploy config | Emerson | Cloudflare Worker proxy, Railway API, hosting (#27) |
 | `harness/` | Dan (+ Fable) | planted-defect validation, recall scoring |

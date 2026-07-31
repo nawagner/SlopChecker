@@ -21,9 +21,16 @@ enough on its own to read anything.
 | `unimelb/unimelb_example.csv` | 36 KB | sample submission format (`ID,Status`) |
 | `unimelb/unimelb.zip` | 462 KB | original archive as received |
 | `fixtures/proposal_climate.pdf` | 17 KB | PDF render of `harness/fixtures/proposal_climate.md` (fabricated, planted defects) — round-trip test artifact for the upload pipeline |
+| `rubrics/synthetic/aldergrove-community-climate-rfp.{md,pdf}` | 9 KB / 158 KB | Fabricated RFP (Aldergrove Resilience Fund) pairing with `proposal_climate.md`; 3 planted compliance violations (#90) |
+| `rubrics/synthetic/aldergrove-evaluation-rubric.{md,pdf}` | 6 KB / 209 KB | Fabricated weighted scoring rubric, companion to the Aldergrove RFP (#90) |
+| `rubrics/synthetic/hartwell-education-innovation-rfp.{md,pdf}` | 5 KB / 142 KB | Fabricated RFP (Hartwell Foundation) pairing with `proposal_edu.md`; 2 planted violations (#90) |
 
 Mirrored from the team Drive folder `unimelb_data` on 2026-07-31.
 `.DS_Store` was not copied.
+
+The `rubrics/synthetic/` files are mirrors of `fixtures/rubrics/` in the
+repo (markdown is canonical; PDFs rendered via pymupdf). The repo copy is
+the source of truth — re-upload after editing.
 
 The schema follows the University of Melbourne grant-applications layout:
 grant metadata (sponsor, category, contract value band, RFCD/SEO research
