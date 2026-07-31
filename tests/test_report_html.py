@@ -151,6 +151,50 @@ def test_missing_anchor_quote_still_renders_card():
     assert "<mark" not in out.split('<div class="rail">')[0].split('<div class="doc">')[1]
 
 
+def test_pdf_style_text_splits_into_pages_not_one_wall():
+    # Real PDF extraction has NO blank lines: single \n per visual line,
+    # \f between pages. One <p> per page, a divider between pages, and an
+    # anchor on page 2 still lands.
+    text = "PI: Liu\nTitle: something\nline three\fpage two starts\nwith a fake citation"
+    rep = {
+        "document": {"file": "t.pdf", "text": text},
+        "findings": [
+            {
+                "id": "C1",
+                "anchor": {"quote": "fake citation"},
+                "checks": [{"name": "x", "result": False}],
+            }
+        ],
+        "ledger": [],
+    }
+    out = render_report(rep)
+    doc_pane = out.split('<div class="rail">')[0]
+    assert doc_pane.count("<p>") == 2  # one block per page, not one wall
+    assert '<div class="pgbrk">p. 2</div>' in out
+    assert '<mark class="no" data-anno="c1">fake citation</mark>' in out
+    # The form feed itself never reaches the markup.
+    assert "\f" not in out
+
+
+def test_paragraph_offsets_survive_mixed_separators():
+    # \n\n and \f both split; offsets must stay exact so anchors that sit
+    # after a page break still highlight (regression for the +2 arithmetic).
+    text = "alpha\n\nbeta\fgamma delta"
+    rep = {
+        "document": {"file": "t.pdf", "text": text},
+        "findings": [
+            {
+                "id": "A1",
+                "anchor": {"quote": "gamma"},
+                "checks": [{"name": "x", "result": 0.5}],
+            }
+        ],
+        "ledger": [],
+    }
+    out = render_report(rep)
+    assert '<mark class="score" data-anno="a1">gamma</mark>' in out
+
+
 def test_skipped_check_renders_as_gap_not_pass(html):
     # The fixture's plagiarism_scan row didn't run: muted chip, reason in the
     # detail column, excluded from result tallies, called out as a gap.

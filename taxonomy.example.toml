@@ -1,0 +1,38 @@
+# SlopChecker tagging taxonomy (#15) — copy, edit, and point at it with:
+#   export SLOPCHECKER_TAXONOMY=/path/to/your-taxonomy.toml
+#
+# Three sections. In each, the key is the tag and the value is a list of
+# lowercase signal phrases matched (case-insensitively) against the document
+# text. This file mirrors the built-in default; replace it wholesale with your
+# own funder's vocabulary rather than editing the tool's code.
+#
+# Matching is literal substring, not regex. A tag with an empty phrase list is
+# a fallback: blog_post (short document, no structural markers) and individual
+# (no organizational signal) are chosen only when nothing else matches.
+
+[topics]
+# Multi-label: a document can carry several topics.
+science_policy = ["science policy", "nsf", "research enterprise", "science funding"]
+ai = ["artificial intelligence", "machine learning", "frontier model", "compute", "llm"]
+biosecurity = ["biosecurity", "biosafety", "pathogen", "dual-use research", "select agent"]
+metascience = ["metascience", "replication", "peer review", "research on research"]
+energy = ["energy", "grid", "nuclear", "emissions", "renewable"]
+
+[doc_types]
+# Single-label: the highest-scoring type wins and drives which checks run.
+grant_application = [
+    "project narrative",
+    "budget justification",
+    "specific aims",
+    "statement of work",
+    "principal investigator",
+]
+think_tank_report = ["executive summary", "recommendations", "about the authors", "acknowledgments"]
+blog_post = []  # fallback: short document with no structural markers
+
+[submitter_types]
+# Single-label, conservative: reports low confidence rather than guessing.
+university = ["university", "college", "school of", "department of", "faculty of"]
+nonprofit = ["501(c)(3)", "501c3", "nonprofit", "non-profit", "foundation", "institute"]
+company = ["inc.", "llc", "corporation", "ltd.", "startup"]
+individual = []  # fallback: no organizational signal (an EIN also nudges org types)

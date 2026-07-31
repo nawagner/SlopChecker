@@ -1,0 +1,22 @@
+Priestley, N. (2023). Coaching intensity and curriculum fidelity in rural
+elementary mathematics interventions. Rural Education Review.
+
+[This is a fabricated source text authored for the SlopChecker harness. It
+is not a real academic paper. Do not cite. See harness/README.md.]
+
+Extract:
+
+Across the four multi-year implementations reviewed here, the sequence's
+efficacy appears to depend more on the fidelity of the task progression
+than on the intensity of adult coaching, though direct evidence for this
+claim remains limited. The three high-fidelity, low-coaching sites
+produced post-intervention gains within 0.1 standard deviations of the
+two high-fidelity, high-coaching sites, while the two low-fidelity sites
+— regardless of coaching intensity — produced substantially smaller
+gains. This pattern is suggestive rather than conclusive: the sample of
+sites is small, participating districts self-selected into the study,
+and no site was randomized to a coaching-intensity condition. A
+pre-registered comparison across matched districts remains the most
+credible next step. We therefore treat the pattern as a hypothesis that
+motivates further work, not as an established finding about the
+coaching-vs-fidelity tradeoff.

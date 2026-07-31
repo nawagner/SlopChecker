@@ -264,7 +264,14 @@
 
     fetch("/api/check", { method: "POST", body: data })
       .then(function (res) {
-        if (!res.ok) throw new Error("HTTP " + res.status);
+        if (!res.ok) {
+          // A 4xx carries the pipeline's own reason (e.g. "scanned PDF, no
+          // text layer") — surface it rather than pretending to be offline.
+          return res.json().then(
+            function (body) { throw { detail: body.detail || ("HTTP " + res.status) }; },
+            function () { throw new Error("HTTP " + res.status); }
+          );
+        }
         var type = res.headers.get("content-type") || "";
         if (type.indexOf("text/html") !== -1) {
           return res.text().then(function (html) {
@@ -280,10 +287,17 @@
           run.disabled = false;
         });
       })
-      .catch(function () {
-        // Pipeline endpoint not wired yet (or offline): show the sample so the
-        // flow is demonstrable end to end.
-        setStatus("The check pipeline isn't connected yet — showing the sample report.", "err");
+      .catch(function (err) {
+        if (err && err.detail) {
+          // The pipeline answered but couldn't read this file. Say why, let
+          // the human pick another file.
+          setStatus("Couldn't check that file: " + err.detail, "err");
+          run.disabled = false;
+          return;
+        }
+        // Endpoint unreachable (offline, deploy in progress): show the sample
+        // so the flow is still demonstrable end to end.
+        setStatus("The check pipeline isn't reachable — showing the sample report.", "err");
         setTimeout(function () { window.location.href = "/demo-report.html"; }, 1400);
       });
   });

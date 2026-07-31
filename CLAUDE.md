@@ -17,7 +17,7 @@ GitHub handle → name (for decoding the git log, issues, and PRs):
 - `etbrooking` — Emerson Brooking
 - `danparshall` — Dan Parshall
 - `dvanderram` — Dominique
-- (Alex — handle to be added)
+- `990991A` — Alex
 
 ## Work against issues
 
@@ -44,8 +44,11 @@ enough — this is a hackathon).
 |---|---|---|
 | `src/slopchecker/pipeline/` | Dan (+ Fable) | pat-helper engine port, loaders, quotecheck |
 | `src/slopchecker/lenses/` | Dan (+ anyone) | lens prompt packs (markdown — low conflict risk, edit away) |
+| `src/slopchecker/detect/` | Dan | AI-detection providers behind a `Detector` protocol (currently Pangram) |
 | `src/slopchecker/checks/` | Nick | deterministic tier: DOI resolution, metadata, dedup |
 | `src/slopchecker/report/` | Emerson (→ Dominique) | evidence report: HTML + PDF rendering, in-line annotation. Emerson built it and owns it; further iteration hands off to Dominique |
+| `worker/public/` | Dominique | landing page + demo report statics (design/copy/UX, #74). Emerson built the first pass |
+| `worker/src/` + deploy config | Emerson | Cloudflare Worker proxy, Railway API, hosting (#27) |
 | `harness/` | Dan (+ Fable) | planted-defect validation, recall scoring |
 | `docs/` narrative + demo | Emerson, Dominique | demo script, framing, README language |
 | `STATUS.md` | everyone | append-only log (see below) |

@@ -22,6 +22,72 @@ Append-only. Newest entry on top. One line per entry:
   CI. Stacked branch `alex/22-fixture-files` on top of #54 / next: "valid DOI →
   wrong paper" case / blocked on nothing.
 
+- 13:21 Dan (fable) — #37 design conversation, no code: brainstormed retry-ladder shape, concluded it's post-MVP (Pangram already has an inline loop; no chat-model check exists yet to hit the refusal problem); captured two shape decisions as a comment on #37 (check-invoked `LadderExecutor`, `Finding.evidence["rung"]` for provenance) so the fork is settled when someone picks it up post-#13; also posted correction on #13 resolving a mutual-block loop (Dan's earlier "LLM client lives with #37" was wrong under new scoping); ticket parked / next: return to happy-path work / blocked on nothing.
+
+- 13:27 Emerson (claude-code) — PDF text rendering fixed (#19): renderer split paragraphs on `\n\n`, which PDF extraction never emits — a real 120-page NIH R01 rendered as ONE `<p>` wall; now `\f`/blank-line boundaries with offset-exact anchor math, one block per page + `p. N` dividers, pre-wrap line structure / needs a Railway redeploy after merge (Nick) to reach the live site / next: demo scenario #25 / blocked on nothing
+
+- 13:29 Dan (fable) — #81 integration tests landed: `tests/test_integration_e2e.py`,
+  9 subprocess-driven tests of the full chain (fabricated PDF → `run` →
+  report.json/HTML validating `EvidenceReport` → `render --pdf` → real PDF),
+  degrade-to-gaps singles + mixed-folder batch, and a loud-fail browser gate
+  (macOS/CI missing-browser = FAILURE, not skip — closes the silent-skip trap
+  behind #78); `integration` marker deselected by default (unit run stays ~5s),
+  CI gains an explicit `pytest -m integration` step / next: PR review + merge /
+  blocked on nothing.
+
+- 13:20 Dan (fable) — #29 harness landed: pat-helper pattern ported to SlopChecker's data model, MVP corpus of 3 catchable + 2 pending_lens:claims defects, current recall 3/3 on runnable tier, ~0.15s canary test in pytest; direct calls to `extract_citations` / `check_quotes` until #7/#10's registry wiring lands (MATCHERS vocabulary stays either way); DOI-resolution defects deferred to Nick's #8; also filed #71 (post-ingest mutation + Task Exp real-fixture path — the follow-up B path) and landed #72 (Alex → `990991A` in team map) / next: nothing critical, could wire DOI defects once #8 lands / blocked on nothing.
+
+- 13:19 Nick (claude-code) — did diagnose + close out #27's last gap: Railway
+  service had no GitHub source connected (`railway status --json` showed
+  `"source": null`), so it was only ever deployed via manual `railway up`
+  from a stale local checkout — explains why `/check` 404'd 15+ min after
+  #70 merged (deployed build predated the route + the pdf/docx extras).
+  Nick connected the Railway GitHub App to `nawagner/SlopChecker` in the
+  dashboard (OAuth grant, had to be done interactively — not automatable);
+  that alone triggered a fresh deploy off current `main`. Verified live:
+  `/health` 200, `/check` end-to-end with a real PDF → full report.json
+  (`recommendation: human_review`). Railway now auto-deploys `main` same
+  as the Cloudflare Worker does / next: nothing outstanding on #27's
+  deploy-connection gap; CROSSREF_MAILTO + CANDID_API_KEY still unset
+  (pre-existing, non-blocking coverage gap) / blocked on nothing.
+
+- 13:15 Dan (fable) — e2e smoke of the full chain (PDF → `slopcheck run` →
+  report.json/HTML → `render --pdf`) works, but found the PDF leg was dark
+  on every Mac: `find_browser()` had no macOS paths (PDF tests silently
+  skipped) AND Chrome ≥132 new-headless never exits after `--print-to-pdf`
+  on macOS (PDF written at 2s, browser parked at 150s+; no flag fixes it).
+  Fixed in report/pdf.py: macOS candidates + judge completion by
+  size-stable artifact then reap the browser; stderr to file not pipe
+  (same deadlock family as #49). 156 passed, 0 skipped / next: handoff for
+  formal e2e integration harness / blocked on nothing.
+
+- 13:08 Nick — did mint a bucket-scoped R2 API token for `slopchecker-docs`
+  (Object Read & Write, scoped to that bucket only, not account-wide) and
+  shared it with the team via secure DM / access to shared data storage is
+  now live, see docs/data-storage.md for setup / next: nothing / blocked
+  on nothing.
+
+- 13:08 Emerson (claude-code) — landing page + index refinement handed to Dominique as #74 (scoped: `worker/public/` statics only; `worker/src/` + deploy config stay with Emerson under #27, which a parallel session is actively working); ownership table updated / next: Dominique picks up #74 / blocked on nothing
+
+- 12:55 Emerson (claude-code) — real web layer landed on `web.py` (#27): `POST /check` = upload → ingest → run_checks → rendered HTML report (`?format=json` for raw report.json); Railway build now installs pdf/docx extras so uploaded PDFs actually ingest in production; frontend surfaces the pipeline's own 422 reason instead of faking "offline" / next: verify live loop on slop-checker.com after Railway deploy, then demo scenario #25 / blocked on nothing
+
+- 12:52 Alex (claude-code) — tagging check landed on branch for PR (#15): pure `detect_doc_type`/`infer_submitter_type`/`tag_topics` + one registered deterministic check, no LLM/no network. Categorical tags ride in quote-anchored `Finding.evidence` (LedgerRow.result is bool|int|float only — no model change to #3); rollups (doc-type conf, submitter conf, topic count) go to the ledger. Configurable taxonomy via stdlib `tomllib` + `$SLOPCHECKER_TAXONOMY` (see taxonomy.example.toml); default is a Python literal so no packaged-data-file risk. `detect_doc_type` is the `applies_to` seam for doc-type-driven check selection. Seeded `src/slopchecker/checks/` (Nick's pkg per ownership table — heads-up on #15). Fixed an over-specified assertion in test_cli_run.py that pinned the exact deterministic ledger. Full suite green (137 passed) / next: merge once reviewed; #29 harness can consume these tags as ground truth / blocked on nothing.
+
+- 12:50 Dan (fable) — #58 done on `danparshall/58-ingest-cli` after #63 landed: deleted the temporary `_load_document` seam + `_TEXT_SUFFIXES`/`UnsupportedFormat`, inlined `ingest.ingest()` in the `run()` loop, mapped `IngestResult.status != "ok"` to the existing degrade path (batch → yellow-skip + row, single-file → red + exit 1), widened the batch-dir filter from `_TEXT_SUFFIXES` to `ingest.LOADERS`; new CLI tests: PDF end-to-end (fabricated via pymupdf), corrupt-PDF, unsupported-suffix (.rst), batch-with-gaps; two existing tests rewritten around a `scratch_registry` fake check (empty-markdown fixture no longer reaches checks — #4 now errors it at ingest, which is the intended shape); 139 passed / 2 skipped locally / next: open PR / blocked on nothing.
+- 12:41 Dan (fable) — CORRECTION to 12:32: #6's CLI never reached main — PR #56 was stacked on the #53 branch and, because #53 merged without branch-deletion, GitHub didn't retarget it; the #56 squash landed on `danparshall/5-runner-cli` instead (caught by another of Dan's sessions reading the actual diff — thanks). Re-landing now from `danparshall/6-cli` merged with current main, 126 tests green; #58 stays blocked until it merges / next: verify `slopcheck run` on origin/main after merge / blocked on nothing.
+- 12:35 Nick (claude-code) — did create R2 bucket `slopchecker-docs` in the
+  Learning Journey AI CF account + mirror the `unimelb_data` Drive folder
+  into it (4 files, 5.0 MB, byte-for-byte verified; `.DS_Store` skipped) /
+  docs/data-storage.md documents contents + access / next: Nick mints a
+  **bucket-scoped** R2 API token in the dashboard and shares it out-of-band
+  — deliberately not minted in-session, since transcripts land in a public
+  dir / note: the dataset carries applicant-shaped demographic fields
+  (birth year, birth country, home language, per-investigator); confirmed
+  synthetic, but retention/third-party rules belong in #23 / blocked on
+  nothing.
+
+- 12:37 Dan (air) — #12 Pangram integration landed in `src/slopchecker/detect/`: `Detector` protocol + `PangramDetector` behind it; per-window `Finding`s with `Span`s quote-anchored against `FlattenedDoc.text`, doc-level `LedgerRow(check="pangram_document", result=fraction_ai)` in its own visual lane (never a verdict); skipped/errored are first-class ledger rows; 429/5xx retry with exponential backoff, 4xx surfaces immediately; on-disk content-hash cache (opt-in via `cache_dir`); `estimate_cost()` for #6's `--dry-run`. Pangram windows the text itself — we don't chunk. Added `detect/` row to ownership table. 10 new tests, 60 total green, ruff+mypy clean / next: open PR, coordinate with #23 (data-handling review before we send any real applicant text) and #37 (retry-ladder consolidation will replace the local loop) / blocked on nothing.
+
 - 12:32 Dan (fable) — all three lanes landed: #55 ingestion (#4: PDF/DOCX/MD/HTML→FlattenedDoc+sections+ref-region, scanned-PDF→errored), #53+#56 registry/tiered-runner + `slopcheck run` CLI (#5, #6: one-file-one-decorator checks, gap rows for skip/error/timeout, dry-run/batch), #59 citations+quotecheck (#7, #10: APA/Chicago/IEEE extraction P/R=1.0 on small clean fixtures, quote-match engine, retrieval stubbed behind SourceFetcher) / filed #58 (wire CLI seam to ingest — small, high-value), scoping comments on #15/#23/#24 for fresh sessions / next: #29 harness once assigned / blocked on nothing.
 
 - 12:31 Emerson (claude-code) — skipped/errored checks now render as gray coverage-gap chips (#19, Dan's #45 flag): SKIPPED/ERROR + reason in ledger and cards, not-run rows excluded from tallies (they were silently counted as scores), "could not run — reported as coverage gaps, not passes" line in the verdict / next: regenerate demo-report.html from the updated fixture / blocked on nothing
