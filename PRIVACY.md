@@ -85,16 +85,23 @@ so a keyless run is honest about what it did not do rather than silently passing
 
 | Cache | What it holds | Location | Default |
 |---|---|---|---|
-| Pangram results | Detection results keyed by a content hash of the text | `<cache_dir>/<hash>.json` | **Off** — caching is opt-in; disabled unless a `cache_dir` is configured |
-| Source text (#10) | Fetched open-access source full text | cache directory | Populated only when a network fetcher is configured; never redistributed (reports carry only the matched window) |
+| Check results (network/LLM checks) | Results keyed by a content hash, as `{"cached_at", "value"}` JSON | `~/.cache/slopchecker/` | **On** — override with `--cache-dir` or `$SLOPCHECK_CACHE_DIR`; disable with `--no-cache` |
+| Source text (#10) | Fetched open-access source full text | under the cache dir | Populated only when a network fetcher is configured; never redistributed (reports carry only the matched window) |
 | Credentials | API keys | `.env` (never committed; see `.gitignore`) | — |
 
-- **Retention period** — cached results and any fetched source text are purged
-  after **30 days**, matching the default deletion window the major API
-  providers we call already use (e.g. Anthropic's commercial API). Caching stays
-  off unless a `cache_dir` is configured.
-- **Cache purge** — `[PLANNED]` (#23 acceptance criterion): a command to delete
-  all caches on demand.
+Only checks that make network/LLM calls write to the cache; a deterministic-only
+run stores nothing. The `<cache_dir>/<hash>.json` scheme is shared by the LLM
+lens cache and the (not-yet-wired) Pangram detector cache.
+
+- **Retention period** — the policy is to purge cached results and fetched
+  source text after **30 days**, matching the default deletion window the major
+  API providers we call already use (e.g. Anthropic's commercial API). Entries
+  carry a `cached_at` timestamp, but automatic TTL enforcement is not yet
+  implemented — today caches persist until deleted.
+- **Cache purge** — `[PLANNED]` (#23 acceptance criterion, tracked in #108): a
+  command to delete all caches on demand; until then, remove
+  `~/.cache/slopchecker/` (or your `--cache-dir`) by hand, or run with
+  `--no-cache`.
 - Shared bulk corpora and fixtures live in Cloudflare R2, not in git — see
   [docs/data-storage.md](docs/data-storage.md). That store holds
   **synthetic** data; if real submissions are ever indexed for similarity
@@ -109,7 +116,9 @@ so a keyless run is honest about what it did not do rather than silently passing
   OA, DOAJ, plain-URL gray literature) and send cited identifiers/URLs, not the
   submission body — so the exposure is narrow by design.
 - **Cache retention period** — **30 days**, aligned with the major API
-  providers' default deletion window; caching off unless a `cache_dir` is set.
+  providers' default deletion window. Caching defaults on at
+  `~/.cache/slopchecker/` (override with `--cache-dir`/`$SLOPCHECK_CACHE_DIR`,
+  disable with `--no-cache`); TTL enforcement is tracked in #108.
 
 The only items still open are the two provider-side `[CONFIRM]`s above (the
 Pangram API-path confirmation and confirming Anthropic Commercial Terms), which
