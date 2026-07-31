@@ -191,6 +191,43 @@ def test_claims_check_emits_doc_level_ledger_counts(monkeypatch, sample_doc):
     assert row.detail == "5 claims extracted"  # full extraction still reported
 
 
+def test_claims_check_surfaces_unanchored_drops_as_coverage_gap(monkeypatch, sample_doc):
+    """Anchor-dropped claims are a coverage gap row, not silence (#144)."""
+    payload = {
+        "claims": [
+            {
+                "id": "CL1",
+                "type": "outcome",
+                "page": 1,
+                "quote": "Meridian will deliver twelve regional trainings",
+                "quantitative": True,
+                "citation": None,
+                "scope": "specific",
+            },
+        ],
+        "unanchored_claims": 3,
+    }
+    _patch_runtime(monkeypatch, payload)
+
+    out = claims_check(sample_doc, CheckContext())
+
+    row = next(r for r in out.ledger if r.check == "claims_unanchored")
+    assert row.status == "skipped"
+    assert "3" in row.reason
+
+
+def test_claims_check_no_gap_row_when_nothing_dropped(monkeypatch, sample_doc):
+    payload = {
+        "claims": [],
+        "unanchored_claims": 0,
+    }
+    _patch_runtime(monkeypatch, payload)
+
+    out = claims_check(sample_doc, CheckContext())
+
+    assert not any(r.check == "claims_unanchored" for r in out.ledger)
+
+
 def test_claims_check_skipped_when_runtime_skips(monkeypatch, sample_doc):
     def fake_run_lens(lens, doc, config=None, *, client=None):
         return LensRunResult(

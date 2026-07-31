@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -273,14 +274,54 @@ def _parse_json_strict(text: str) -> dict[str, Any]:
 # --- Quote anchoring -------------------------------------------------------
 
 
+def _rescue_quote(quote: str, source_text: str) -> str | None:
+    """Byte-exact source substring equal to ``quote`` up to whitespace runs.
+
+    Hard-wrapped sources (markdown, PDF extraction) carry mid-sentence
+    newlines that models routinely normalize to spaces; matching with ``\\s+``
+    flexibility and returning the *matched source bytes* keeps the verbatim
+    contract while tolerating the rewrap. Returns None when no match.
+    """
+    parts = quote.split()
+    if not parts:
+        return None
+    pattern = r"\s+".join(re.escape(part) for part in parts)
+    match = re.search(pattern, source_text)
+    return match.group(0) if match else None
+
+
 def _quote_anchor(payload: dict[str, Any], source_text: str) -> dict[str, Any]:
-    """Drop items in ``payload['claims']`` whose ``quote`` isn't a verbatim
-    substring of ``source_text``. Non-mutating: returns a new payload dict.
+    """Anchor each claim's ``quote`` to ``source_text`` verbatim.
+
+    Exact substrings pass unchanged; whitespace-rewrapped quotes are rewritten
+    to the matched source bytes (see ``_rescue_quote``); everything else is
+    dropped — and counted in ``unanchored_claims`` so mass drops surface as a
+    coverage gap instead of an ok-with-zero-claims run (#144). Non-mutating:
+    returns a new payload dict.
     """
     claims = payload.get("claims", [])
     if not isinstance(claims, list):
         raise ValueError("payload['claims'] must be a list")
-    kept = [c for c in claims if isinstance(c, dict) and c.get("quote", "") in source_text]
+    kept: list[dict[str, Any]] = []
+    dropped = 0
+    for claim in claims:
+        if not isinstance(claim, dict):
+            dropped += 1
+            continue
+        quote = claim.get("quote", "")
+        if not isinstance(quote, str):
+            dropped += 1
+            continue
+        if quote in source_text:
+            kept.append(claim)
+            continue
+        rescued = _rescue_quote(quote, source_text)
+        if rescued is not None:
+            kept.append({**claim, "quote": rescued})
+        else:
+            dropped += 1
+    if dropped:
+        return {**payload, "claims": kept, "unanchored_claims": dropped}
     return {**payload, "claims": kept}
 
 

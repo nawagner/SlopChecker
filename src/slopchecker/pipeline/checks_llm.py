@@ -137,6 +137,22 @@ def claims(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
     claims = (result.payload or {}).get("claims", [])
     findings = [f for c in claims if (f := _map_claim_to_finding(c, result.provider, result.model))]
     quant_unsourced = sum(1 for c in claims if c.get("quantitative") and c.get("citation") is None)
+    unanchored = (result.payload or {}).get("unanchored_claims", 0)
+    gap_rows = (
+        [
+            LedgerRow(
+                check="claims_unanchored",
+                label="Claims dropped by quote anchoring",
+                status="skipped",
+                reason=(
+                    f"{unanchored} claim(s) could not be verbatim-anchored to the "
+                    "document text — reported as a coverage gap, not silence"
+                ),
+            )
+        ]
+        if unanchored
+        else []
+    )
     return CheckOutput(
         findings=findings,
         ledger=[
@@ -146,6 +162,7 @@ def claims(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
                 result=True,
                 detail=f"{len(claims)} claims extracted",
             ),
+            *gap_rows,
             LedgerRow(
                 check="claims_quant_unsourced",
                 label="Unsourced quantitative claims",

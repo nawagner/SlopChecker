@@ -218,6 +218,51 @@ def test_run_lens_drops_claims_whose_quote_is_not_verbatim_substring(claims_lens
     kept = result.payload["claims"]
     assert len(kept) == 1
     assert kept[0]["id"] == "CL1"
+    # The drop is visible, not silent (#144): degrade to gaps, never quietly.
+    assert result.payload["unanchored_claims"] == 1
+
+
+def test_run_lens_rescues_quotes_across_source_line_wraps(claims_lens):
+    """Whitespace-tolerant anchoring (#144).
+
+    Hard-wrapped source (markdown, PDF extraction) has mid-sentence newlines;
+    models routinely reproduce the sentence with spaces. That must anchor —
+    with the quote rewritten to the byte-exact source substring, keeping the
+    verbatim contract. Before this fix, whole runs returned ok with 0 claims
+    when the model normalized whitespace consistently.
+    """
+    doc = FlattenedDoc(
+        file="fake.md",
+        text=(
+            "Our approach will improve municipal heat-illness outcomes by\n"
+            "approximately 65% within the first deployment season."
+        ),
+    )
+    payload = {
+        "claims": [
+            {
+                "id": "CL1",
+                "type": "impact",
+                "page": 1,
+                # Space where the source hard-wraps with \n.
+                "quote": "improve municipal heat-illness outcomes by approximately 65%",
+                "quantitative": True,
+                "citation": None,
+            },
+        ]
+    }
+    client = FakeClient(script=[json.dumps(payload)])
+    result = run_lens(claims_lens, doc, LensRunConfig(), client=client)
+    assert result.status == "ok"
+    kept = result.payload["claims"]
+    assert len(kept) == 1
+    # Rewritten to the exact source bytes — still a verbatim substring.
+    assert kept[0]["quote"] == (
+        "improve municipal heat-illness outcomes by\napproximately 65%"
+    )
+    assert kept[0]["quote"] in doc.text
+    # A fully-anchored run carries no drop annotation at all.
+    assert "unanchored_claims" not in result.payload
 
 
 def test_run_lens_keeps_all_claims_when_all_quotes_are_verbatim(claims_lens, sample_doc):
