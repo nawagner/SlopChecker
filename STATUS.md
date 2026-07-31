@@ -67,6 +67,29 @@ Append-only. Newest entry on top. One line per entry:
 
 - 19:04 Dan (fable) — #71 post-ingest mutation path landed on `danparshall/71-post-ingest-mutation`: new `harness/post_ingest.py::mutate_ingest_result()` sibling of `injector.inject()` — mutates `FlattenedDoc.text` *after* the loader runs, so recall is measured against text that flowed through the real PDF/DOCX/HTML loader instead of hand-authored markdown. Same discipline as injector (missing-original hard-error, deletion via empty `mutated`, sequential apply, first-occurrence match) plus mechanical span shifting for `references`/`sections`/`page_offsets`: entirely-before → unchanged, entirely-after → shift by delta, mutation entirely inside → extend `.end`, partial overlap → hard-error (recall would be meaningless). `run_harness()` extended: `substrate:` defects → post-ingest path, `file:` defects → existing pre-ingest path, both merge back to the same `per_file_findings` map so `MATCHERS` is unchanged; new `--substrates` CLI flag. Ships one demo defect (`cite-orphan-real-pdf`, `[99]` inserted into `Aim 1:` of a real grant PDF symlinked from `tests/fixtures/synthetic/files/`); manual harness now 4/4 recall (was 3/3). 13 new tests, `test_harness.py` canary updated, full suite 523 green (post-rebase over #14 similarity + #119 KV + #74 landing + #19 PDF reflow), ruff+mypy clean on new code. Item 2 of #71 (Task Exposure paper) is a small follow-up now unblocked via route (b) — compile `.tex` → PDF, symlink into `harness/substrates/`, add defects; no new loader needed. / next: open PR / blocked on nothing.
 
+- 15:20 Nick (claude-code) — #25 demo doc picked and written into the README:
+  `tests/fixtures/synthetic/files/grant_application__fabricated_citations.docx`.
+  Went looking in R2 first — listed it directly over S3, **11 objects, exactly
+  one proposal** (`fixtures/proposal_climate.pdf`), so the bucket is a file
+  drop, not a case library (matches `docs/data-storage.md` and Dominique's
+  14:41 line; README now says so, to save the next person the trip). That one
+  R2 proposal is a bad demo pick: as a PDF all four citation checks skip, it
+  tags as `blog_post` (0.4), and it emits a false "0/10 markers linked". Ran
+  the recommended fixture in all four formats — **DOCX and HTML both parse 9/9
+  and give `all_dois_resolve=false`, 3/9 not found; MD and PDF both skip the
+  whole citation tier**, and MD adds nine spurious "unlinked citation"
+  findings. That adds a row to Emerson's #123 table, which lists html/md/pdf
+  but not docx — **docx is the format where the tier is live**, worth knowing
+  before demo day. Two caveats now in the README: 3 of the 6 real DOIs 403 into
+  gray coverage-gap chips, and raw finding counts are unstable run-to-run
+  (17 vs 18) purely on whether Pangram is keyed — the citation numbers are the
+  stable part. Also checked the realistic-prose alternative: `pandoc
+  proposal_climate.md -o .docx` does unlock the tier, but all 3 DOIs are
+  `10.9999/fake-*` so it resolves 0/3 with no real-vs-invented contrast /
+  next: #123 is the demo-critical one — PDF is what funders upload / blocked on
+  nothing. Note: README is Emerson+Dominique's per the ownership table —
+  flagging rather than assuming.
+
 - 14:53 Nick (claude-code) — #119 shared KV cache landed on
   `nick/119-kv-cache`. Motivation was a comment in `checks_detect.py`: *"no
   `cache_dir` — the server filesystem is ephemeral"* — **Pangram was entirely
