@@ -35,6 +35,8 @@ DEFAULT_TIMEOUT_S = 30.0
 # LLM check package (registers under tier="llm").
 CHECK_PACKAGES: tuple[str, ...] = (
     "slopchecker.pipeline.checks_builtin",
+    "slopchecker.pipeline.checks_citations",
+    "slopchecker.pipeline.checks_detect",
     "slopchecker.pipeline.checks_llm",
     "slopchecker.pipeline.claim_support",
     "slopchecker.checks",

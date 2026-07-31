@@ -40,6 +40,7 @@ Append-only. Newest entry on top. One line per entry:
   (Note: this 17:39 entry was dropped from main by an earlier STATUS merge
   resolution — restored here per the append-only rule, corrections get a
   new line rather than silent loss.)
+- 13:49 Emerson (claude-code) — first substance checks registered (#7/#12): `citations_linked` (orphan in-text markers, quote-anchored findings) + `pangram_document` (api tier; without PANGRAM_API_KEY it's a skipped gap row and no text leaves the process — #23 gates on setting the key, not on this code); fixed fallout the registration exposed: cli.py report.json now utf-8 (Windows cp1252 corrupted renders), registry-frozen test assumptions pinned with --only, and the local-only dry-run flake root-caused (rich ellipsizing the id column on narrow consoles — column now folds) / next: #20 batch summary view (Emerson claiming) / blocked on nothing
 
 - 13:02 Alex (claude-code) — #22 fixtures: added the `wrong_paper` defect — a
   citation with a real, *resolving* DOI attributed to the wrong paper

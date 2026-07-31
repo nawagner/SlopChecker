@@ -41,7 +41,13 @@ def sample_md(tmp_path):
 
 @pytest.fixture
 def scratch_registry(monkeypatch):
-    """A copy of the real registry (built-ins included) tests may add fakes to."""
+    """A copy of the real registry (built-ins included) tests may add fakes to.
+
+    discover() first: with the real check modules already imported, a test
+    overwriting an id (e.g. a fake pangram_document) can't collide with a
+    later import-time register() when the CLI calls discover() itself.
+    """
+    registry_mod.discover()
     monkeypatch.setattr(registry_mod, "_REGISTRY", dict(registry_mod._REGISTRY))
 
 
@@ -108,7 +114,17 @@ def test_findings_never_fail_the_exit_code(sample_md, tmp_path, scratch_registry
     assert rows["always_fails"].result is False
 
 
-def test_dry_run_lists_checks_and_calls_nothing(sample_md, tmp_path, scratch_registry):
+def test_dry_run_lists_checks_and_calls_nothing(sample_md, tmp_path, scratch_registry, monkeypatch):
+    # Pin the console wide: at narrow widths rich shrinks the id column and
+    # folds/ellipsizes "pangram_document", failing the substring asserts for
+    # rendering reasons only (legacy Windows consoles are ~1 char narrower
+    # than CI, which is why this only ever broke locally).
+    import rich.console
+
+    from slopchecker import cli as cli_mod
+
+    monkeypatch.setattr(cli_mod, "console", rich.console.Console(width=200))
+
     def paid(doc, ctx):  # pragma: no cover — the point is that it never runs
         raise AssertionError("--dry-run must not execute checks")
 
@@ -123,7 +139,11 @@ def test_dry_run_lists_checks_and_calls_nothing(sample_md, tmp_path, scratch_reg
         fn=paid,
     )
     out = tmp_path / "reports"
-    result = runner.invoke(app, ["run", str(sample_md), "--out", str(out), "--dry-run"])
+    # --only pins the table to two short rows: with the full registry the id
+    # column can get width-truncated (locally and as more checks register),
+    # which breaks the substring assertions for rendering reasons only.
+    only = ["--only", "has_text", "--only", "pangram_document"]
+    result = runner.invoke(app, ["run", str(sample_md), "--out", str(out), "--dry-run", *only])
 
     assert result.exit_code == 0, result.output
     assert "has_text" in plain(result)
@@ -235,7 +255,9 @@ def test_batch_ranks_by_concerns(tmp_path, scratch_registry):
     (docs / "notes.rst").write_text("ignored suffix — not in LOADERS")
 
     out = tmp_path / "reports"
-    result = runner.invoke(app, ["run", str(docs), "--out", str(out)])
+    # --only: pin the check set so the ranking assertions don't break every
+    # time a new check gets registered (they assert exact concern counts).
+    result = runner.invoke(app, ["run", str(docs), "--out", str(out), "--only", "flag_bad"])
 
     assert result.exit_code == 0, result.output
     assert "Batch summary" in plain(result)
