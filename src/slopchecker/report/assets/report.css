@@ -137,6 +137,19 @@ table.ledger { border-collapse: collapse; width: 100%; font-size: .84rem; min-wi
           background: var(--panel); border: 1px solid var(--rule); border-radius: 4px;
           padding: .9rem 1.1rem; overflow-x: auto; white-space: pre; max-width: 46rem; }
 .schema .c { color: var(--soft); }
+.schema pre { margin: 0; font: inherit; white-space: pre; }
+
+/* Collapsed-by-default raw JSON: the summary line doubles as the section
+   heading, so it takes the h2 treatment. Collapsed also keeps the printed
+   PDF lean — the render is the artifact, the JSON is its source. */
+details.fold summary { cursor: pointer; font-size: .78rem; letter-spacing: .13em;
+                       text-transform: uppercase; color: var(--soft); font-weight: 600;
+                       border-bottom: 1px solid var(--rule); padding-bottom: .35rem;
+                       margin: 3rem 0 1rem; }
+details.fold summary button { font: inherit; font-size: .9em; text-transform: none;
+                              letter-spacing: normal; cursor: pointer; margin-left: .75rem;
+                              padding: .15rem .6rem; border: 1px solid var(--rule);
+                              border-radius: 4px; background: var(--panel); color: var(--ink); }
 .foot { font-size: .76rem; color: var(--soft); margin-top: 2rem; max-width: 60ch; }
 
 /* Print-safe fallback: the shipping artifact is a PDF, so the interactive
