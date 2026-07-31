@@ -45,7 +45,7 @@ def _lens_config(no_cache: bool = False) -> LensRunConfig:
 
 
 def _map_claim_to_finding(
-    claim: dict[str, Any], provider: str, model: str | None
+    claim: dict[str, Any], provider: str, model: str | None, fallback_id: str
 ) -> Finding | None:
     """One *flagged* claim → one quote-anchored Finding, per lenses/claims.md.
 
@@ -56,14 +56,22 @@ def _map_claim_to_finding(
     demo document as red failures — indistinguishable from fabricated
     DOIs. Attributes are not checks. A claim that raises no flag is
     silent, same policy as claim_support's ``supported`` verdict.
+
+    ``needs_source`` is the lens's judgment (claims.md rule 6), moved
+    into the LLM 2026-07-31: the mechanical quantitative-and-uncited
+    flag misfired on every budget line and deliverable count. Missing
+    defaults to False — a misfire costs more than a miss.
     """
     quantitative = bool(claim.get("quantitative", False))
     citation = claim.get("citation")
-    if not quantitative or citation is not None:
+    needs_source = bool(claim.get("needs_source", False))
+    if not quantitative or not needs_source or citation is not None:
         return None
     claim_type = claim.get("type", "unknown")
     return Finding(
-        id=str(claim["id"]),
+        # Models drop the "id" field often enough that requiring it would
+        # error the whole check; document order is just as stable.
+        id=str(claim.get("id") or fallback_id),
         target="claim",
         label="Unsourced quantitative claim",
         anchor=Anchor(page=claim.get("page"), quote=claim["quote"]),
@@ -117,7 +125,11 @@ def claims(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
         )
 
     claims = (result.payload or {}).get("claims", [])
-    findings = [f for c in claims if (f := _map_claim_to_finding(c, result.provider, result.model))]
+    findings = [
+        f
+        for i, c in enumerate(claims, start=1)
+        if (f := _map_claim_to_finding(c, result.provider, result.model, fallback_id=f"CL{i}"))
+    ]
     return CheckOutput(
         findings=findings,
         ledger=[

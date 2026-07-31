@@ -48,7 +48,8 @@ def test_claims_check_maps_only_flagged_claims_to_findings(monkeypatch, sample_d
                 "page": 1,
                 "quote": "Meridian will deliver twelve regional trainings within the first grant year",
                 "quantitative": True,
-                "citation": None,  # flagged: quantitative and unsourced
+                "citation": None,
+                "needs_source": True,  # flagged: empirical number, no source
             },
             {
                 "id": "CL2",
@@ -65,6 +66,24 @@ def test_claims_check_maps_only_flagged_claims_to_findings(monkeypatch, sample_d
                 "quote": "The information environment has degraded rapidly",
                 "quantitative": True,
                 "citation": "[1]",  # quantitative but cited → no finding
+                "needs_source": True,
+            },
+            {
+                "id": "CL4",
+                "type": "outcome",
+                "page": 1,
+                "quote": "Meridian will deliver twelve regional trainings",
+                "quantitative": True,
+                "citation": None,  # the old misfire: applicant's own budget
+                "needs_source": False,
+            },
+            {
+                "id": "CL5",
+                "type": "outcome",
+                "page": 1,
+                "quote": "The information environment has degraded rapidly",
+                "quantitative": True,
+                "citation": None,  # needs_source omitted → defaults to quiet
             },
         ]
     }
@@ -95,6 +114,7 @@ def test_flagged_claim_check_polarity_renders_as_failure(monkeypatch, sample_doc
                 "quote": "Meridian will deliver twelve regional trainings within the first grant year",
                 "quantitative": True,
                 "citation": None,
+                "needs_source": True,
             },
         ]
     }
@@ -117,6 +137,7 @@ def test_claims_check_emits_doc_level_quant_unsourced_ledger_row(monkeypatch, sa
                 "quote": "Meridian will deliver twelve regional trainings within the first grant year",
                 "quantitative": True,
                 "citation": None,
+                "needs_source": True,
             },
             {
                 "id": "CL2",
@@ -125,6 +146,7 @@ def test_claims_check_emits_doc_level_quant_unsourced_ledger_row(monkeypatch, sa
                 "quote": "Meridian will deliver twelve regional trainings",
                 "quantitative": True,
                 "citation": None,
+                "needs_source": True,
             },
             {
                 "id": "CL3",
@@ -226,6 +248,7 @@ def test_claims_check_page_defaults_to_none_when_missing(monkeypatch, sample_doc
                 "quote": "Meridian will deliver twelve regional trainings",
                 "quantitative": True,
                 "citation": None,
+                "needs_source": True,
                 # no "page" key
             },
         ]

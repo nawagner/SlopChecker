@@ -163,3 +163,67 @@ def test_passage_cap_is_stated_not_silent(
 
     assert len(output.findings) == checks_detect._MAX_AI_PASSAGES
     assert "showing top 5 of 8" in output.ledger[0].detail
+
+
+def test_long_window_anchor_trims_to_opening_sentences(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A window of hundreds of words must not wallpaper the document pane:
+    the mark shows the window's opening (cut at a sentence boundary), the
+    note states the full length, and the quote stays a verbatim prefix."""
+    sentence = "This passage was assembled by a large language model at scale. "
+    long_text = sentence * 12  # ~760 chars, well past _MAX_ANCHOR_CHARS
+    doc = FlattenedDoc(file="t.txt", text=long_text)
+    response = pangram_response(fraction_ai=1.0)
+    response["text"] = long_text
+    response["windows"] = [
+        {
+            "text": long_text,
+            "label": "AI-Generated",
+            "ai_assistance_score": 1.0,
+            "confidence": "High",
+            "start_index": 0,
+            "end_index": len(long_text),
+            "word_count": len(long_text.split()),
+            "token_length": len(long_text.split()),
+        }
+    ]
+
+    monkeypatch.setenv("PANGRAM_API_KEY", "test-key")
+    transport = FakeTransport([response])
+
+    import slopchecker.pipeline.checks_detect as checks_detect
+
+    monkeypatch.setattr(
+        checks_detect,
+        "PangramDetector",
+        lambda config: PangramDetector(config, transport=transport),
+    )
+
+    output = checks_detect.pangram_document(doc, CheckContext())
+
+    (finding,) = output.findings
+    quote = finding.anchor.quote
+    assert len(quote) <= checks_detect._MAX_ANCHOR_CHARS
+    assert long_text.startswith(quote)  # verbatim prefix -> still quote-anchored
+    assert quote.endswith("scale.")  # cut lands on a sentence boundary
+    assert finding.anchor.span.end == len(quote)
+    assert "opening of a" in finding.note and "word passage" in finding.note
+
+
+def test_short_window_anchor_is_untouched(
+    doc: FlattenedDoc, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("PANGRAM_API_KEY", "test-key")
+    transport = FakeTransport([pangram_response(fraction_ai=0.6)])
+
+    import slopchecker.pipeline.checks_detect as checks_detect
+
+    monkeypatch.setattr(
+        checks_detect,
+        "PangramDetector",
+        lambda config: PangramDetector(config, transport=transport),
+    )
+
+    output = checks_detect.pangram_document(doc, CheckContext())
+
+    for finding in output.findings:
+        assert "opening of a" not in (finding.note or "")
