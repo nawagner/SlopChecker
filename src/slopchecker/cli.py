@@ -260,7 +260,7 @@ def _print_batch_summary(rows: list[dict], out_dir: Path) -> None:
         "report",
         "error",
     ]
-    with csv_path.open("w", newline="") as fh:
+    with csv_path.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=fields)
         writer.writeheader()
         writer.writerows(rows)

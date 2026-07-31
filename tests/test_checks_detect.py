@@ -8,12 +8,12 @@ via a factory monkeypatched onto `slopchecker.pipeline.checks_detect`.
 from __future__ import annotations
 
 import pytest
-from tests.test_detect_pangram import FakeTransport, pangram_response
 
 from slopchecker.detect import PangramDetector
 from slopchecker.detect.pangram import TransportClientError
 from slopchecker.models import FlattenedDoc
 from slopchecker.pipeline.registry import CheckContext
+from test_detect_pangram import FakeTransport, pangram_response  # tests/ is the import root
 
 
 @pytest.fixture

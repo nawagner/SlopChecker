@@ -108,7 +108,7 @@ def test_run_leg_exits_cleanly(chain):
 def test_run_leg_report_json_validates_against_model(chain):
     """report.json is the contract (#3) — it must round-trip EvidenceReport."""
     _, out = chain
-    report = EvidenceReport.model_validate_json((out / "proposal.report.json").read_text())
+    report = EvidenceReport.model_validate_json((out / "proposal.report.json").read_text("utf-8"))
     assert report.document.file == "proposal.pdf"
     assert report.document.media_type == "application/pdf"
     assert report.document.pages == 2
@@ -118,7 +118,7 @@ def test_run_leg_report_json_validates_against_model(chain):
 
 def test_run_leg_writes_html(chain):
     _, out = chain
-    html = (out / "proposal.report.html").read_text()
+    html = (out / "proposal.report.html").read_text("utf-8")
     assert "proposal.pdf" in html
     assert "Llama-Assisted" in html
 
@@ -197,7 +197,7 @@ def test_batch_mixed_folder_reports_and_gaps(tmp_path):
     docs.mkdir()
     # reuse the #79 harness corpus where it fits (fabricated by construction)
     (docs / "climate.md").write_text(
-        (HARNESS_FIXTURES / "proposal_climate.md").read_text(), encoding="utf-8"
+        (HARNESS_FIXTURES / "proposal_climate.md").read_text("utf-8"), encoding="utf-8"
     )
     make_pdf(docs / "proposal.pdf", [PAGE1, PAGE2])
     (docs / "corrupt.pdf").write_bytes(b"%PDF-1.7 nope")
@@ -211,13 +211,13 @@ def test_batch_mixed_folder_reports_and_gaps(tmp_path):
     assert_no_traceback(proc)
     # readable docs got reports — and they validate against the model
     for stem in ("climate", "proposal"):
-        EvidenceReport.model_validate_json((out / f"{stem}.report.json").read_text())
+        EvidenceReport.model_validate_json((out / f"{stem}.report.json").read_text("utf-8"))
     # duds got no report...
     assert not (out / "corrupt.report.json").exists()
     assert not (out / "scan.report.json").exists()
     assert not (out / "notes.report.json").exists()
     # ...but are recorded as gaps in summary.csv with their ingest reason
-    csv_text = (out / "summary.csv").read_text()
+    csv_text = (out / "summary.csv").read_text("utf-8")
     csv_lines = csv_text.strip().splitlines()
     assert len(csv_lines) == 5  # header + 2 reports + 2 gap rows (.rst filtered)
     assert "could not open as PDF" in csv_text
