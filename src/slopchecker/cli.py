@@ -59,7 +59,10 @@ def _print_summary(report: EvidenceReport, written: list[Path]) -> None:
 
 def _dry_run(checks, n_docs: int) -> None:
     table = Table(title=f"Dry run — would run {len(checks)} check(s) on {n_docs} document(s)")
-    table.add_column("Check id")
+    # fold, don't ellipsize: ids are the --only/--skip vocabulary, and rich's
+    # default drops end chars on narrow consoles (legacy Windows is ~1 char
+    # narrower than CI, which is how this only ever broke locally).
+    table.add_column("Check id", overflow="fold")
     table.add_column("Name")
     table.add_column("Tier")
     table.add_column("Est. cost/doc", justify="right")
@@ -195,11 +198,13 @@ def run(
         written: list[Path] = []
         if "json" in fmt_list:
             json_path = out_dir / f"{target.stem}.report.json"
-            json_path.write_text(report.model_dump_json(exclude_none=True, indent=2))
+            # utf-8 explicitly: on Windows write_text defaults to cp1252, which
+            # render_file's utf-8 read then rejects on any non-ASCII detail.
+            json_path.write_text(report.model_dump_json(exclude_none=True, indent=2), "utf-8")
             written.append(json_path)
         if "html" in fmt_list:
             html_path = out_dir / f"{target.stem}.report.html"
-            html_path.write_text(render_report(report.to_report_dict()))
+            html_path.write_text(render_report(report.to_report_dict()), "utf-8")
             written.append(html_path)
 
         counts = report.counts()
@@ -255,7 +260,7 @@ def _print_batch_summary(rows: list[dict], out_dir: Path) -> None:
         "report",
         "error",
     ]
-    with csv_path.open("w", newline="") as fh:
+    with csv_path.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=fields)
         writer.writeheader()
         writer.writerows(rows)
