@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a labeled, dimension-covered corpus of synthetic grant proposals.
+"""Generate a labeled, dimension-covered corpus of synthetic funding documents.
 
 Built on the "dimensions -> tuples -> generate" method from Hamel Husain &
 Shreya Shankar's evals work (https://hamel.dev/blog/posts/evals-faq/): define
@@ -8,21 +8,21 @@ model's default mode, then expand each tuple into a full example.
 
 DIMENSIONS
     authorship        human | ai_clean | ai_laundered | slop  (the primary label)
+    document_type     grant_application | blog_post | think_tank_report
     institution_tier  R1 | R2 (Carnegie research tiers -- "R1/R2"); flavor
-                      resources, infrastructure, and typical award scale.
-                      Override with --tiers.
+                      resources, framing, and typical award scale. --tiers.
     discipline        biomedical | engineering | social_science | public_health
                       | physical_science
     applicant_type    early_stage_investigator | established_pi | multi_pi_team
                       | small_nonprofit
-    defect            (slop only) fabricated_citations | overclaims |
-                      budget_inflated | missing_methods | all
+    defect            (slop only) fabricated_citations | overclaims | all, plus
+                      budget_inflated | missing_methods for grant_application.
 
 SEED PULLS
-    Human seeds come from *multiple* NIH RePORTER pulls -- one per Carnegie tier,
-    each filtered to a starter roster of R1 vs R2 awardee institutions and tagged
-    with its tier -- so the human class spans the same tier axis as the generated
-    classes. --offline fabricates seeds (no network, nothing real, committable).
+    Human grant seeds come from *multiple* NIH RePORTER pulls -- one per Carnegie
+    tier, filtered to a starter roster of R1 vs R2 awardee institutions. Human
+    blog/report docs and every generated doc are fabricated. --offline fabricates
+    everything (no network, nothing real, fully committable).
 
 BACKENDS
     template   stdlib-only, offline, deterministic with --seed. Runs anywhere.
@@ -39,7 +39,7 @@ OUTPUT (snake_case keys)
 Examples
 --------
     python3 synth_proposals.py --n 240
-    python3 synth_proposals.py --n 400 --tiers R1 R2
+    python3 synth_proposals.py --n 240 --doctypes grant_application blog_post
     python3 synth_proposals.py --n 240 --offline --seed 7
     python3 synth_proposals.py --n 400 --backend anthropic --model claude-sonnet-5
 """
@@ -63,9 +63,25 @@ NIH_SEARCH_URL = "https://api.reporter.nih.gov/v2/projects/search"
 # Dimensions
 # --------------------------------------------------------------------------- #
 AUTHORSHIP = ["human", "ai_clean", "ai_laundered", "slop"]
+DOCUMENT_TYPES = ["grant_application", "blog_post", "think_tank_report"]
 DISCIPLINES = ["biomedical", "engineering", "social_science", "public_health", "physical_science"]
 APPLICANT_TYPES = ["early_stage_investigator", "established_pi", "multi_pi_team", "small_nonprofit"]
-DEFECTS_SLOP = ["fabricated_citations", "overclaims", "budget_inflated", "missing_methods", "all"]
+
+# Which slop defects are meaningful for which document type. Budget and methods
+# are grant-specific; fabricated citations and overclaims apply everywhere.
+GRANT_DEFECTS = ["fabricated_citations", "overclaims", "budget_inflated", "missing_methods", "all"]
+TEXT_DEFECTS = ["fabricated_citations", "overclaims", "all"]
+DEFECTS_BY_DOCTYPE = {
+    "grant_application": GRANT_DEFECTS,
+    "blog_post": TEXT_DEFECTS,
+    "think_tank_report": TEXT_DEFECTS,
+}
+
+CITATION_HEADING = {
+    "grant_application": "References",
+    "blog_post": "Sources",
+    "think_tank_report": "Endnotes",
+}
 
 # Carnegie institution-tier specs -- flavor resources, framing, and award scale.
 TIER_SPECS = {
@@ -195,6 +211,7 @@ BUILTIN_TOPICS = {
     ],
 }
 
+# Grant-flavored clean/overclaim pools.
 CLEAN_SENTENCES = [
     "This proposal addresses {topic}, a problem with substantial significance.",
     "Prior work has established a partial understanding, yet key gaps remain.",
@@ -212,12 +229,49 @@ OVERCLAIM_SENTENCES = [
     "The results will immediately transform practice nationwide upon completion.",
 ]
 
+# Prose pools for blog posts and reports (no grant vocabulary).
+TEXT_CLEAN = [
+    "This piece examines {topic}, a question of growing public interest.",
+    "The evidence base is partial, and important gaps remain.",
+    "Recent analysis points toward a tractable path forward.",
+    "Practitioners and policymakers alike have a role to play here.",
+    "The discussion draws on established {flavor} methods and current data.",
+    "Careful framing guards against overstatement.",
+    "The takeaways are meant to inform, not to prescribe.",
+]
+
+TEXT_OVERCLAIM = [
+    "This is, without question, the definitive account of the issue.",
+    "The conclusions here are beyond dispute and settle the debate for good.",
+    "Every serious observer already agrees; the matter is entirely settled.",
+    "These findings will transform policy overnight, guaranteed.",
+]
+
 APPLICANT_FLAVOR = {
     "early_stage_investigator": "The PI's first independent award; strong mentorship is in place.",
     "established_pi": "The PI has a sustained track record of funded work in this area.",
     "multi_pi_team": "Two co-equal PIs contribute complementary methods under joint leadership.",
     "small_nonprofit": "The applicant is a community nonprofit partnering with an academic core.",
 }
+
+TITLE_TEMPLATES = [
+    "{cap}",
+    "{cap}: A Multidisciplinary Research Program",
+    "Advancing {topic}",
+    "Toward {topic}",
+    "{cap}: Mechanisms and Interventions",
+]
+BLOG_TITLES = [
+    "{cap}: What the Evidence Shows",
+    "Why {topic} Matters Now",
+    "{cap}, Explained",
+    "The Case for Rethinking {topic}",
+]
+REPORT_TITLES = [
+    "{cap}: Findings and Recommendations",
+    "A Policy Assessment of {topic}",
+    "{cap}: Evidence and Options",
+]
 
 
 @dataclass
@@ -244,7 +298,7 @@ class Record:
 
 
 # --------------------------------------------------------------------------- #
-# Seed pulls (multiple, one per activity code)
+# Seed pulls (multiple, one per Carnegie tier)
 # --------------------------------------------------------------------------- #
 def fetch_nih_pull(tier, n, rng):
     criteria = {"fiscal_years": [2021, 2022, 2023]}
@@ -344,18 +398,42 @@ def generate_with_anthropic(dims, topic, model):
     key = os.environ.get("ANTHROPIC_API_KEY")
     if not key:
         return None
+    spec = _prompt_for(dims, topic)
+    if dims["authorship"] == "slop":
+        spec += _slop_inject(dims["document_type"], dims["defect"])
+    return _post_anthropic(key, model, spec)
+
+
+def _prompt_for(dims, topic):
+    dt = dims["document_type"]
+    if dt == "blog_post":
+        return (
+            "Write a realistic ~350-word policy blog post on the topic below. "
+            "Include a one-line dek, a short intro, two or three body paragraphs, "
+            "and a takeaway. Conversational but credible. Do not include a title "
+            f"or top-level heading. Stay strictly on the topic.\nTopic: {topic}\n"
+        )
+    if dt == "think_tank_report":
+        return (
+            "Write a realistic ~350-word think-tank report excerpt on the topic "
+            "below. Include Executive Summary, Background, Findings, and "
+            "Recommendations sections. Formal and evidence-based. Do not include a "
+            f"title or top-level heading. Stay strictly on the topic.\nTopic: {topic}\n"
+        )
     tier = dims["institution_tier"]
-    tspec = TIER_SPECS.get(tier, DEFAULT_TIER)
-    spec = (
-        f"Write a realistic ~350-word research grant proposal excerpt (Specific Aims, "
-        f"Background, Approach, Innovation, Budget Justification).\n"
+    tspec = _tier_spec(tier)
+    return (
+        "Write a realistic ~350-word research grant proposal excerpt (Specific "
+        "Aims, Background, Approach, Innovation, Budget Justification).\n"
         f"Topic: {topic}\nInstitution tier: {tier} (Carnegie; {tspec['infrastructure']})\n"
         f"Discipline: {dims['discipline']}\nApplicant: {dims['applicant_type']}\n"
-        f"Do not include a title or top-level heading; start at the Specific Aims section. "
-        f"Stay strictly on the stated topic.\n"
+        "Do not include a title or top-level heading; start at the Specific Aims "
+        "section. Stay strictly on the stated topic.\n"
     )
-    if dims["authorship"] == "slop":
-        defect = dims["defect"]
+
+
+def _slop_inject(dt, defect):
+    if dt == "grant_application":
         inject = {
             "fabricated_citations": "cite sources that sound real but are fabricated",
             "overclaims": "include grandiose, unsupported guarantees of success",
@@ -363,9 +441,13 @@ def generate_with_anthropic(dims, topic, model):
             "missing_methods": "keep the methods vague and hand-wavy",
             "all": "do all of: fake citations, overclaims, padded budget, vague methods",
         }
-        spec += f"Make it subtly low-quality: {inject.get(defect, inject['all'])}."
-    out = _post_anthropic(key, model, spec)
-    return out
+    else:
+        inject = {
+            "fabricated_citations": "cite sources that sound real but are fabricated",
+            "overclaims": "state sweeping, unsupported claims as settled fact",
+            "all": "do both: fabricated sources and sweeping unsupported claims",
+        }
+    return f"Make it subtly low-quality: {inject.get(defect, inject['all'])}."
 
 
 def _post_anthropic(key, model, prompt):
@@ -392,18 +474,19 @@ def _post_anthropic(key, model, prompt):
 
 
 # --------------------------------------------------------------------------- #
-# Proposal construction
+# Document construction
 # --------------------------------------------------------------------------- #
 def _defect_flags(dims):
     d = dims.get("defect", "none")
     is_all = d == "all"
+    grant = dims["document_type"] == "grant_application"
     return {
         "ai_generated": dims["authorship"] != "human",
         "laundered": dims["authorship"] == "ai_laundered",
         "has_fabricated_citations": d == "fabricated_citations" or is_all,
         "overclaims": d == "overclaims" or is_all,
-        "budget_inflated": d == "budget_inflated" or is_all,
-        "missing_methods": d == "missing_methods" or is_all,
+        "budget_inflated": (d == "budget_inflated" or is_all) and grant,
+        "missing_methods": (d == "missing_methods" or is_all) and grant,
     }
 
 
@@ -433,7 +516,16 @@ def _tier_spec(tier):
     return TIER_SPECS.get(tier, DEFAULT_TIER)
 
 
-def _template_sections(topic, dims, rng):
+def _sections_for(topic, dims, rng):
+    dt = dims["document_type"]
+    if dt == "blog_post":
+        return _blog_sections(topic, dims, rng)
+    if dt == "think_tank_report":
+        return _report_sections(topic, dims, rng)
+    return _grant_sections(topic, dims, rng)
+
+
+def _grant_sections(topic, dims, rng):
     tier = dims["institution_tier"]
     tspec = _tier_spec(tier)
     flavor = rng.choice(DISCIPLINE_FLAVOR[dims["discipline"]])
@@ -472,6 +564,47 @@ def _template_sections(topic, dims, rng):
     }
 
 
+def _blog_sections(topic, dims, rng):
+    flavor = rng.choice(DISCIPLINE_FLAVOR[dims["discipline"]])
+    gt = _defect_flags(dims)
+    intro = " ".join(s.format(topic=topic, flavor=flavor) for s in rng.sample(TEXT_CLEAN, k=3))
+    body = " ".join(s.format(topic=topic, flavor=flavor) for s in rng.sample(TEXT_CLEAN, k=3))
+    if gt["overclaims"]:
+        takeaway = " ".join(rng.sample(TEXT_OVERCLAIM, k=2))
+    else:
+        takeaway = rng.choice(TEXT_CLEAN).format(topic=topic, flavor=flavor)
+    return {
+        "dek": f"What we know about {topic}, and what to watch.",
+        "intro": intro,
+        "body": body,
+        "takeaway": takeaway,
+    }
+
+
+def _report_sections(topic, dims, rng):
+    flavor = rng.choice(DISCIPLINE_FLAVOR[dims["discipline"]])
+    gt = _defect_flags(dims)
+    exec_summary = " ".join(
+        s.format(topic=topic, flavor=flavor) for s in rng.sample(TEXT_CLEAN, k=2)
+    )
+    background = " ".join(s.format(topic=topic, flavor=flavor) for s in rng.sample(TEXT_CLEAN, k=3))
+    findings_base = " ".join(
+        s.format(topic=topic, flavor=flavor) for s in rng.sample(TEXT_CLEAN, k=3)
+    )
+    findings = (
+        (rng.choice(TEXT_OVERCLAIM) + " " + findings_base) if gt["overclaims"] else findings_base
+    )
+    recommendations = " ".join(
+        s.format(topic=topic, flavor=flavor) for s in rng.sample(TEXT_CLEAN, k=2)
+    )
+    return {
+        "executive_summary": exec_summary,
+        "background": background,
+        "findings": findings,
+        "recommendations": recommendations,
+    }
+
+
 def _budget_text(tier, rng, inflated):
     tspec = _tier_spec(tier)
     lo, hi = tspec["budget_per_year"]
@@ -487,6 +620,7 @@ def _budget_text(tier, rng, inflated):
 def _launder(text, rng):
     swaps = {
         "This proposal addresses": "The present application concerns",
+        "This piece examines": "The present article considers",
         "Our preliminary data suggest": "Pilot findings indicate",
         "We will": "The team intends to",
         "novel": "innovative",
@@ -501,23 +635,31 @@ def _launder(text, rng):
 
 
 def build_record(idx, dims, seed, backend, model, rng):
-    topic = _topic_from_seed(seed, dims, rng)
+    dt = dims["document_type"]
     gt = _defect_flags(dims)
     used_model = None
 
     if dims["authorship"] == "human":
-        title = seed["title"]
-        sections = {"abstract": seed["abstract"]}
-        text = seed["abstract"]
-        cites = _make_citations(rng, rng.randint(3, 8), fabricate=False)
-        full = _assemble(title, sections, cites, human_text=text)
+        if dt == "grant_application" and seed.get("seed_source") == "nih_reporter":
+            topic = _clean_title(seed.get("title", ""))
+            title = seed["title"]
+            sections = {"abstract": seed["abstract"]}
+            cites = _make_citations(rng, rng.randint(3, 8), fabricate=False)
+            full = _assemble(title, sections, cites, dt, human_text=seed["abstract"])
+        else:
+            topic = rng.choice(BUILTIN_TOPICS[dims["discipline"]])
+            title = _title_for(topic, dims, rng)
+            sections = _sections_for(topic, dims, rng)  # defect none -> clean
+            cites = _make_citations(rng, rng.randint(3, 8), fabricate=False)
+            full = _assemble(title, sections, cites, dt, human_text=None)
     else:
-        title = _title_for_topic(topic, rng)  # keep title and body on the same topic
+        topic = rng.choice(BUILTIN_TOPICS[dims["discipline"]])
+        title = _title_for(topic, dims, rng)  # keep title and body on the same topic
         sections, body, used_model = _generate_body(topic, dims, backend, model, rng)
         if dims["authorship"] == "ai_laundered":
             body = _launder(body, rng)
         cites = _make_citations(rng, rng.randint(4, 10), fabricate=gt["has_fabricated_citations"])
-        full = _assemble(title, sections, cites, human_text=None, override_body=body)
+        full = _assemble(title, sections, cites, dt, human_text=None, override_body=body)
 
     n_unresolvable = sum(1 for c in cites if not c.resolves)
     prov = {
@@ -546,17 +688,19 @@ def build_record(idx, dims, seed, backend, model, rng):
     )
 
 
-TITLE_TEMPLATES = [
-    "{cap}",
-    "{cap}: A Multidisciplinary Research Program",
-    "Advancing {topic}",
-    "Toward {topic}",
-    "{cap}: Mechanisms and Interventions",
-]
+def _title_for(topic, dims, rng):
+    cap = topic[:1].upper() + topic[1:]
+    dt = dims["document_type"]
+    if dt == "blog_post":
+        return rng.choice(BLOG_TITLES).format(topic=topic, cap=cap)
+    if dt == "think_tank_report":
+        return rng.choice(REPORT_TITLES).format(topic=topic, cap=cap)
+    return rng.choice(TITLE_TEMPLATES).format(topic=topic, cap=cap)
 
 
-def _title_for_topic(topic, rng):
-    return rng.choice(TITLE_TEMPLATES).format(topic=topic, cap=topic[:1].upper() + topic[1:])
+def _clean_title(title):
+    title = (title or "").strip().replace("A Program of Research on ", "")
+    return (title[:1].lower() + title[1:]) if title else "an unspecified problem"
 
 
 def _generate_body(topic, dims, backend, model, rng):
@@ -564,12 +708,12 @@ def _generate_body(topic, dims, backend, model, rng):
         out = generate_with_anthropic(dims, topic, model)
         if out:
             return {"generated": out}, out, model
-    sections = _template_sections(topic, dims, rng)
+    sections = _sections_for(topic, dims, rng)
     text = "\n\n".join(f"{k.replace('_', ' ').title()}\n{v}" for k, v in sections.items())
     return sections, text, None
 
 
-def _assemble(title, sections, cites, human_text, override_body=None):
+def _assemble(title, sections, cites, doc_type, human_text=None, override_body=None):
     parts = [title, ""]
     if human_text is not None:
         parts.append(human_text)
@@ -578,21 +722,9 @@ def _assemble(title, sections, cites, human_text, override_body=None):
     else:
         for k, v in sections.items():
             parts.append(f"{k.replace('_', ' ').title()}\n{v}")
-    parts.append("\nReferences")
+    parts.append("\n" + CITATION_HEADING.get(doc_type, "References"))
     parts.extend(f"{c.marker} https://doi.org/{c.doi}" for c in cites)
     return "\n".join(parts)
-
-
-def _topic_from_seed(seed, dims, rng):
-    if seed["seed_source"] == "builtin" or dims["authorship"] == "human":
-        title = seed.get("title", "").strip()
-        return (
-            title.replace("A Program of Research on ", "")[:1].lower()
-            + title.replace("A Program of Research on ", "")[1:]
-            if title
-            else "an unspecified problem"
-        )
-    return rng.choice(BUILTIN_TOPICS[dims["discipline"]])
 
 
 def _extract_budget(sections):
@@ -606,23 +738,39 @@ def _extract_budget(sections):
 # --------------------------------------------------------------------------- #
 # Tuple enumeration (dimensions -> tuples, stratified for label balance)
 # --------------------------------------------------------------------------- #
-def build_tuples(n, tiers, rng):
+def build_tuples(n, tiers, doctypes, rng):
     per = max(1, n // len(AUTHORSHIP))
     tuples = []
     for auth in AUTHORSHIP:
-        defects = DEFECTS_SLOP if auth == "slop" else ["none"]
-        grid = [
-            dict(authorship=auth, institution_tier=t, discipline=d, applicant_type=a, defect=x)
-            for t, d, a, x in itertools.product(tiers, DISCIPLINES, APPLICANT_TYPES, defects)
-        ]
-        rng.shuffle(grid)
-        tuples.extend(grid[i % len(grid)] for i in range(per))
+        combos = []
+        for dt in doctypes:
+            defects = DEFECTS_BY_DOCTYPE[dt] if auth == "slop" else ["none"]
+            for t, disc, a, x in itertools.product(tiers, DISCIPLINES, APPLICANT_TYPES, defects):
+                combos.append(
+                    dict(
+                        authorship=auth,
+                        document_type=dt,
+                        institution_tier=t,
+                        discipline=disc,
+                        applicant_type=a,
+                        defect=x,
+                    )
+                )
+        rng.shuffle(combos)
+        tuples.extend(combos[i % len(combos)] for i in range(per))
     rng.shuffle(tuples)
     return tuples
 
 
 def coverage_report(records):
-    dims = ["authorship", "institution_tier", "discipline", "applicant_type", "defect"]
+    dims = [
+        "authorship",
+        "document_type",
+        "institution_tier",
+        "discipline",
+        "applicant_type",
+        "defect",
+    ]
     report = {d: dict(Counter(r.dimensions[d] for r in records)) for d in dims}
     tuple_keys = Counter(tuple(sorted(r.dimensions.items())) for r in records)
     report["_tuples"] = {"unique": len(tuple_keys), "total_records": len(records)}
@@ -634,10 +782,17 @@ def coverage_report(records):
 # --------------------------------------------------------------------------- #
 def main():
     ap = argparse.ArgumentParser(
-        description="Generate dimension-covered synthetic grant proposals."
+        description="Generate dimension-covered synthetic funding documents."
     )
     ap.add_argument(
         "--n", type=int, default=240, help="total records (split evenly across authorship labels)"
+    )
+    ap.add_argument(
+        "--doctypes",
+        nargs="+",
+        default=DOCUMENT_TYPES,
+        choices=DOCUMENT_TYPES,
+        help="document types = the document_type dimension",
     )
     ap.add_argument(
         "--tiers",
@@ -663,7 +818,7 @@ def main():
     n_human_each = max(5, per_label // len(tiers))
     seed_buckets = collect_seeds(tiers, n_human_each, args.offline, rng)
 
-    tuples = build_tuples(args.n, tiers, rng)
+    tuples = build_tuples(args.n, tiers, args.doctypes, rng)
     records = []
     for idx, dims in enumerate(tuples):
         bucket = seed_buckets.get(dims["institution_tier"]) or next(iter(seed_buckets.values()))
@@ -689,6 +844,7 @@ def _write_outputs(args, records, tiers):
             [
                 "id",
                 "label",
+                "document_type",
                 "institution_tier",
                 "discipline",
                 "applicant_type",
@@ -711,6 +867,7 @@ def _write_outputs(args, records, tiers):
                 [
                     r.id,
                     r.label,
+                    d["document_type"],
                     d["institution_tier"],
                     d["discipline"],
                     d["applicant_type"],
@@ -738,6 +895,7 @@ def _write_outputs(args, records, tiers):
             {
                 "generated_utc": datetime.now(UTC).isoformat(),
                 "n_records": len(records),
+                "doctypes": args.doctypes,
                 "tiers": tiers,
                 "backend": args.backend,
                 "model": args.model if args.backend == "anthropic" else None,
