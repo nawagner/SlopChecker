@@ -15,7 +15,7 @@ dependencies = [
 [project.optional-dependencies]
 # Heavy/optional deps live behind extras so someone working on citations
 # doesn't need the PDF or LLM stack installed (see #2).
-pdf = ["pypdf>=4.2", "pdfplumber>=0.11"]
+pdf = ["pymupdf>=1.24"]
 docx = ["python-docx>=1.1"]
 llm = ["anthropic>=0.40"]
 # Deploy-target stub for #27, not the real API — see slopchecker/web.py.
