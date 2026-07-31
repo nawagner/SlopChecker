@@ -1,0 +1,39 @@
+The Persuasion Gradient: Measuring Influence Operations at Scale
+
+A research proposal submitted to the Meridian Foundation
+(fabricated fixture document — every person, work, and finding is invented)
+
+1. Background
+
+Large-scale influence campaigns have shifted from broad demographic
+targeting to individually tailored persuasion (Vance, 2019). Recent
+work suggests that model-generated arguments can shift policy opinions
+by measurable margins (Okafor & Lindqvist, 2022). Smith (2021) argued
+that "durable attitude change requires repeated exposure across
+multiple framings" and that single-shot interventions decay within
+days. These findings extend earlier inoculation results (Smith, 2021;
+Vance, 2019).
+
+2. Prior Work
+
+Delacroix et al. (2023) report that prebunking interventions retain
+"roughly sixty percent of their measured effect ... eight weeks after
+the final exposure" in platform-scale trials. The strongest critique
+of this line of work holds that laboratory effects rarely survive
+contact with platform dynamics (Marlowe, 2018). Field replications
+remain scarce (see Okafor & Lindqvist, 2022, p. 14).
+
+References
+
+Delacroix, M., Ibarra, S., & Chen, W. (2023). Prebunking at platform
+scale: A field experiment. Journal of Applied Misinformation Studies,
+14(2), 101-129. https://doi.org/10.1234/jams.2023.0142
+
+Okafor, C., & Lindqvist, A. (2022). Tailored persuasion and the limits
+of microtargeting. Political Communication Quarterly, 9(4), 55-83.
+https://doi.org/10.5678/pcq.2022.0904
+
+Smith, J. (2021). Inoculation theory in synthetic media environments.
+arXiv:2107.04321.
+
+Vance, R. (2019). The demographic targeting fallacy. Meridian Press.

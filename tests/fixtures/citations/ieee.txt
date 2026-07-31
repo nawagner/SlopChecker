@@ -1,0 +1,30 @@
+Adaptive Spectrum Allocation for Rural Mesh Networks
+
+Technical proposal, Fenwick Infrastructure Fund
+(fabricated fixture document — every person, work, and finding is invented)
+
+Dynamic spectrum access has matured from simulation to field
+deployment over the past decade [1]. Mesh topologies remain the
+dominant architecture for last-mile rural coverage [2], although
+backhaul contention limits effective throughput [1], [3]. Recent
+trials combine TV whitespace with unlicensed midband links [3, 4].
+
+The proposed pilot builds on the coexistence framework of [2] and on
+the interference model developed in [7], extending both to
+multi-operator settings.
+
+References
+
+[1] T. Alvarez and P. Okonkwo, "Field measurements of dynamic
+spectrum access in agricultural corridors," IEEE Trans. Rural Netw.,
+vol. 8, no. 3, pp. 211-224, 2020.
+
+[2] S. Brandt, "Mesh coexistence under unlicensed midband rules," in
+Proc. 14th Symp. Community Networking, 2021, pp. 45-52.
+
+[3] L. Ferreira, M. Osei, and K. Duval, "TV whitespace backhaul: A
+two-county trial," Telecommunications Policy Review, vol. 12, no. 1,
+pp. 77-95, 2022. doi:10.9012/tpr.2022.1201
+
+[4] R. Ashworth, Spectrum Commons Revisited. Fenwick, NH: Millbrook
+Technical Press, 2019.

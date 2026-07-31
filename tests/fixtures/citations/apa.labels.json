@@ -1,0 +1,21 @@
+{
+  "style": "APA",
+  "mentions": [
+    {"marker": "Vance, 2019", "occurrence": 1, "links": ["vance-2019"]},
+    {"marker": "Okafor & Lindqvist, 2022", "occurrence": 1, "links": ["okafor-2022"]},
+    {"marker": "Smith (2021)", "occurrence": 1, "links": ["smith-2021"]},
+    {"marker": "Smith, 2021", "occurrence": 1, "links": ["smith-2021"]},
+    {"marker": "Vance, 2019", "occurrence": 2, "links": ["vance-2019"]},
+    {"marker": "Delacroix et al. (2023)", "occurrence": 1, "links": ["delacroix-2023"]},
+    {"marker": "Marlowe, 2018", "occurrence": 1, "links": [null]},
+    {"marker": "Okafor & Lindqvist, 2022, p. 14", "occurrence": 1, "links": ["okafor-2022"]}
+  ],
+  "references": [
+    {"key": "delacroix-2023", "first_author": "Delacroix", "year": 2023,
+     "doi": "10.1234/jams.2023.0142"},
+    {"key": "okafor-2022", "first_author": "Okafor", "year": 2022,
+     "doi": "10.5678/pcq.2022.0904"},
+    {"key": "smith-2021", "first_author": "Smith", "year": 2021, "arxiv_id": "2107.04321"},
+    {"key": "vance-2019", "first_author": "Vance", "year": 2019}
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "style": "numbered / IEEE",
+  "mentions": [
+    {"marker": "[1]", "occurrence": 1, "links": ["1"]},
+    {"marker": "[2]", "occurrence": 1, "links": ["2"]},
+    {"marker": "[1]", "occurrence": 2, "links": ["1"]},
+    {"marker": "[3]", "occurrence": 1, "links": ["3"]},
+    {"marker": "[3, 4]", "occurrence": 1, "links": ["3", "4"]},
+    {"marker": "[2]", "occurrence": 2, "links": ["2"]},
+    {"marker": "[7]", "occurrence": 1, "links": [null]}
+  ],
+  "references": [
+    {"key": "1", "first_author": "Alvarez", "year": 2020},
+    {"key": "2", "first_author": "Brandt", "year": 2021},
+    {"key": "3", "first_author": "Ferreira", "year": 2022, "doi": "10.9012/tpr.2022.1201"},
+    {"key": "4", "first_author": "Ashworth", "year": 2019}
+  ]
+}

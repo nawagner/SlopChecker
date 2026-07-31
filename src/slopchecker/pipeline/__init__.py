@@ -1,4 +1,8 @@
-"""Check registry + tiered runner (#5). See registry.py for how to add a check."""
+"""Check registry + tiered runner (#5). See registry.py for how to add a check.
+
+Subpackages: ``citations`` (extraction, #7) and ``quotes`` (quote checking,
+#10) — import those directly.
+"""
 
 from slopchecker.pipeline.registry import (
     TIER_ORDER,
