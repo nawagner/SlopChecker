@@ -42,7 +42,7 @@ from slopchecker.checks.cache import Cache
 from slopchecker.models import Anchor, CheckResult, Finding, FlattenedDoc, LedgerRow, Span
 
 DEFAULT_BASE_URL = "https://text.external-api.pangram.com"
-DEFAULT_MODEL = "pangram-3.3"
+DEFAULT_MODEL = "pangram-4"
 
 #: Cache namespace for detector responses (#119).
 CACHE_NAMESPACE = "pangram"
@@ -242,7 +242,7 @@ class DetectorResult:
 class PangramConfig:
     """Knobs for `PangramDetector`.
 
-    - `model` — default `"pangram-3.3"`; Pangram requires an explicit model
+    - `model` — default `"pangram-4"`; Pangram requires an explicit model
       after 2026-09-30.
     - `max_attempts` — retry ceiling for 429 / 5xx (client errors and
       auth errors are never retried).
