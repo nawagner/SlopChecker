@@ -28,7 +28,14 @@ class Credential:
 CREDENTIALS: tuple[Credential, ...] = (
     Credential("ANTHROPIC_API_KEY", "LLM tier: claims, citation support, budget review"),
     Credential("PANGRAM_API_KEY", "AI-generated text detection"),
-    Credential("CROSSREF_MAILTO", "Contact email for the Crossref polite pool", secret=False),
+    # Crossref's REST API needs no auth at all — this is a courtesy header,
+    # not a credential. #8's DOI resolution must work with this unset; never
+    # gate that check behind config.require("CROSSREF_MAILTO").
+    Credential(
+        "CROSSREF_MAILTO",
+        "Contact email for Crossref's polite pool (optional, no auth needed)",
+        secret=False,
+    ),
     Credential("CANDID_API_KEY", "Prior-funding lookups against the Candid grants dataset"),
 )
 
