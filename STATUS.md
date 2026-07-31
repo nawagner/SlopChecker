@@ -5,6 +5,8 @@ Append-only. Newest entry on top. One line per entry:
 
 ## Log
 
+- 17:39 Dan (fable) — #10 fetchers landed on `danparshall/10-fetchers`: real `SourceFetcher` implementations for arXiv (HTML then PDF-via-pymupdf), PMC-OA (DOI→PMCID→EFetch JATS body), DOAJ (OA gate — indexed DOIs only, then follow `bibjson.link[type=fulltext]`), and plain URL (gray literature); `ChainFetcher` + `build_default_fetcher()` route by `applies_to` with first-hit-wins (arXiv → PMC → DOAJ → URL). Every failure path — 4xx, 5xx, transport error, unparseable JSON, non-OA PMC, missing pymupdf — returns `None` and the check layer maps that to `source_unavailable` (skipped, mandatory reason); an uncheckable quote can never look like a `not_found`. Retries deliberately absent: #37's retry ladder wraps this layer rather than duplicating logic in each fetcher. 30 new tests via `httpx.MockTransport` (suite stays offline). Stayed out of `src/slopchecker/checks/` — Nick's #80 has its own net/cache; consolidation is later work. Full suite: 204 passed, 4 skipped, 9 deselected (integration), 0 failures / next: open PR, wire `build_default_fetcher()` into CLI as a small follow-up / blocked on nothing.
+
 - 13:02 Alex (claude-code) — #22 fixtures: added the `wrong_paper` defect — a
   citation with a real, *resolving* DOI attributed to the wrong paper
   (`metadata_match=false`, new `has_mismatched_citations` ground truth). It's the
