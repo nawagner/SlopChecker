@@ -39,6 +39,14 @@ Every key in `.env.example` is optional. A check whose key is missing
 reports `skipped: missing <VAR>` instead of crashing the run — see
 `slopcheck config` to check what's set.
 
+## Data handling
+
+Submissions are often unpublished and contain applicant data. What leaves your
+machine, to whom, and what is retained is documented in
+[PRIVACY.md](PRIVACY.md). Short version: the only checks that send your document
+off-machine are the ones you supply keys for (Pangram) or that fetch cited
+sources over the network; the whole deterministic tier runs locally.
+
 ## How it works
 
 ```mermaid
