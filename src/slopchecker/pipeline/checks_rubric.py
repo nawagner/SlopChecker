@@ -114,8 +114,7 @@ def rubric_budget_ceiling(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
     total_value, span = total
     within = total_value <= ceiling_value
     detail = (
-        f"budget total ${total_value:,.0f} vs ceiling ${ceiling_value:,.0f}"
-        f" ({ctx.rubric.file})"
+        f"budget total ${total_value:,.0f} vs ceiling ${ceiling_value:,.0f} ({ctx.rubric.file})"
     )
 
     findings: list[Finding] = []

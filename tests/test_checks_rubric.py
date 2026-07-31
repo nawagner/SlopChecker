@@ -151,9 +151,7 @@ def test_cli_rubric_flag_end_to_end(tmp_path):
     )
     assert result.exit_code == 0, result.output
 
-    report = json.loads(
-        (out / "proposal_climate.report.json").read_text("utf-8")
-    )
+    report = json.loads((out / "proposal_climate.report.json").read_text("utf-8"))
     rows = {r["check"]: r for r in report["ledger"]}
     assert rows["rubric_budget_ceiling"]["result"] is False
     assert report["solicitation"] == "aldergrove-community-climate-rfp.md"

@@ -47,6 +47,9 @@ Issues: #90 (filed and claimed this session), touching #16, #27, #74.
   all-zeros with status=ok — misleading. Assert on the real fields.
 - Merge of PR #76 hit the expected STATUS.md keep-both conflict with Nick's
   simultaneous entry; resolved per house convention.
+- GitHub Actions attached NO run to PR #128's head commit while sibling
+  PRs opened the same minute ran normally; close/reopen didn't wake it
+  either. This commit is a synthetic `synchronize` push to force a run.
 
 ## Left to do (#90 checklist)
 
