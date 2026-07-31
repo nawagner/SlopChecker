@@ -30,6 +30,11 @@ DEFAULT_TIMEOUT_S = 15.0
 # flaky endpoint doesn't read as a bad citation.
 MAX_ATTEMPTS = 3
 BACKOFF_S = (0.5, 1.5)
+# arXiv's export API rate-limits bursts hard and 503s freely — their own docs
+# ask clients to wait ~3s between calls and retry. A resolution-length ladder
+# left an available record reading as "no record" whenever a run touched arXiv
+# more than once in quick succession, so the XML path gets a patient one.
+SLOW_BACKOFF_S = (1.0, 3.0, 5.0, 8.0)
 
 _REPO = "https://github.com/nawagner/SlopChecker"
 
@@ -173,11 +178,15 @@ def resolve_doi(client: httpx.Client, doi: str) -> Resolution:
 
 
 def _get_with_retries(
-    client: httpx.Client, url: str, params: dict[str, str] | None, accept: str
+    client: httpx.Client,
+    url: str,
+    params: dict[str, str] | None,
+    accept: str,
+    backoff: tuple[float, ...] = BACKOFF_S,
 ) -> httpx.Response | None:
     """GET with the transient-failure ladder. None means "gave up", and a 404
     means "this provider has no record" — both read as "ask the next one"."""
-    for attempt in range(MAX_ATTEMPTS):
+    for attempt in range(len(backoff) + 1):
         try:
             response = client.get(url, params=params, headers={"Accept": accept})
             if response.status_code == 404:
@@ -187,8 +196,8 @@ def _get_with_retries(
             response.raise_for_status()
             return response
         except httpx.HTTPError:
-            if attempt < len(BACKOFF_S):
-                time.sleep(BACKOFF_S[attempt])
+            if attempt < len(backoff):
+                time.sleep(backoff[attempt])
                 continue
             return None
     return None
@@ -217,5 +226,11 @@ def get_text(client: httpx.Client, url: str, params: dict[str, str] | None = Non
     back off and retry, so a single unretried GET made an available provider
     look like a missing record perhaps half the time.
     """
-    response = _get_with_retries(client, url, params, "application/atom+xml, application/xml")
+    response = _get_with_retries(
+        client,
+        url,
+        params,
+        "application/atom+xml, application/xml",
+        backoff=SLOW_BACKOFF_S,
+    )
     return response.text if response is not None else None
