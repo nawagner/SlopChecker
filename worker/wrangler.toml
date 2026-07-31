@@ -19,6 +19,31 @@ binding = "ASSETS"
 # Not a secret — Railway's public service URL, just a proxy target.
 RAILWAY_API_URL = "https://slopchecker-production.up.railway.app"
 
+# Report history: EvidenceReport (#3) normalized into queryable tables.
+# Worker-binding only — the Python side never talks to D1, because that would
+# need a Cloudflare API token, and #23/#65 established that no credential is
+# minted or pasted in a session (this repo commits transcripts publicly).
+#
+# database_id is an identifier, not a secret — same class as the R2 bucket name
+# in docs/data-storage.md. It belongs in committed config, exactly as
+# Cloudflare intends.
+#
+# database_name is REQUIRED, not decorative: wrangler's
+# getDatabaseInfoFromConfig throws without it, so every `d1 migrations apply`
+# would fail.
+[[d1_databases]]
+binding = "DB"
+database_name = "slopchecker"
+# TODO(nick): replace with the UUID from `wrangler d1 create slopchecker` (or
+# the dashboard). Local dev, tests and CI do NOT need the real value —
+# `d1 migrations apply --local` and `wrangler dev` hand this string straight to
+# Miniflare as a SQLite filename without validating it. Only
+# `--remote` and production reads need the real UUID.
+database_id = "local-dev-placeholder"
+# Explicit so the drizzle.config.ts `out` <-> wrangler coupling is visible in
+# one place. Same value as wrangler's default, relative to this file.
+migrations_dir = "migrations"
+
 # slop-checker.com is already a Cloudflare zone with no conflicting DNS
 # records, so this provisions the DNS record + SSL automatically on deploy —
 # no manual `wrangler route add` needed.

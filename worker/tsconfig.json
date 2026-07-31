@@ -6,7 +6,8 @@
     "moduleResolution": "bundler",
     "strict": true,
     "skipLibCheck": true,
-    "types": ["@cloudflare/workers-types"]
+    "resolveJsonModule": true,
+    "types": ["@cloudflare/workers-types", "@cloudflare/vitest-pool-workers/types", "node"]
   },
-  "include": ["src"]
+  "include": ["src", "test", "*.ts", "*.mts"]
 }

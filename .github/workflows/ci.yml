@@ -27,3 +27,54 @@ jobs:
       # Non-blocking to start (#2).
       - run: mypy
         continue-on-error: true
+
+  # The D1 report store lives in worker/ and needs Node, so it gets its own
+  # job rather than bolting onto `test`. Two things NOT to do here, both of
+  # which would brick the repo:
+  #   - Don't add a matrix to `test`. That renames its check to `test (3.11)`
+  #     and the required status check on main never reports again (#43).
+  #   - Don't add `paths:` filters to this workflow. A worker-only PR would
+  #     skip `test` entirely, and a required check that never runs leaves the
+  #     PR permanently pending.
+  #
+  # This job is advisory until someone adds it to the `mainsaver` ruleset in
+  # the dashboard — same out-of-band step #43 took for `test`.
+  #
+  # Needs the npm registry, and nothing else: readD1Migrations reads the
+  # filesystem, applyD1Migrations runs against Miniflare's in-process SQLite,
+  # and workerd is a local binary. No Cloudflare account, no API token.
+  worker:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker
+    env:
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      # Validates the migration files against each other (journal vs snapshots).
+      # Note this does NOT compare schema.ts to the emitted SQL — the next step
+      # does that.
+      - run: npm run db:check
+      # Catches the actual failure mode: someone edits schema.ts and forgets
+      # `npm run db:generate`, so the TypeScript and the SQL disagree and the
+      # database never gets the change. Regenerating is a no-op when they're in
+      # sync ("No schema changes, nothing to migrate"), so any new or modified
+      # file under migrations/ means drift.
+      - name: schema.ts and migrations/ must agree
+        run: |
+          npm run db:generate
+          if [ -n "$(git status --porcelain migrations)" ]; then
+            echo "::error::schema.ts and migrations/ have drifted."
+            echo "Run 'npm run db:generate' in worker/ and commit the result."
+            git status --porcelain migrations
+            exit 1
+          fi
+      - run: npm test

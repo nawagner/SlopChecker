@@ -71,7 +71,7 @@ plus a `skipped`/`errored` status — never free text, never a verdict. See
 | `src/slopchecker/checks/` | deterministic checks: DOI resolution, metadata, tagging |
 | `src/slopchecker/report/` | evidence report rendering: HTML + PDF |
 | `src/slopchecker/ingest/` | PDF/DOCX/MD/HTML → normalized `FlattenedDoc` |
-| `worker/` | Cloudflare Worker proxy + landing page |
+| `worker/` | Cloudflare Worker: proxy, landing page, D1 report store |
 | `harness/` | planted-defect validation, recall scoring |
 | `fixtures/`, `tests/fixtures/` | fabricated test documents — never real applicant material (#22) |
 
@@ -80,7 +80,9 @@ plus a `skipped`/`errored` status — never free text, never a verdict. See
 example, and how to run the tests. Shared bulk data (corpora, fixtures too
 big for git) lives in Cloudflare R2 — see
 [`docs/data-storage.md`](docs/data-storage.md) for what's there and how to
-get access.
+get access. Reports can additionally be stored in Cloudflare D1 to make
+results queryable across submissions — see
+[`docs/d1-database.md`](docs/d1-database.md).
 
 ## Contributing
 

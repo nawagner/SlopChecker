@@ -50,6 +50,7 @@ enough — this is a hackathon).
 | `fixtures/rubrics/` | Emerson | synthetic rubric (funder reference doc) fixtures, mirrored to R2 (#90) |
 | `worker/public/` | Dominique | landing page + demo report statics (design/copy/UX, #74). Emerson built the first pass |
 | `worker/src/` + deploy config | Emerson | Cloudflare Worker proxy, Railway API, hosting (#27) |
+| `worker/src/db/`, `worker/src/routes/runs.ts`, `worker/migrations/` | Nick | D1 report history: schema, Drizzle migrations, `/api/runs` (#88). Lives inside Emerson's `worker/src/` — the `WORKER_OWNED` list in `index.ts` is the seam between them |
 | `harness/` | Dan (+ Fable) | planted-defect validation, recall scoring |
 | `docs/` narrative + demo | Emerson, Dominique | demo script, framing, README language |
 | `STATUS.md` | everyone | append-only log (see below) |
