@@ -11,6 +11,27 @@ Append-only. Newest entry on top. One line per entry:
 
 - 15:32 Emerson (claude-code) — claims lane de-polluted (#13): the old mapping emitted every extracted claim as a Finding whose three descriptive booleans always contained a False, so all 10 claims on the demo doc rendered as red failures indistinguishable from fabricated DOIs (and the actually-bad case showed a green quant_unsourced: YES chip). Now only flagged claims (quantitative + unsourced) become Findings — "Unsourced quantitative claim", single check quant_claim_sourced: NO — unflagged claims are silent, same policy as claim_support's supported verdict; ledger still carries total extracted + flagged count. Design comment on #13 for Dan / also verified DOI resolution on the live grant app is behaving as designed: 3 real Nature DOIs resolve, 3 fabricated 404 → red findings, PNAS+JAMA 403 bot-walls honestly reported as coverage gaps / next: #20 batch summary / blocked on nothing
 
+- 15:52 Nick (claude-code) — #123 Markdown half fixed, and **a correction to my
+  own 15:20 line**: that format table was measured on a tree that predated
+  #126's parser fix (my worktree base was older than 8f33556), so it was stale
+  when I merged it and the README told everyone not to demo from PDF. PDF has
+  worked since #126. Re-measured on current main and fixed the README. The
+  genuinely-broken format was **Markdown only**, root cause: there are two
+  independent reference-region finders, and they disagree.
+  `ingest/util.find_references()` reads `Section.title` (already stripped by
+  the loader) and finds `## References` fine; the checks call
+  `pipeline/citations/references.find_reference_region()`, which reads raw
+  `FlattenedDoc.text` where the markdown loader passes `#`s through verbatim —
+  and its `_HEADING_RE` had no `#` in it. So .md returned `None`, the whole
+  citation tier reported a coverage gap, and `citations_linked` additionally
+  emitted 9 spurious "unlinked citation" findings. One-line regex fix (accept
+  ATX markers, tolerate closing `#`s). Red-green TDD: independent agent wrote 5
+  failing tests first, verified RED at 535 passed / 5 failed, GREEN at 540
+  passed / 0 failed, plus regression guards that bare + numbered headings still
+  match and heading-shaped prose still doesn't. All four formats now identical
+  on the demo doc (9/9 well-formed, 3/9 resolved). `pipeline/` is Dan's module
+  — noted on #123 / next: PR / blocked on nothing.
+
 - 14:55 Emerson (fable) — rubric plumbing landed (#90): `CheckContext.rubric` (pre-ingested FlattenedDoc; heads-up @danparshall — one field + registry package entry in pipeline/), `slopcheck run --rubric <path>` (fail-fast on bad path; rubric filename stamps `report.solicitation` when no explicit label), and first consumer `rubric_budget_ceiling` (deterministic: conservative cap-phrase parse of rubric text vs proposal budget-total line, every extraction miss → skipped gap row, never a guess; findings quote-anchor the proposal's total line with exact spans). Ground-truth tests catch both planted budget violations (climate $90k>$75k, edu $97k>$85k) using the committed fixtures. 484 passed, ruff clean / next: web `rubric` upload slot, then spec-drafting bridge to #16 / blocked on nothing
 
 - 19:31 Nick (claude-code) — #143 CI: shipped two changes, one was wrong, and the headline metric moved for a different reason than I claimed. (a) xdist on the live suite: REVERTED. Local said 17.7s -> 10.5s at -n 4 with a clean optimum curve; the runner said 15s vs 14s serial. Zero gain, and it aims 4 concurrent workers at Crossref for nothing — same root cause as #132, this sandbox reaches those hosts via a slow proxy so the suite only *looks* network-bound here. (b) `integration` split into its own job: KEPT, after proving it hermetic (passes identically under blocked DNS, 9.39s vs 9.27s), which is what makes it safe to require — ruleset set becomes `test` AND `integration`, noted on #43. Measured across 3 runs: max job 35s -> 27s, but **wall span stayed exactly 35s every time** — with 3 jobs one starts ~6s late, with 4 jobs two start ~8s late, and the runner's allocation stagger eats the parallelism precisely. The win that IS real: time-to-required-checks-green 35s -> 21s, since test(19s)+integration(21s) both land before the advisory live(27s) that nobody waits on. Also learned the hard way: a PR with merge conflicts gets NO ci run at all (mergeable_state dirty -> no refs/pull/N/merge), which shows as *no check* rather than a failing one — that's a #43 landmine, fix is always rebase / next: #132 remains a dev-loop-only fix / blocked on nothing.
