@@ -31,9 +31,11 @@ DEFAULT_TIMEOUT_S = 30.0
 
 # Packages scanned by discover(). pipeline/checks_builtin.py holds the trivial
 # built-ins; slopchecker.checks is Nick's deterministic-tier package (#8 etc.)
-# and is picked up automatically once it exists.
+# and is picked up automatically once it exists. pipeline/claim_support is #11's
+# LLM check package (registers under tier="llm").
 CHECK_PACKAGES: tuple[str, ...] = (
     "slopchecker.pipeline.checks_builtin",
+    "slopchecker.pipeline.claim_support",
     "slopchecker.checks",
 )
 
