@@ -2,19 +2,20 @@
 
 ## Executive Summary
 
-Practitioners and policymakers alike have a role to play here. The discussion draws on established community methods and current data.
+Practitioners and policymakers alike have a role to play here [1]. The discussion draws on established community methods and current data [2].
 
 ## Background
 
-Careful framing guards against overstatement. Recent analysis points toward a tractable path forward. The takeaways are meant to inform, not to prescribe.
+Careful framing guards against overstatement [3]. Recent analysis points toward a tractable path forward [4]. The takeaways are meant to inform, not to prescribe [5].
 
 ## Findings
 
-Practitioners and policymakers alike have a role to play here. The takeaways are meant to inform, not to prescribe. Recent analysis points toward a tractable path forward.
+Practitioners and policymakers alike have a role to play here [6]. The takeaways are meant to inform, not to prescribe [7]. Recent analysis points toward a tractable path forward [8].
 
 ## Recommendations
 
-The discussion draws on established community methods and current data. This piece examines community-based interventions to reduce childhood asthma disparities, a question of growing public interest.
+The discussion draws on established community methods and current data [9]. This piece examines community-based interventions to reduce childhood asthma disparities, a question of growing public interest [10].
+As one source notes, “This proposal addresses the target problem, a problem with substantial significance.” [1]
 
 ## Endnotes
 

@@ -2,13 +2,13 @@
 
 ## Specific Aims
 
-Aim 1: Advance screening pathways for hypertension in underserved populations via a intervention-focused strategy.
-Aim 2: Advance screening pathways for hypertension in underserved populations via a intervention-focused strategy.
-Aim 3: Advance screening pathways for hypertension in underserved populations via a intervention-focused strategy.
+Aim 1: Advance screening pathways for hypertension in underserved populations via a intervention-focused strategy [1].
+Aim 2: Advance screening pathways for hypertension in underserved populations via a intervention-focused strategy [2].
+Aim 3: Advance screening pathways for hypertension in underserved populations via a intervention-focused strategy [3].
 
 ## Background
 
-Findings will be disseminated through peer-reviewed publication and open data release. Rigorous, pre-registered analyses will guard against bias and support reproducibility. This proposal addresses screening pathways for hypertension in underserved populations, a problem with substantial significance. We will assemble a multidisciplinary team with complementary expertise.
+Findings will be disseminated through peer-reviewed publication and open data release [4]. Rigorous, pre-registered analyses will guard against bias and support reproducibility [5]. This proposal addresses screening pathways for hypertension in underserved populations, a problem with substantial significance [6]. We will assemble a multidisciplinary team with complementary expertise [7].
 
 ## Approach
 
@@ -25,6 +25,7 @@ Two co-equal PIs contribute complementary methods under joint leadership. The R1
 ## Budget Justification
 
 Budget: personnel $726,017; equipment $113,747; travel $18,865; indirect costs $133,425. Total requested support is $992,054 over 5 years at a R1 institution.
+As one source notes, “We will assemble a multidisciplinary team with complementary expertise.” [1]
 
 ## References
 

@@ -39,6 +39,20 @@ All four formats round-trip through `slopchecker.ingest.ingest()` with
 `status=ok`; note the PDF path preserves text and DOIs but not heading structure
 (sections come back empty), which is a real ingestion characteristic to test for.
 
+## In-text citations (#123)
+
+Every document body carries in-text `[n]` markers woven onto the claim sentences
+they support, plus one grounded quote (a source's own claim in quotation marks
+with its marker adjacent). Without them, every `[n]` sat inside the bibliography,
+so `citations_linked` reported "no in-text citations" and `check_quotes` found
+nothing to ground — the whole citation-linkage tier was dark on this corpus. The
+weave is deterministic and lives in `weave_body_blocks` (shared by
+`synth_proposals.py` and `render_fixtures.py`), so `corpus.jsonl['text']` and the
+rendered files carry identical markers. Note that on `blog_post` (`Sources`) and
+`think_tank_report` (`Endnotes`), and on the `.md`/`.pdf` renders, the bare-DOI
+reference list does not parse yet, so markers do not fully *link* — that parser
+gap is tracked in #126, separate from the body-side markers here.
+
 ## Document types
 
 The `document_type` dimension covers all three types #22 asks for:

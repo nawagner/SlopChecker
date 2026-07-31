@@ -2,19 +2,20 @@
 
 ## Executive Summary
 
-The discussion draws on established simulation methods and current data. This piece examines machine learning for protein structure prediction in drug discovery, a question of growing public interest.
+The discussion draws on established simulation methods and current data [1]. This piece examines machine learning for protein structure prediction in drug discovery, a question of growing public interest [2].
 
 ## Background
 
-Careful framing guards against overstatement. The takeaways are meant to inform, not to prescribe. The discussion draws on established simulation methods and current data.
+Careful framing guards against overstatement [3]. The takeaways are meant to inform, not to prescribe [4]. The discussion draws on established simulation methods and current data [5].
 
 ## Findings
 
-This is, without question, the definitive account of the issue. Recent analysis points toward a tractable path forward. Practitioners and policymakers alike have a role to play here. This piece examines machine learning for protein structure prediction in drug discovery, a question of growing public interest.
+This is, without question, the definitive account of the issue [6]. Recent analysis points toward a tractable path forward [7]. Practitioners and policymakers alike have a role to play here. This piece examines machine learning for protein structure prediction in drug discovery, a question of growing public interest.
 
 ## Recommendations
 
 Practitioners and policymakers alike have a role to play here. The takeaways are meant to inform, not to prescribe.
+As one source notes, “This proposal addresses the target problem, a problem with substantial significance.” [1]
 
 ## Endnotes
 

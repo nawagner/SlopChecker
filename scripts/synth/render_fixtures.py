@@ -28,9 +28,13 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from synth_proposals import weave_body_blocks  # noqa: E402  (same-dir sibling module)
 
 CITATION_HEADING = {
     "grant_application": "References",
@@ -106,6 +110,10 @@ def _near_dup_pair(records):
 def _blocks(record):
     title = record["title"]
     body = [(k.replace("_", " ").title(), v) for k, v in record["sections"].items()]
+    # #123: weave in-text markers + a grounded quote into the body, exactly as the
+    # generator does for corpus.jsonl['text'], so the rendered files exercise
+    # citations_linked and check_quotes instead of leaving that tier dark.
+    body = list(weave_body_blocks(body, record["citations"]))
     heading = CITATION_HEADING.get(record["dimensions"]["document_type"], "References")
     cites = [f"{c['marker']} https://doi.org/{c['doi']}" for c in record["citations"]]
     return title, body, heading, cites

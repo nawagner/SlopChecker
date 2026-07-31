@@ -2,19 +2,20 @@
 
 ## Dek
 
-What we know about wearable sensors for continuous glucose monitoring in rural clinics, and what to watch.
+What we know about wearable sensors for continuous glucose monitoring in rural clinics, and what to watch [1].
 
 ## Intro
 
-The evidence base is partial, and important gaps remain. The takeaways are meant to inform, not to prescribe. Practitioners and policymakers alike have a role to play here.
+The evidence base is partial, and important gaps remain [2]. The takeaways are meant to inform, not to prescribe [3]. Practitioners and policymakers alike have a role to play here [4].
 
 ## Body
 
-Careful framing guards against overstatement. The discussion draws on established throughput methods and current data. The takeaways are meant to inform, not to prescribe.
+Careful framing guards against overstatement [5]. The discussion draws on established throughput methods and current data [6]. The takeaways are meant to inform, not to prescribe.
 
 ## Takeaway
 
 Every serious observer already agrees; the matter is entirely settled. These findings will transform policy overnight, guaranteed.
+As one source notes, “This proposal addresses the target problem, a problem with substantial significance.” [1]
 
 ## Sources
 

@@ -2,17 +2,17 @@
 
 ## Specific Aims
 
-Aim 1: Advance measuring the labor-market effects of remote work policy via a field experiment-focused strategy.
-Aim 2: Advance measuring the labor-market effects of remote work policy via a field experiment-focused strategy.
-Aim 3: Advance measuring the labor-market effects of remote work policy via a field experiment-focused strategy.
+Aim 1: Advance measuring the labor-market effects of remote work policy via a field experiment-focused strategy [1].
+Aim 2: Advance measuring the labor-market effects of remote work policy via a field experiment-focused strategy [2].
+Aim 3: Advance measuring the labor-market effects of remote work policy via a field experiment-focused strategy [3].
 
 ## Background
 
-The approach integrates established field experiment methods with a novel analytical pipeline. Our preliminary data suggest a tractable path toward measurable improvement. This proposal addresses measuring the labor-market effects of remote work policy, a problem with substantial significance. We will assemble a multidisciplinary team with complementary expertise.
+The approach integrates established field experiment methods with a novel analytical pipeline [4]. Our preliminary data suggest a tractable path toward measurable improvement [5]. This proposal addresses measuring the labor-market effects of remote work policy, a problem with substantial significance [6]. We will assemble a multidisciplinary team with complementary expertise [7].
 
 ## Approach
 
-Findings will be disseminated through peer-reviewed publication and open data release. The approach integrates established field experiment methods with a novel analytical pipeline. Prior work has established a partial understanding, yet key gaps remain. Our preliminary data suggest a tractable path toward measurable improvement.
+Findings will be disseminated through peer-reviewed publication and open data release [8]. The approach integrates established field experiment methods with a novel analytical pipeline [9]. Prior work has established a partial understanding, yet key gaps remain. Our preliminary data suggest a tractable path toward measurable improvement.
 
 ## Innovation
 
@@ -25,6 +25,7 @@ Two co-equal PIs contribute complementary methods under joint leadership. The R2
 ## Budget Justification
 
 Budget: personnel $265,462; equipment $95,223; travel $8,779; indirect costs $59,937. Total requested support is $429,401 over 3 years at a R2 institution.
+As one source notes, “Findings will be disseminated through peer-reviewed publication and open data release.” [1]
 
 ## References
 

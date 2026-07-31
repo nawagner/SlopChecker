@@ -2,13 +2,13 @@
 
 ## Specific Aims
 
-Aim 1: Advance energy-efficient edge inference for implantable devices via a fabrication-focused strategy.
-Aim 2: Advance energy-efficient edge inference for implantable devices via a fabrication-focused strategy.
-Aim 3: Advance energy-efficient edge inference for implantable devices via a fabrication-focused strategy.
+Aim 1: Advance energy-efficient edge inference for implantable devices via a fabrication-focused strategy [1].
+Aim 2: Advance energy-efficient edge inference for implantable devices via a fabrication-focused strategy [2].
+Aim 3: Advance energy-efficient edge inference for implantable devices via a fabrication-focused strategy [3].
 
 ## Background
 
-This proposal addresses energy-efficient edge inference for implantable devices, a problem with substantial significance. Prior work has established a partial understanding, yet key gaps remain. We will assemble a multidisciplinary team with complementary expertise. Findings will be disseminated through peer-reviewed publication and open data release.
+This proposal addresses energy-efficient edge inference for implantable devices, a problem with substantial significance [4]. Prior work has established a partial understanding, yet key gaps remain. We will assemble a multidisciplinary team with complementary expertise. Findings will be disseminated through peer-reviewed publication and open data release.
 
 ## Approach
 
@@ -25,6 +25,7 @@ The PI's first independent award; strong mentorship is in place. The R2 host ins
 ## Budget Justification
 
 Budget: personnel $216,982; equipment $57,938; travel $15,751; indirect costs $45,726. Total requested support is $336,397 over 2 years at a R2 institution.
+As one source notes, “Prior work has established a partial understanding, yet key gaps remain.” [1]
 
 ## References
 

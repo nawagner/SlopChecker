@@ -2,19 +2,20 @@
 
 ## Executive Summary
 
-Recent analysis points toward a tractable path forward. This piece examines energy-efficient edge inference for implantable devices, a question of growing public interest.
+Recent analysis points toward a tractable path forward [1]. This piece examines energy-efficient edge inference for implantable devices, a question of growing public interest [2].
 
 ## Background
 
-Recent analysis points toward a tractable path forward. The evidence base is partial, and important gaps remain. This piece examines energy-efficient edge inference for implantable devices, a question of growing public interest.
+Recent analysis points toward a tractable path forward [3]. The evidence base is partial, and important gaps remain [4]. This piece examines energy-efficient edge inference for implantable devices, a question of growing public interest [5].
 
 ## Findings
 
-The conclusions here are beyond dispute and settle the debate for good. The takeaways are meant to inform, not to prescribe. The discussion draws on established prototype methods and current data. Recent analysis points toward a tractable path forward.
+The conclusions here are beyond dispute and settle the debate for good [6]. The takeaways are meant to inform, not to prescribe [7]. The discussion draws on established prototype methods and current data [8]. Recent analysis points toward a tractable path forward.
 
 ## Recommendations
 
 This piece examines energy-efficient edge inference for implantable devices, a question of growing public interest. Recent analysis points toward a tractable path forward.
+As one source notes, “Prior work has established a partial understanding, yet key gaps remain.” [1]
 
 ## Endnotes
 
