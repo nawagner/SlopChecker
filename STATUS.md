@@ -48,6 +48,18 @@ Append-only. Newest entry on top. One line per entry:
   extraction from FlattenedDoc); will flag Nick on #8 before Phase 4 (checks/)
   / blocked on nothing.
 
+- 15:08 Nick (claude-code) — #74 dropped the API status strip from the
+  landing page (`API live · v0.1.0 · 2/4 credentialed checks armed`). Two
+  problems: the denominator is `len(config.CREDENTIALS)`, which counts
+  `CROSSREF_MAILTO` (not a credential — Crossref needs no auth, and
+  `checks/net.py` forbids gating DOI resolution on it) and `CANDID_API_KEY`
+  (no check uses it yet), so "2/4" undersold a fully-armed pipeline; and
+  "armed" is combat framing on a signals-not-verdicts page. Markup, CSS,
+  and the `/api/health` → `/api/config` fetch all deleted — 20 lines, no
+  other change. `/api/config` still answers server-side for debugging.
+  `worker/public/` is Dominique's module, so this is noted on #74. Next:
+  nothing / blocked on nothing.
+
 - 14:53 Nick (claude-code) — #119 shared KV cache landed on
   `nick/119-kv-cache`. Motivation was a comment in `checks_detect.py`: *"no
   `cache_dir` — the server filesystem is ephemeral"* — **Pangram was entirely

@@ -202,13 +202,6 @@
   .status.busy { color: var(--accent); }
   .demolink { font-size: .85rem; margin-top: .9rem; }
 
-  /* api status strip */
-  .apistrip { font-family: var(--mono); font-size: .76rem; color: var(--soft);
-              border: 1px solid var(--rule); border-radius: 4px; padding: .55rem .9rem;
-              display: none; margin-top: 3.5rem; }
-  .apistrip .dot { display: inline-block; width: .55em; height: .55em; border-radius: 50%;
-                   background: var(--yes); margin-right: .5em; }
-
   footer { margin-top: 3.5rem; border-top: 1px solid var(--rule); background: var(--bg-tint); }
   footer .wrap { padding: 1.4rem 1.25rem 2.5rem; font-size: .78rem; color: var(--soft);
                  max-width: 62rem; }
@@ -498,8 +491,6 @@ gap in coverage — never as a quiet pass.</p>
   wrote ourselves.</p>
 </section>
 
-<div class="apistrip" id="apistrip"><span class="dot"></span><span id="apitext"></span></div>
-
 </main>
 
 <footer>
@@ -593,17 +584,6 @@ gap in coverage — never as a quiet pass.</p>
         setTimeout(function () { window.location.href = "/demo-report.html"; }, 1400);
       });
   });
-
-  // Live API strip: only shown when the health endpoint answers.
-  fetch("/api/health").then(function (r) { return r.json(); }).then(function (h) {
-    return fetch("/api/config").then(function (r) { return r.json(); }).then(function (c) {
-      var armed = c.credentials.filter(function (x) { return x.set; }).length;
-      document.getElementById("apitext").textContent =
-        "API live · v" + h.version + " · " + armed + "/" + c.credentials.length +
-        " credentialed checks armed";
-      document.getElementById("apistrip").style.display = "block";
-    });
-  }).catch(function () { /* offline or local file — leave the strip hidden */ });
 })();
 </script>
 </body>
