@@ -83,6 +83,49 @@ def _anchor_spans(text: str, findings: list[dict]) -> list[tuple[int, int, dict]
     return spans
 
 
+def _soft_joins(par: str) -> set[int]:
+    """Indices of newlines that are PDF line-wrap artifacts, not structure.
+
+    Extracted PDF text carries one ``\\n`` per visual line; mid-sentence
+    breaks make the report unreadable. A newline renders as a space when the
+    text on both sides reads as one continuing sentence (conservatively:
+    lowercase/comma before, lowercase or opening bracket after). Everything
+    else — headings, key-value lines, list items — keeps its hard break.
+    The swap is 1:1 in characters, so anchor offsets never move.
+    """
+    joins: set[int] = set()
+    for i, ch in enumerate(par):
+        if ch != "\n":
+            continue
+        # Look past the trailing/leading spaces pdf extraction leaves on lines.
+        before = par[:i].rstrip(" \t")
+        after = par[i + 1 :].lstrip(" \t")
+        prev = before[-1] if before else ""
+        nxt = after[0] if after else ""
+        if (prev.islower() or prev in ",;") and (nxt.islower() or nxt in "(\"'"):
+            joins.add(i)
+    return joins
+
+
+def _display(par: str, seg_start: int, seg_end: int, joins: set[int]) -> str:
+    """One chunk of paragraph text, escaped, with soft-join newlines as spaces.
+
+    Dropped rather than spaced when the line already ended in whitespace —
+    under ``pre-wrap`` a doubled space is visible. Safe: mark boundaries come
+    from the original offsets, and this only edits inside one segment.
+    """
+    chunk = par[seg_start:seg_end]
+    if joins:
+        out = []
+        for j, c in enumerate(chunk):
+            if c == "\n" and (seg_start + j) in joins:
+                out.append("" if out and out[-1].endswith((" ", "\t")) else " ")
+            else:
+                out.append(c)
+        chunk = "".join(out)
+    return escape(chunk)
+
+
 def _mark_paragraph(par: str, offset: int, spans: list[tuple[int, int, dict]]) -> str:
     """Render one paragraph, wrapping annotated segments in <mark> tags.
 
@@ -90,6 +133,7 @@ def _mark_paragraph(par: str, offset: int, spans: list[tuple[int, int, dict]]) -
     span boundary; a segment covered by several findings carries all their ids
     in data-anno and takes the strongest lane for its color.
     """
+    joins = _soft_joins(par)
     end = offset + len(par)
     local = [
         (max(s, offset) - offset, min(e, end) - offset, f)
@@ -97,12 +141,12 @@ def _mark_paragraph(par: str, offset: int, spans: list[tuple[int, int, dict]]) -
         if s < end and e > offset
     ]
     if not local:
-        return escape(par)
+        return _display(par, 0, len(par), joins)
 
     bounds = sorted({0, len(par), *(b for s, e, _ in local for b in (s, e))})
     out = []
     for seg_start, seg_end in zip(bounds, bounds[1:], strict=False):
-        chunk = escape(par[seg_start:seg_end])
+        chunk = _display(par, seg_start, seg_end, joins)
         covering = [f for s, e, f in local if s <= seg_start and e >= seg_end]
         if not covering:
             out.append(chunk)
