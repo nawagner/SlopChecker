@@ -40,18 +40,36 @@ jobs:
       # this PR — widen once someone reformats those with their owner's nod.
       - run: ruff format --check src tests
       - run: pytest
-      # Full CLI chain on fabricated fixtures (#81). Deselected from the
-      # default run by addopts; without this step it never runs anywhere.
-      # Browser leg: ubuntu runners ship google-chrome on PATH (see #49).
-      #
-      # Also the only place a browser starts: the real PDF render moved here
-      # from the unit run (#118), where two cold Chrome launches cost ~11s of
-      # a 16s step. It stays in this job — inside the required check — rather
-      # than a parallel one, so the shipping artifact keeps its merge gate.
-      - run: pytest -m integration
       # Non-blocking to start (#2).
       - run: mypy
         continue-on-error: true
+
+  # Full CLI chain on fabricated fixtures (#81), plus the one real PDF render
+  # (#118). Split out of `test` because it was 11.6s of that job's 35s and
+  # nothing in it needs to be serialised behind the unit run (#143).
+  #
+  # ✅ Unlike `live`, this job SHOULD go in the `mainsaver` ruleset when #43 is
+  # flipped — required set is `test` AND `integration`. It is hermetic: run
+  # under blocked DNS it passes identically and in the same time (9.39s vs
+  # 9.27s), so it has none of live's third-party-flakiness problem. Splitting
+  # it costs no gate coverage *provided* it is required alongside `test`.
+  # Adding the job without adding it to the ruleset is the one way to get this
+  # wrong — that would silently drop the CLI chain out of the merge gate.
+  #
+  # Browser leg: ubuntu runners ship google-chrome on PATH (see #49).
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+      - run: uv pip install --system -e ".[web,dev,pdf,docx,similarity,harness]"
+      - run: pytest -m integration
 
   # tests/test_checks_live.py really calls doi.org, Crossref, OpenAlex and
   # arXiv. That is deliberate and stays (a mocked resolver agrees with our
@@ -85,6 +103,20 @@ jobs:
           enable-cache: true
           cache-dependency-glob: pyproject.toml
       - run: uv pip install --system -e ".[web,dev,pdf,docx,similarity,harness]"
+      # NOT parallelised, and the measurement is why. Locally xdist looked
+      # like a clear win (serial 17.7s -> 10.5s at -n 4), so #143 shipped
+      # `-n 4` to CI — where it came back 15s against 14s serial. No gain,
+      # and it puts four concurrent workers against doi.org/Crossref/OpenAlex
+      # /arXiv for nothing.
+      #
+      # The reason is the same one that made #132 look urgent: this sandbox
+      # reaches those hosts through a slow proxy, so locally the suite is
+      # network-bound and workers overlap the waiting. On a GitHub runner the
+      # network is fast enough that the suite isn't waiting much, and xdist's
+      # worker startup is pure overhead.
+      #
+      # Don't re-add it on the strength of a local benchmark. Measure on the
+      # runner.
       - run: pytest -m live
 
   # The D1 report store lives in worker/ and needs Node, so it gets its own

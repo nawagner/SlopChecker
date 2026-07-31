@@ -136,3 +136,89 @@ on one. Worth its own issue.
 - Watch a real run to confirm the uv and cache numbers on the runner
   (local measurements are a sandbox, not `ubuntu-latest`).
 - When #43 is flipped: add `test` to the ruleset, **not** `live`.
+
+---
+
+# Part 3 — #143: what didn't work, and the metric that did
+
+#114 and #118 cut *work*. By this point the problem was *shape*: four jobs,
+none dominant. I shipped two changes. **One was wrong, and the one that
+survived improved a different metric than the one I set out to improve.**
+
+## Reverted: xdist on the live suite
+
+Locally this looked decisive — serial 17.7s, n=2 13.5s, n=3 11.7s, n=4 10.5s,
+n=6 12.5s, n=8 12.4s. A clean curve with an obvious optimum, reproducible.
+
+**On the runner: 15s against 14s serial.** Nothing. And it aims four
+concurrent workers at doi.org/Crossref/OpenAlex/arXiv for no benefit.
+
+Same root cause as the #132 finding: this sandbox reaches those hosts through
+a slow proxy, so the suite is genuinely network-bound *here* and workers
+overlap the waiting. On a GitHub runner the network is fast enough that it
+barely waits, and xdist's worker startup is pure overhead. Recorded in the
+workflow comment at the point of use so nobody re-adds it off a local
+benchmark.
+
+## Kept: `integration` in its own job
+
+Hermetic, verified rather than assumed — under blocked DNS it passes
+identically and in the same time (9.39s vs 9.27s). That's what makes it safe
+to *require*, unlike `live`. Ruleset set becomes `test` AND `integration`
+(noted on #43); adding the job without the ruleset entry would be the #114
+mistake in a new costume.
+
+## The measurement that reframed it
+
+Three runs, and the number I was chasing never moved:
+
+| | before (3 jobs) | run 1 (4 jobs, xdist) | run 2 (4 jobs, no xdist) |
+|---|---|---|---|
+| `test` | 35s | 24s | 19s |
+| `integration` | — | 29s | 21s |
+| `live` | 26s | 25s | 27s |
+| `worker` | 20s | 20s | 23s |
+| max job | 35s | 29s | 27s |
+| **wall span** | **35s** | **35s** | **35s** |
+
+**Wall span was exactly 35s in all three.** With 3 jobs one is allocated ~6s
+late; with 4 jobs, two are allocated ~8s late. The runner's allocation stagger
+absorbs the parallelism almost exactly. More jobs did not make CI finish
+sooner.
+
+What *did* improve is the metric that actually gates a merge:
+
+- time-to-**required**-checks-green: **35s → 21s**
+
+`test` (19s) and `integration` (21s) both land before the advisory `live`
+(27s), and nobody waits on `live` — it can never be required, by design. So
+once #43 flips, a PR becomes mergeable 14s sooner even though the run as a
+whole still takes 35s.
+
+That is close to the ~21s I originally projected, and it is worth being clear
+that I got there for a different reason than I claimed. The projection assumed
+span would fall. It didn't.
+
+## A CI landmine found by accident
+
+A PR with merge conflicts gets **no workflow run at all** — `mergeable_state:
+dirty` means GitHub can't compute `refs/pull/N/merge`, so `pull_request`
+workflows never fire. I burned real time misdiagnosing this as a dropped
+webhook and then as a repo-wide Actions outage; both were wrong.
+
+It's nasty because it inverts the signal: the PR shows **no check**, not a
+failing one, and the last green run stays visible so it reads as passing. Same
+shape `ci.yml` already warns about for `paths:` filters. Once #43 flips, a PR
+that develops a conflict silently stops producing checks and the fix is always
+rebase, never re-run.
+
+## Standing conclusion for whoever optimises this next
+
+Per-job setup (~8-9s x 4) plus allocation stagger is the floor, and splitting
+further will not beat it — that is now measured, not assumed. Real remaining
+work is inside `test_integration_e2e.py` (subprocess-heavy) which is #81's
+territory. And #132 stays a dev-loop fix: 19s locally, 0.147s on the runner.
+
+**Three times this session a local profile pointed at the wrong thing** (#118
+PDF tests invisible locally, #132 overstated by ~100x, xdist transferring to
+zero). Profile on the machine that has the problem.
