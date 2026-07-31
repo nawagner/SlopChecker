@@ -224,8 +224,7 @@ def test_unknown_fields_rejected():
 
 
 def test_check_definition():
-    check = Check(id="doi_resolves", name="DOI resolves", tier="deterministic",
-                  needs_network=True)
+    check = Check(id="doi_resolves", name="DOI resolves", tier="deterministic", needs_network=True)
     assert check.est_cost_usd == 0.0
     assert Check.model_validate_json(check.model_dump_json()) == check
     with pytest.raises(ValidationError):
