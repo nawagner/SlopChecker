@@ -133,6 +133,95 @@ def test_no_reference_section_degrades_to_unlinked():
     assert len(ext.findings) == 1
 
 
+# ------------------------------------------------------------- CRLF (#98)
+
+
+def to_crlf(text: str) -> str:
+    assert "\r" not in text, "fixture already has CR — conversion would double it"
+    return text.replace("\n", "\r\n")
+
+
+def test_reference_region_found_crlf():
+    text, _ = load("apa")
+    crlf = to_crlf(text)
+    region = find_reference_region(crlf)
+    assert region is not None
+    assert "Delacroix" in crlf[region.start : region.end]
+    assert "References" not in crlf[region.start : region.end]
+
+
+@pytest.mark.parametrize("name", DOCS)
+def test_crlf_extraction_parity(name):
+    """CRLF and LF versions of the same doc extract identically (#98)."""
+    text, _ = load(name)
+    lf = extract_citations(text)
+    crlf_text = to_crlf(text)
+    crlf = extract_citations(crlf_text)
+
+    # same references, same parsed fields
+    assert [r.key for r in crlf.references] == [r.key for r in lf.references]
+    for a, b in zip(crlf.references, lf.references, strict=True):
+        assert (a.year, a.doi, a.arxiv_id, a.pages, a.title, a.venue, a.authors) == (
+            b.year,
+            b.doi,
+            b.arxiv_id,
+            b.pages,
+            b.title,
+            b.venue,
+            b.authors,
+        )
+
+    # same mentions, same linking
+    assert [m.marker for m in crlf.mentions] == [m.marker for m in lf.mentions]
+    assert [c.reference.key if c.reference else None for c in crlf.citations] == [
+        c.reference.key if c.reference else None for c in lf.citations
+    ]
+
+    # claim sentences match modulo line endings
+    for a, b in zip(crlf.mentions, lf.mentions, strict=True):
+        assert a.claim_text.replace("\r\n", "\n") == b.claim_text.replace("\r\n", "\n")
+
+    # same findings — guards the grounding loop below against passing vacuously
+    assert [f.target for f in crlf.findings] == [f.target for f in lf.findings]
+
+    # spans stay mechanically grounded in the CRLF text (quote-anchor rule)
+    for r in crlf.references:
+        assert crlf_text[r.span.start : r.span.end] == r.raw
+    for f in crlf.findings:
+        assert crlf_text[f.anchor.span.start : f.anchor.span.end] == f.anchor.quote
+
+
+def test_crlf_blank_line_split_keeps_wrapped_entries_whole():
+    """Blank-line-separated entries whose continuation lines start at column 0
+    must not fragment under CRLF (`\\n[ \\t]*\\n` never matches `\\r\\n\\r\\n`)."""
+    body = (
+        "Prior work shows the effect (Vega, 2021).\n"
+        "\n"
+        "References\n"
+        "\n"
+        "Vega, L. (2021). First fabricated entry.\n"
+        "Journal of Nothing, 3(1), 1-9.\n"
+        "\n"
+        "Wren, T. (2020). Second fabricated entry.\n"
+        "Annals of Nowhere, 7(2), 10-19.\n"
+    )
+    lf = extract_citations(body)
+    crlf = extract_citations(to_crlf(body))
+    assert [r.key for r in lf.references] == ["vega-2021", "wren-2020"]
+    assert [r.key for r in crlf.references] == ["vega-2021", "wren-2020"]
+    assert crlf.citations[0].reference is not None
+
+
+def test_crlf_claim_sentence_clamped_to_paragraph():
+    """A heading with no terminal punctuation must not bleed into the claim
+    sentence when paragraphs are CRLF-separated."""
+    body = "Section 2 Methods\n\nThe effect replicates (Vega, 2021). More text follows."
+    for text in (body, to_crlf(body)):
+        (mention,) = extract_citations(text).mentions
+        claim = mention.claim_text.replace("\r\n", "\n")
+        assert claim == "The effect replicates (Vega, 2021)."
+
+
 # ------------------------------------------------------- precision / recall
 
 
