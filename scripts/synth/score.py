@@ -23,6 +23,7 @@ import argparse
 import csv
 import json
 import os
+import re
 
 FIELDS = [
     "ai_generated",
@@ -30,7 +31,9 @@ FIELDS = [
     "has_mismatched_citations",
     "overclaims",
     "budget_inflated",
+    "budget_math",
     "missing_methods",
+    "is_near_duplicate",
 ]
 
 OVERCLAIM_MARKERS = [
@@ -92,9 +95,27 @@ def demo_checker(corpus_dir):
             "has_mismatched_citations": False,
             "overclaims": any(m in text for m in OVERCLAIM_MARKERS),
             "budget_inflated": budget > BUDGET_INFLATED_THRESHOLD,
+            # budget_math IS deterministically checkable: parse the dollar figures,
+            # treat the last (stated total) vs the sum of the line items.
+            "budget_math": _budget_mismatch(r["text"]),
             "missing_methods": "appropriate methods to achieve the aims" in text,
+            # near-duplicate is a cross-document similarity property; a per-doc
+            # text scan can't see it -> always misses (recall 0).
+            "is_near_duplicate": False,
         }
     return preds
+
+
+def _budget_mismatch(text):
+    # Label-aware (robust to sentence reordering): the stated total by its label,
+    # vs the sum of the labeled line items.
+    m = re.search(r"Total requested support is \$([\d,]+)", text)
+    if not m:
+        return False
+    total = int(m.group(1).replace(",", ""))
+    items = re.findall(r"(?:personnel|equipment|travel|indirect costs) \$([\d,]+)", text)
+    nums = [int(x.replace(",", "")) for x in items]
+    return len(nums) >= 2 and sum(nums) != total
 
 
 # --------------------------------------------------------------------------- #

@@ -1,30 +1,27 @@
-# A Policy Assessment of early detection of pancreatic cancer using circulating tumor DNA
+# Machine learning for protein structure prediction in drug discovery: Evidence and Options
 
 ## Executive Summary
 
-The takeaways are meant to inform, not to prescribe. Careful framing guards against overstatement.
+The discussion draws on established simulation methods and current data. This piece examines machine learning for protein structure prediction in drug discovery, a question of growing public interest.
 
 ## Background
 
-Careful framing guards against overstatement. Recent analysis points toward a tractable path forward. The evidence base is partial, and important gaps remain.
+Careful framing guards against overstatement. The takeaways are meant to inform, not to prescribe. The discussion draws on established simulation methods and current data.
 
 ## Findings
 
-These findings will transform policy overnight, guaranteed. The evidence base is partial, and important gaps remain. This piece examines early detection of pancreatic cancer using circulating tumor DNA, a question of growing public interest. Recent analysis points toward a tractable path forward.
+This is, without question, the definitive account of the issue. Recent analysis points toward a tractable path forward. Practitioners and policymakers alike have a role to play here. This piece examines machine learning for protein structure prediction in drug discovery, a question of growing public interest.
 
 ## Recommendations
 
-Careful framing guards against overstatement. The evidence base is partial, and important gaps remain.
+Practitioners and policymakers alike have a role to play here. The takeaways are meant to inform, not to prescribe.
 
 ## Endnotes
 
 - [1] https://doi.org/10.1371/journal.pone.0173664
-- [2] https://doi.org/10.3449/971hspth
-- [3] https://doi.org/10.8489/eh58b6pj
-- [4] https://doi.org/10.6780/p0lf7xe7
-- [5] https://doi.org/10.1109/TPAMI.2016.2577031
-- [6] https://doi.org/10.7338/xqbwewpg
-- [7] https://doi.org/10.1002/anie.201907688
-- [8] https://doi.org/10.1021/jacs.9b02765
-- [9] https://doi.org/10.3986/ie3csmcm
-- [10] https://doi.org/10.6080/6z84qcms
+- [2] https://doi.org/10.3430/eir9uy7s
+- [3] https://doi.org/10.1056/NEJMoa2034577
+- [4] https://doi.org/10.4743/0v3z0gu1
+- [5] https://doi.org/10.1001/jama.2016.9797
+- [6] https://doi.org/10.1126/science.1259855
+- [7] https://doi.org/10.7105/i9d99vh0

@@ -16,8 +16,9 @@ DIMENSIONS
     applicant_type    early_stage_investigator | established_pi | multi_pi_team
                       | small_nonprofit
     defect            (slop only) fabricated_citations | wrong_paper | overclaims
-                      | all, plus budget_inflated | missing_methods (grants only).
-                      wrong_paper = a real, resolving DOI cited as the wrong paper.
+                      | all, plus budget_inflated | budget_math | missing_methods
+                      (grants only). wrong_paper = a real, resolving DOI cited as
+                      the wrong paper; budget_math = line items that don't sum.
 
 SEED PULLS
     Human grant seeds come from *multiple* NIH RePORTER pulls -- one per Carnegie
@@ -75,6 +76,7 @@ GRANT_DEFECTS = [
     "wrong_paper",
     "overclaims",
     "budget_inflated",
+    "budget_math",
     "missing_methods",
     "all",
 ]
@@ -452,6 +454,7 @@ def _slop_inject(dt, defect):
             "wrong_paper": wrong_paper,
             "overclaims": "include grandiose, unsupported guarantees of success",
             "budget_inflated": "request an implausibly large budget for the scope",
+            "budget_math": "itemize a budget whose line items do not sum to the stated total",
             "missing_methods": "keep the methods vague and hand-wavy",
             "all": "do all of: fake citations, wrong-paper citations, overclaims, padded budget",
         }
@@ -502,7 +505,11 @@ def _defect_flags(dims):
         "has_mismatched_citations": d == "wrong_paper" or is_all,
         "overclaims": d == "overclaims" or is_all,
         "budget_inflated": (d == "budget_inflated" or is_all) and grant,
+        "budget_math": (d == "budget_math" or is_all) and grant,
         "missing_methods": (d == "missing_methods" or is_all) and grant,
+        # Set only on near-duplicate clones (see add_near_duplicates); a relational
+        # property, not derivable from this record's own dimensions.
+        "is_near_duplicate": False,
     }
 
 
@@ -588,7 +595,7 @@ def _grant_sections(topic, dims, rng):
         if gt["overclaims"]
         else rng.choice(CLEAN_SENTENCES).format(topic=topic, flavor=flavor)
     )
-    budget = _budget_text(tier, rng, inflated=gt["budget_inflated"])
+    budget = _budget_text(tier, rng, inflated=gt["budget_inflated"], error=gt["budget_math"])
     context = (
         f"{APPLICANT_FLAVOR[dims['applicant_type']]} The {tier} host institution offers "
         f"{tspec['infrastructure']}, backed by {tspec['track_record']}."
@@ -644,15 +651,22 @@ def _report_sections(topic, dims, rng):
     }
 
 
-def _budget_text(tier, rng, inflated):
+def _budget_text(tier, rng, inflated, error=False):
     tspec = _tier_spec(tier)
     lo, hi = tspec["budget_per_year"]
-    per_year = rng.randint(lo, hi)
     years = rng.randint(*tspec["years"])
-    total = per_year * years * (rng.randint(4, 8) if inflated else 1)
+    mult = rng.randint(4, 8) if inflated else 1
+    personnel = rng.randint(lo, hi) * years * mult // 2
+    equipment = rng.randint(20_000, 120_000) * mult
+    travel = rng.randint(5_000, 25_000) * mult
+    indirect = rng.randint(30_000, 150_000) * mult
+    items_sum = personnel + equipment + travel + indirect
+    # budget_math: the stated total does not equal the sum of the line items.
+    stated = items_sum + rng.choice([-1, 1]) * rng.randint(10_000, 90_000) if error else items_sum
     return (
-        f"Total requested support is ${total:,} over {years} years "
-        f"at a {tier} institution, covering personnel, materials, and dissemination."
+        f"Budget: personnel ${personnel:,}; equipment ${equipment:,}; "
+        f"travel ${travel:,}; indirect costs ${indirect:,}. "
+        f"Total requested support is ${stated:,} over {years} years at a {tier} institution."
     )
 
 
@@ -718,6 +732,7 @@ def build_record(idx, dims, seed, backend, model, rng):
         "n_citations": len(cites),
         "n_unresolvable_citations": n_unresolvable,
         "n_mismatched_citations": n_mismatched,
+        "duplicate_of": None,  # set on near-duplicate clones
     }
     return Record(
         id=f"synth_{idx:05d}",
@@ -774,6 +789,10 @@ def _assemble(title, sections, cites, doc_type, human_text=None, override_body=N
 
 
 def _extract_budget(sections):
+    for v in sections.values():  # prefer the stated total over a line item
+        m = re.search(r"Total requested support is \$([\d,]+)", v)
+        if m:
+            return int(m.group(1).replace(",", ""))
     for v in sections.values():
         m = re.search(r"\$([\d,]+)", v)
         if m:
@@ -823,6 +842,38 @@ def coverage_report(records):
     return report
 
 
+def add_near_duplicates(records, k, rng):
+    """Append k near-duplicate clones: each is a light paraphrase of an existing
+    record, flagged is_near_duplicate with duplicate_of pointing at its original.
+    Exercises the similarity/duplication check ("similar to existing submissions").
+    """
+    base_n = len(records)
+    clones = []
+    for i in range(k):
+        orig = rng.choice(records)
+        # Paraphrase at the section level so the clone is a near-duplicate however
+        # it's rendered (from sections OR from text), not just in the text blob.
+        sections = {key: _launder(val, rng) for key, val in orig.sections.items()}
+        cites = [Citation(**c) for c in orig.citations]
+        dt = orig.dimensions["document_type"]
+        clones.append(
+            Record(
+                id=f"synth_{base_n + i:05d}",
+                label=orig.label,
+                dimensions=dict(orig.dimensions),
+                title=orig.title,
+                topic=orig.topic,
+                sections=sections,
+                text=_assemble(orig.title, sections, cites, dt),
+                citations=[dict(c) for c in orig.citations],
+                ground_truth={**orig.ground_truth, "is_near_duplicate": True},
+                provenance=dict(orig.provenance),
+                meta={**orig.meta, "duplicate_of": orig.id},
+            )
+        )
+    return clones
+
+
 # --------------------------------------------------------------------------- #
 # Driver
 # --------------------------------------------------------------------------- #
@@ -852,6 +903,12 @@ def main():
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--out", default="./synthetic_proposals")
     ap.add_argument(
+        "--near-dups",
+        type=int,
+        default=0,
+        help="append N near-duplicate clones (is_near_duplicate + duplicate_of)",
+    )
+    ap.add_argument(
         "--verify-dois", action="store_true", help="HEAD-check each DOI (slow, network)"
     )
     args = ap.parse_args()
@@ -870,6 +927,9 @@ def main():
         bucket = seed_buckets.get(dims["institution_tier"]) or next(iter(seed_buckets.values()))
         seed = rng.choice(bucket)
         records.append(build_record(idx, dims, seed, args.backend, args.model, rng))
+
+    if args.near_dups:
+        records += add_near_duplicates(records, args.near_dups, rng)
 
     if args.verify_dois:
         _verify_dois(records)
@@ -901,10 +961,13 @@ def _write_outputs(args, records, tiers):
                 "has_mismatched_citations",
                 "overclaims",
                 "budget_inflated",
+                "budget_math",
                 "missing_methods",
+                "is_near_duplicate",
                 "n_citations",
                 "n_unresolvable_citations",
                 "n_mismatched_citations",
+                "duplicate_of",
                 "backend",
                 "seed_source",
             ]
@@ -926,10 +989,13 @@ def _write_outputs(args, records, tiers):
                     g["has_mismatched_citations"],
                     g["overclaims"],
                     g["budget_inflated"],
+                    g["budget_math"],
                     g["missing_methods"],
+                    g["is_near_duplicate"],
                     r.meta["n_citations"],
                     r.meta["n_unresolvable_citations"],
                     r.meta["n_mismatched_citations"],
+                    r.meta["duplicate_of"] or "",
                     r.provenance["backend"],
                     r.provenance["seed_source"],
                 ]
@@ -945,6 +1011,7 @@ def _write_outputs(args, records, tiers):
             {
                 "generated_utc": datetime.now(UTC).isoformat(),
                 "n_records": len(records),
+                "near_dups": args.near_dups,
                 "doctypes": args.doctypes,
                 "tiers": tiers,
                 "backend": args.backend,
