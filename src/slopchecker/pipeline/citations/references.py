@@ -13,13 +13,22 @@ from slopchecker.models import Span
 from slopchecker.pipeline.citations.models import ReferenceEntry
 
 _HEADING_RE = re.compile(
-    r"^[ \t]*(?:\d+\.?\s+)?"
+    # Markdown ATX markers (`## References`) are consumed here because this
+    # module reads FlattenedDoc.text, and the markdown loader passes the file
+    # through verbatim — offsets index the raw file, so the `#`s are still on
+    # the heading line. Without this the region is never found on .md and the
+    # whole citation tier reports a coverage gap on a document that plainly
+    # has a bibliography (#123). ingest.util.find_references() doesn't need
+    # this: it reads Section.title, which the loader already stripped.
+    r"^[ \t]*(?:#{1,6}[ \t]*)?(?:\d+\.?\s+)?"
     # "sources"/"citations"/"endnotes" are what non-academic documents call
     # a bibliography, and blog posts / think-tank reports are two of the three
     # document types this tool screens. Bare "notes" is deliberately out: the
     # region runs heading-to-end, so a false positive swallows the document.
     r"(?:references|bibliography|works cited|reference list|literature cited"
     r"|sources|citations|endnotes|works consulted)"
+    # Trailing `#`s close an ATX heading (`## References ##`) and are optional
+    # in the syntax, so they're tolerated rather than required.
     # \r is in the trailing class because re.MULTILINE's $ matches before \n
     # but does not consume a preceding \r, so a CRLF heading line never
     # matched and the document read as having no bibliography at all.
@@ -27,7 +36,7 @@ _HEADING_RE = re.compile(
     # so this only bites callers passing raw text straight to
     # extract_citations() — but silently returning zero references is a bad
     # way to find that out.
-    r"[ \t]*:?[ \t\r]*$",
+    r"[ \t]*:?[ \t]*#*[ \t\r]*$",
     re.IGNORECASE | re.MULTILINE,
 )
 

@@ -46,23 +46,24 @@ slopcheck run tests/fixtures/synthetic/files/grant_application__fabricated_citat
 Nine DOIs, all nine correctly formatted, three of which do not exist:
 `citation_identifiers_valid` passes 9/9 while `all_dois_resolve` fails with
 3 not found. "Looks perfect, isn't real" in one screen, quote-anchored, with
-no spurious findings alongside it.
+no spurious findings alongside it. `.docx` is named above only because it's
+the format a funder is most likely to hand you; see the table below.
 
-**Use the DOCX or HTML copy — not the PDF or Markdown.** Reference-list
-parsing is format-dependent (#123). The same document, same checks:
+**Any of the four formats works** — `.docx`, `.html`, `.md` and `.pdf` all
+produce the same citation result on this document:
 
 | format | `citation_identifiers_valid` | `all_dois_resolve` |
 |---|---|---|
-| `.docx` | **true — 9/9 well-formed** | **false — 3/9 resolved, 3 not found** |
-| `.html` | **true — 9/9 well-formed** | **false — 3/9 resolved, 3 not found** |
-| `.md` | skipped — no reference list found | skipped — same |
-| `.pdf` | skipped — no reference list found | skipped — same |
+| `.docx` | true — 9/9 well-formed | false — 3/9 resolved, 3 not found |
+| `.html` | true — 9/9 well-formed | false — 3/9 resolved, 3 not found |
+| `.md` | true — 9/9 well-formed | false — 3/9 resolved, 3 not found |
+| `.pdf` | true — 9/9 well-formed | false — 3/9 resolved, 3 not found |
 
-As a PDF, all four citation checks skip and the planted defect is invisible.
-Markdown skips them too, and additionally emits nine spurious "unlinked
-citation" findings, because the reference-list markers get counted as in-text
-ones. PDF is the format funders actually upload, which is what makes #123
-demo-critical rather than cosmetic.
+Format parity is recent and was hard-won: PDF was fixed by #126 and Markdown
+by #123, and before those the citation tier was dark on the format funders
+actually upload. If you see `skipped — no reference list found in the
+document` on a document that plainly has one, that's a regression in
+reference-region detection, not a property of the file.
 
 Three of the six remaining DOIs are real but return 403, so they render as
 gray coverage-gap chips rather than failures — worth knowing before it's on a

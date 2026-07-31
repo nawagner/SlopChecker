@@ -14,7 +14,11 @@ from pathlib import Path
 
 import pytest
 
-from slopchecker.pipeline.citations import extract_citations, find_reference_region
+from slopchecker.pipeline.citations import (
+    extract_citations,
+    find_reference_region,
+    parse_references,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures" / "citations"
 DOCS = ["apa", "chicago", "ieee"]
@@ -189,6 +193,123 @@ def test_sources_heading_is_a_reference_section():
     # Blog posts and think-tank reports say "Sources", not "References".
     ext = extract_citations(_MARKDOWN_BULLETS)
     assert ext.ref_region is not None
+
+
+# ------------------------------------------- Markdown ATX headings (#123)
+#
+# The HTML/DOCX/PDF loaders strip heading markup before the text reaches
+# find_reference_region(); a `.md` document has nothing to strip, so its
+# bibliography heading arrives as "## References". A bare-heading-only regex
+# reports "no reference section" on a document that plainly has one, and the
+# whole citation-integrity tier (all_dois_resolve, citation_identifiers_valid,
+# metadata_match) degrades to a coverage gap for every markdown submission.
+
+_MD_ATX_H2 = """Prebunking achieves durable inoculation [1]. A second claim follows [2].
+
+## References
+
+- [1] https://doi.org/10.1038/s41586-020-2649-2
+- [2] https://doi.org/10.1073/pnas.1517384113
+"""
+
+_MD_ATX_H1_SOURCES = """Prebunking achieves durable inoculation [1].
+
+# Sources
+
+- [1] https://doi.org/10.1016/j.cell.2016.07.054
+"""
+
+# Closing-sequence ATX is optional syntax in Markdown, but real authors use it.
+_MD_ATX_CLOSED = """Prebunking achieves durable inoculation [1].
+
+## References ##
+
+- [1] https://doi.org/10.3353/uuwzix69
+"""
+
+
+@pytest.mark.parametrize(
+    ("text", "heading"),
+    [
+        (_MD_ATX_H2, "## References"),
+        (_MD_ATX_H1_SOURCES, "# Sources"),
+        (_MD_ATX_CLOSED, "## References ##"),
+    ],
+    ids=["atx-h2", "atx-h1-sources", "atx-closing-sequence"],
+)
+def test_markdown_atx_heading_is_a_reference_section(text, heading):
+    """A Markdown ATX heading marks a bibliography just as a bare line does."""
+    region = find_reference_region(text)
+    assert region is not None, f"markdown heading {heading!r} not recognised as a reference heading"
+    block = text[region.start : region.end]
+    # The region runs heading-to-end, so the heading — markup and all — has to
+    # be consumed, exactly as it is for a bare heading line.
+    assert block.strip().startswith("- ["), (
+        f"heading {heading!r} not fully consumed: {block[:40]!r}"
+    )
+    assert "doi.org" in block
+
+
+def test_markdown_atx_region_entries_parse():
+    """Finding the region isn't enough — the bullet entries must parse out of it."""
+    region = find_reference_region(_MD_ATX_H2)
+    assert region is not None, "## References not recognised, so there is no region to parse"
+    refs = parse_references(_MD_ATX_H2, region)
+    assert [r.key for r in refs] == ["1", "2"]
+    assert refs[0].doi == "10.1038/s41586-020-2649-2"
+    assert refs[1].doi == "10.1073/pnas.1517384113"
+
+
+def test_markdown_atx_document_links_its_mentions_end_to_end():
+    ext = extract_citations(_MD_ATX_H2)
+    assert ext.ref_region is not None
+    assert len(ext.references) == 2
+    assert [m.marker for m in ext.mentions] == ["[1]", "[2]"]
+    assert all(c.reference is not None for c in ext.citations)
+    assert ext.findings == []
+
+
+# --- regression guards: widening for ATX must not break what already works ---
+
+_BARE_HEADING = """Prebunking achieves durable inoculation [1].
+
+References
+
+- [1] https://doi.org/10.1038/s41586-020-2649-2
+"""
+
+_NUMBERED_HEADING = """Prebunking achieves durable inoculation [1].
+
+6. References
+
+- [1] https://doi.org/10.1038/s41586-020-2649-2
+"""
+
+# Heading words used mid-sentence, and a wrapped line that happens to *end* on
+# one. Neither is a heading; matching either swallows the document.
+_HEADING_SHAPED_PROSE = """This proposal cites its sources inline rather than in
+an appended bibliography, so reviewers can check each claim in place.
+
+Reviewers may also want our working notes and sources
+before scoring, but those are not part of this submission.
+"""
+
+
+@pytest.mark.parametrize(
+    "text",
+    [_BARE_HEADING, _NUMBERED_HEADING],
+    ids=["bare-heading", "numbered-heading"],
+)
+def test_non_markdown_headings_still_found(text):
+    region = find_reference_region(text)
+    assert region is not None
+    assert [r.key for r in parse_references(text, region)] == ["1"]
+
+
+def test_heading_shaped_prose_is_still_not_a_reference_section():
+    """No false positives: the region runs heading-to-end, so a bad match
+    swallows the whole document."""
+    assert find_reference_region(_HEADING_SHAPED_PROSE) is None
 
 
 # ------------------------------------------------------------- CRLF (#98)
