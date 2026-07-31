@@ -65,6 +65,7 @@ mark { background: transparent; color: inherit; padding: 0 .08em; cursor: pointe
 mark.no    { background: var(--no-bg);    box-shadow: inset 0 -2px 0 var(--no); }
 mark.yes   { background: var(--yes-bg);   box-shadow: inset 0 -2px 0 var(--yes); }
 mark.score { background: var(--score-bg); box-shadow: inset 0 -2px 0 var(--score); }
+mark.skip  { background: var(--panel);    box-shadow: inset 0 -2px 0 var(--soft); }
 mark.active { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .rail { position: relative; min-height: 100%; }
@@ -81,6 +82,7 @@ mark.active { outline: 2px solid var(--accent); outline-offset: 1px; }
         border-radius: 3px; padding: .1rem .35rem; }
 .a-id.no { background: var(--no); } .a-id.yes { background: var(--yes); }
 .a-id.score { background: var(--score); }
+.a-id.skip { background: var(--soft); }
 .a-name { font-weight: 600; }
 .kv { font-family: var(--mono); font-size: .78rem; line-height: 1.7;
       border-collapse: collapse; width: 100%; }
@@ -90,6 +92,8 @@ mark.active { outline: 2px solid var(--accent); outline-offset: 1px; }
 .v-yes { color: var(--yes); font-weight: 700; }
 .v-no { color: var(--no); font-weight: 700; }
 .v-score { color: var(--score); font-weight: 700; }
+.v-skip { color: var(--soft); font-weight: 700; }
+.why { color: var(--soft); font-weight: 400; }
 .a-note { font-size: .76rem; color: var(--soft); margin: .45rem 0 0; }
 
 @media (max-width: 900px) {
@@ -111,6 +115,7 @@ table.ledger { border-collapse: collapse; width: 100%; font-size: .84rem; min-wi
 .ledger td.r { font-family: var(--mono); font-weight: 700; }
 .ledger td.r.yes { color: var(--yes); } .ledger td.r.no { color: var(--no); }
 .ledger td.r.score { color: var(--score); }
+.ledger td.r.skip { color: var(--soft); }
 .ledger td.d { color: var(--soft); font-size: .8rem; }
 
 .verdict { border: 1px solid var(--no); border-left: 5px solid var(--no);
@@ -150,9 +155,9 @@ table.ledger { border-collapse: collapse; width: 100%; font-size: .84rem; min-wi
 <header>
   <span class="name">SlopChecker</span>
   <span class="docid">proposal.pdf — “Resilient Information Ecosystems Initiative” (Meridian Policy Group)</span>
-  <span class="facts">OSF-2026-CIV-014 · 2026-07-31 · 9 checks · 41s</span>
+  <span class="facts">OSF-2026-CIV-014 · 2026-07-31 · 10 checks · 41s</span>
 </header>
-<p class="hint">Checks appear beside the passages they refer to — click a card or highlight to expand/collapse. Red = failed a check · green = passed · purple = detector score.</p>
+<p class="hint">Checks appear beside the passages they refer to — click a card or highlight to expand/collapse. Red = failed a check · green = passed · purple = detector score · gray = could not run.</p>
 
 <div class="layout">
 <div class="doc">
@@ -237,6 +242,7 @@ table.ledger { border-collapse: collapse; width: 100%; font-size: .84rem; min-wi
     <tr><td>AI detection (Pangram)</td><td class="r score">0.96</td><td class="d">document score</td></tr>
     <tr><td>Similar to prior submission</td><td class="r score">0.87</td><td class="d">vs. submission #0083</td></tr>
     <tr><td>Budget within comparable range</td><td class="r no">NO</td><td class="d">$148k vs. $0.9–2.4M comparables (Candid)</td></tr>
+    <tr><td>Plagiarism scan</td><td class="r skip">SKIPPED</td><td class="d">no API key configured</td></tr>
   </tbody>
 </table>
 </div>
@@ -244,8 +250,8 @@ table.ledger { border-collapse: collapse; width: 100%; font-size: .84rem; min-wi
 <h2>Summary</h2>
 <div class="verdict">
   <p class="headline">5 checks failed — flag for human review</p>
-  <p>Failed: Required sections present (missing: Budget Justification); All DOIs resolve (3 / 4 — ref [3] not found); Quotes found in sources (0 / 1 — Q1); Claimed numbers found in sources (0 / 1 — C4); Budget within comparable range ($148k vs. $0.9–2.4M comparables (Candid)). Detector and similarity scores are context, not grounds.</p>
-  <p class="counts">NO ×5 · YES ×2 · scores ×2</p>
+  <p>Failed: Required sections present (missing: Budget Justification); All DOIs resolve (3 / 4 — ref [3] not found); Quotes found in sources (0 / 1 — Q1); Claimed numbers found in sources (0 / 1 — C4); Budget within comparable range ($148k vs. $0.9–2.4M comparables (Candid)). 1 check could not run (see ledger) — reported as coverage gaps, not passes. Detector and similarity scores are context, not grounds.</p>
+  <p class="counts">NO ×5 · YES ×2 · scores ×2 · not run ×1</p>
 </div>
 
 <h2>report.json (this page is a render of this)</h2>
@@ -428,6 +434,12 @@ table.ledger { border-collapse: collapse; width: 100%; font-size: .84rem; min-wi
       &quot;label&quot;: &quot;Budget within comparable range&quot;,
       &quot;result&quot;: false,
       &quot;detail&quot;: &quot;$148k vs. $0.9–2.4M comparables (Candid)&quot;
+    },
+    {
+      &quot;check&quot;: &quot;plagiarism_scan&quot;,
+      &quot;label&quot;: &quot;Plagiarism scan&quot;,
+      &quot;status&quot;: &quot;skipped&quot;,
+      &quot;reason&quot;: &quot;no API key configured&quot;
     }
   ],
   &quot;summary&quot;: {
