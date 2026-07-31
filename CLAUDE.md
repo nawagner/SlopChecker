@@ -52,13 +52,17 @@ every Stop and SessionEnd: it copies your session transcript to
 `ai-log/transcripts/` (Stop) and commits/pushes it (SessionEnd). Best-effort —
 it never blocks your session on failure.
 
-- **This repo is public.** The script scrubs obvious credential patterns
-  (Anthropic/GitHub/AWS/Slack tokens, `Bearer` headers, `api_key=` values), but
-  scrubbing is best-effort, not a guarantee. Don't paste secrets, personal
-  data, or unpublished third-party material into sessions in this repo.
-- **Opt out** by setting `SLOPCHECK_NO_TRANSCRIPT=1` in your environment, or
-  decline the project hooks when Claude Code prompts you to trust them.
+- **Opt-in.** The hook does nothing unless you set `SLOPCHECK_TRANSCRIPT=1`
+  in your environment. Reason: transcripts capture everything your own
+  harness injects into a session (personal memory hooks, task lists, local
+  paths), not just SlopChecker work — and this repo is public.
+- **If you opt in:** the script scrubs obvious credential patterns
+  (Anthropic/GitHub/AWS/Slack tokens, `Bearer` headers, `api_key=` values),
+  but scrubbing is best-effort, not a guarantee. Don't paste secrets,
+  personal data, or unpublished third-party material into sessions here.
 - Transcripts are `.jsonl`, named `<date>-<git-user>-<session8>.jsonl`.
+- Session logs in `ai-log/` (above) stay mandatory either way — that's the
+  work trail; transcripts are the raw feed for whoever wants it.
 
 ## Practical notes
 

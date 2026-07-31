@@ -6,7 +6,9 @@ Wired up as a project hook in .claude/settings.json:
   SessionEnd -> copy + git add/commit/push (--push)
 
 Best-effort by design: always exits 0 so a logging failure never blocks a
-session. Opt out with SLOPCHECK_NO_TRANSCRIPT=1.
+session. OPT-IN: does nothing unless SLOPCHECK_TRANSCRIPT=1 is set in your
+environment (personal context injected by your own hooks/memory would
+otherwise end up in a public repo).
 
 The repo is public. Obvious credential patterns are scrubbed before the copy,
 but scrubbing is best-effort — don't paste secrets into sessions here.
@@ -49,7 +51,7 @@ def git(*args: str) -> str:
 
 
 def main() -> None:
-    if os.environ.get("SLOPCHECK_NO_TRANSCRIPT") == "1":
+    if os.environ.get("SLOPCHECK_TRANSCRIPT") != "1":
         return
 
     payload = json.load(sys.stdin)
