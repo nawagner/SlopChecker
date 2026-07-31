@@ -30,7 +30,10 @@ def find_browser() -> str | None:
     env = os.environ.get("CHROMIUM")
     if env and Path(env).exists():
         return env
-    for name in ("chrome", "chromium", "chromium-browser", "msedge", "google-chrome"):
+    # google-chrome/chrome before chromium: on Ubuntu, `chromium` is usually a
+    # snap wrapper whose confinement rejects a /tmp --user-data-dir and hangs
+    # headless (exactly what happened on CI runners, which have both).
+    for name in ("google-chrome", "chrome", "msedge", "chromium-browser", "chromium"):
         path = shutil.which(name)
         if path:
             return path
@@ -48,13 +51,23 @@ def html_to_pdf(html_path: Path, pdf_path: Path, timeout: int = 60) -> Path:
             "No Chromium-family browser found for PDF output. Install Chrome/Edge "
             "or set CHROMIUM to a chromium binary."
         )
-    with tempfile.TemporaryDirectory() as profile:
+    # ignore_cleanup_errors: the throwaway profile may still be written to by
+    # exiting browser children when the context closes; leftover tmp files are
+    # preferable to a spurious OSError.
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as profile:
         subprocess.run(
             [
                 browser,
                 "--headless",
                 "--disable-gpu",
                 "--no-sandbox",
+                # No crashpad/breakpad children: they inherit our stdout/stderr
+                # pipes and outlive the browser process, which deadlocks
+                # capture_output on Linux CI until the timeout kills the run.
+                "--disable-crash-reporter",
+                "--disable-breakpad",
+                "--no-first-run",
+                "--disable-dev-shm-usage",
                 f"--user-data-dir={profile}",
                 "--no-pdf-header-footer",
                 f"--print-to-pdf={pdf_path}",
