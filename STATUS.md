@@ -5,6 +5,9 @@ Append-only. Newest entry on top. One line per entry:
 
 ## Log
 
+- 19:14 Nick (claude-code) — #118 PDF tests off the unit critical path. The 11s was two cold headless-Chrome launches, and only one was about rendering: `test_render_pdf_default_sibling_path` started a browser to check that `r.json` -> `r.pdf`, which is our path logic, not Chrome's — and it *skipped* wherever Chrome was absent, so that logic went unverified on exactly the machines most likely to get it wrong. Now stubbed at the `html_to_pdf` seam (render_file still runs for real), plus three more plumbing assertions it enables; the single genuine render is marked `integration`. Unit run of that file 2.77s -> 0.03s locally and ~11s -> 0 on CI; proved no browser starts by running the file with subprocess.Popen/run rigged to raise, and red-greened the stub by breaking with_suffix(). Kept the real render inside the required `test` job rather than a parallel one — trading gate coverage for seconds is the mistake #114's review caught, and the PDF is the shipping artifact / next: PR / blocked on nothing.
+
+
 - 19:10 Dan (air) — #18 structured lane Phase 1 stacked on the same PR (#127):
   `src/slopchecker/background/` skeleton (extract + structured/base with the
   `RegistryLookup` Protocol for the coming ProPublica/OpenAlex/ORCID clients)
