@@ -176,6 +176,34 @@ def test_pdf_style_text_splits_into_pages_not_one_wall():
     assert "\f" not in out
 
 
+def test_pdf_line_wraps_reflow_but_structure_stays():
+    # Mid-sentence newlines (PDF line-wrap artifacts) render as spaces;
+    # heading/key-value newlines keep their hard break.
+    text = "PI: Liu\nTitle: something\nfield trials show durable\ngains from prebunking [1]."
+    rep = {"document": {"file": "t.pdf", "text": text}, "findings": [], "ledger": []}
+    out = render_report(rep)
+    assert "durable gains from prebunking" in out  # soft-joined
+    assert "PI: Liu\nTitle: something" in out  # hard breaks kept
+
+
+def test_anchor_across_soft_joined_newline_still_marks():
+    text = "evidence shows durable\ngains at scale in trials."
+    rep = {
+        "document": {"file": "t.pdf", "text": text},
+        "findings": [
+            {
+                "id": "A1",
+                "anchor": {"quote": "durable\ngains"},
+                "checks": [{"name": "x", "result": False}],
+            }
+        ],
+        "ledger": [],
+    }
+    out = render_report(rep)
+    # The mark wraps the same characters, newline rendered as a space.
+    assert '<mark class="no" data-anno="a1">durable gains</mark>' in out
+
+
 def test_paragraph_offsets_survive_mixed_separators():
     # \n\n and \f both split; offsets must stay exact so anchors that sit
     # after a page break still highlight (regression for the +2 arithmetic).
