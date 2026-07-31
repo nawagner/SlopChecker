@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from slopchecker import config as _config
+from slopchecker.checks.cache import CONTENT_HASH_TTL_S, remote_cache
 from slopchecker.lenses import load_lens
 from slopchecker.models import Anchor, CheckResult, Finding, FlattenedDoc, LedgerRow
 from slopchecker.pipeline.lens_runtime import LensRunConfig, run_lens
@@ -21,13 +22,22 @@ from slopchecker.pipeline.registry import CheckContext, CheckOutput, register
 _LENS_ID = "claims"
 
 
-def _lens_config() -> LensRunConfig:
-    """Optional on-disk cache, opt-in via ``SLOPCHECK_LENS_CACHE_DIR``.
+def _lens_config(no_cache: bool = False) -> LensRunConfig:
+    """Cache policy for the lens call. Two tiers, both opt-in.
 
-    Off by default so the check has no filesystem side-effects on a fresh
-    checkout; set the env var when repeated runs on the same document
-    should short-circuit the Anthropic call.
+    The shared KV cache (#119) wins when configured: it survives the ephemeral
+    Railway filesystem and is shared across runs, so a repeat of the demo
+    document costs nothing. Payloads are span-encoded on the way in, since lens
+    quotes are verbatim document text — see ``lens_runtime._encode_payload``.
+
+    Otherwise the on-disk cache, opt-in via ``SLOPCHECK_LENS_CACHE_DIR``. Off by
+    default so the check has no filesystem side-effects on a fresh checkout.
     """
+    if no_cache:
+        return LensRunConfig()
+    cache = remote_cache(ttl_s=CONTENT_HASH_TTL_S)
+    if cache is not None:
+        return LensRunConfig(cache=cache)
     cache_env = _config.get("SLOPCHECK_LENS_CACHE_DIR")
     cache_dir = Path(cache_env) / _LENS_ID if cache_env else None
     return LensRunConfig(cache_dir=cache_dir)
@@ -77,7 +87,7 @@ def claims(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
     criteria).
     """
     lens = load_lens(_LENS_ID)
-    result = run_lens(lens, doc, _lens_config())
+    result = run_lens(lens, doc, _lens_config(no_cache=ctx.no_cache))
 
     if result.status != "ok":
         return CheckOutput(

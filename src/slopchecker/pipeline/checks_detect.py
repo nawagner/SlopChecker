@@ -11,6 +11,7 @@ the key is set in production, not on anything in this module.
 
 from __future__ import annotations
 
+from slopchecker.checks.cache import CONTENT_HASH_TTL_S, remote_cache
 from slopchecker.detect import PangramConfig, PangramDetector
 from slopchecker.models import FlattenedDoc, LedgerRow
 from slopchecker.pipeline.registry import CheckContext, CheckOutput, register
@@ -29,11 +30,21 @@ from slopchecker.pipeline.registry import CheckContext, CheckOutput, register
 def pangram_document(doc: FlattenedDoc, ctx: CheckContext) -> CheckOutput:
     """Run Pangram's AI-detection API on `doc` and map the result to a `CheckOutput`.
 
-    A fresh `PangramDetector` is instantiated per call (no `cache_dir` — the
-    server filesystem is ephemeral). The detector itself handles a missing
-    API key, transport failures, and retries; this function never raises.
+    A fresh `PangramDetector` is instantiated per call. No `cache_dir` — the
+    server filesystem is ephemeral, which is exactly why the shared KV cache
+    (#119) exists: keyed on the content hash, it survives deploys and is shared
+    across runs, so re-running the same document costs nothing. Unconfigured
+    (`SLOPCHECK_CACHE_URL` / `SLOPCHECK_CACHE_TOKEN` unset) it is simply None
+    and the check behaves exactly as before.
+
+    `--no-cache` is honoured here rather than inside the detector, so the flag
+    means the same thing for every tier.
+
+    The detector itself handles a missing API key, transport failures, and
+    retries; this function never raises.
     """
-    detector = PangramDetector(PangramConfig())
+    cache = None if ctx.no_cache else remote_cache(ttl_s=CONTENT_HASH_TTL_S)
+    detector = PangramDetector(PangramConfig(cache=cache))
     result = detector.check(doc)
 
     ledger_row = result.ledger_row

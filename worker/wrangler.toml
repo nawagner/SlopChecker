@@ -45,6 +45,20 @@ database_id = "1917ea0e-5a86-4bb6-8b15-876888c3d340"
 # one place. Same value as wrangler's default, relative to this file.
 migrations_dir = "migrations"
 
+# Shared cache for expensive derived results (#119): Pangram scores, lens
+# payloads, DOI/URL resolutions. Read and written by the Railway Python service
+# through /api/cache — never by a Cloudflare API token, for the same reason the
+# D1 block above gives.
+#
+# `id` is an identifier, not a secret, same class as `database_id`. The bearer
+# token that actually gates the endpoint is a Worker secret and is not here.
+#
+# Binding a namespace also gives the test suite one: vitest-pool-workers reads
+# this file, so Miniflare provisions a local KV for `CACHE` automatically.
+[[kv_namespaces]]
+binding = "CACHE"
+id = "80bde980a03a4a7e8dabda40e11a311f"
+
 # slop-checker.com is already a Cloudflare zone with no conflicting DNS
 # records, so this provisions the DNS record + SSL automatically on deploy —
 # no manual `wrangler route add` needed.

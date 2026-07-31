@@ -87,21 +87,35 @@ so a keyless run is honest about what it did not do rather than silently passing
 |---|---|---|---|
 | Check results (network/LLM checks) | Results keyed by a content hash, as `{"cached_at", "value"}` JSON | `~/.cache/slopchecker/` | **On** — override with `--cache-dir` or `$SLOPCHECK_CACHE_DIR`; disable with `--no-cache` |
 | Source text (#10) | Fetched open-access source full text | under the cache dir | Populated only when a network fetcher is configured; never redistributed (reports carry only the matched window) |
+| Shared result cache (#119) | Pangram scores, lens claim records, DOI/URL resolutions — **derived values only** | Cloudflare KV, `slopchecker_cache` | **Off** unless `SLOPCHECK_CACHE_URL` + `SLOPCHECK_CACHE_TOKEN` are set; currently the hosted service only |
 | Credentials | API keys | `.env` (never committed; see `.gitignore`) | — |
 
 Only checks that make network/LLM calls write to the cache; a deterministic-only
 run stores nothing. The `<cache_dir>/<hash>.json` scheme is shared by the LLM
-lens cache and the (not-yet-wired) Pangram detector cache.
+lens cache and the Pangram detector cache.
+
+**The shared cache holds no document text.** It is the one cache that leaves the
+machine, so the rule is enforced mechanically rather than by convention:
+Pangram responses pass a field whitelist, and lens quotes are stored as
+`[start, end]` offsets and re-sliced from the local document on read. Cache
+*keys* are hashed too, so the store carries no record of which DOIs a proposal
+cited. Fetched source text is deliberately excluded — that would put
+third-party, sometimes paywalled full text into shared storage. Details and the
+enforcement points: [docs/kv-cache.md](docs/kv-cache.md).
 
 - **Retention period** — the policy is to purge cached results and fetched
   source text after **30 days**, matching the default deletion window the major
-  API providers we call already use (e.g. Anthropic's commercial API). Entries
-  carry a `cached_at` timestamp, but automatic TTL enforcement is not yet
-  implemented — today caches persist until deleted.
-- **Cache purge** — `[PLANNED]` (#23 acceptance criterion, tracked in #108): a
-  command to delete all caches on demand; until then, remove
-  `~/.cache/slopchecker/` (or your `--cache-dir`) by hand, or run with
-  `--no-cache`.
+  API providers we call already use (e.g. Anthropic's commercial API). On disk,
+  entries carry a `cached_at` timestamp and expire on read, but nothing deletes
+  the files — they persist until removed by hand. The shared cache is the
+  exception: 30 days is a KV TTL, so expiry there is actual deletion rather than
+  a cleanup task someone has to remember. Identifier lookups (DOI/URL) keep
+  their shorter 7-day TTL in both tiers.
+- **Cache purge** — mostly `[PLANNED]` (#23 acceptance criterion, tracked in
+  #108): a command to delete all caches on demand. Single entries can be deleted
+  from the shared cache today (`DELETE /api/cache/:namespace/:key`); for the
+  disk cache, remove `~/.cache/slopchecker/` (or your `--cache-dir`) by hand, or
+  run with `--no-cache`.
 - Shared bulk corpora and fixtures live in Cloudflare R2, not in git — see
   [docs/data-storage.md](docs/data-storage.md). That store holds
   **synthetic** data; if real submissions are ever indexed for similarity
