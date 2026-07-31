@@ -150,9 +150,7 @@ def run(
         raise typer.Exit(2)
 
     if path.is_dir():
-        targets = sorted(
-            p for p in path.iterdir() if p.is_file() and p.suffix.lower() in LOADERS
-        )
+        targets = sorted(p for p in path.iterdir() if p.is_file() and p.suffix.lower() in LOADERS)
         if not targets:
             exts = ", ".join(sorted(LOADERS))
             console.print(f"[red]no readable proposals ({exts}) found in {path}[/red]")

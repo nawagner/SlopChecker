@@ -92,9 +92,7 @@ def test_findings_never_fail_the_exit_code(sample_md, tmp_path, scratch_registry
 
     def always_fails(doc, ctx):
         return CheckOutput(
-            ledger=[
-                LedgerRow(check="always_fails", label="Contrived failure", result=False)
-            ]
+            ledger=[LedgerRow(check="always_fails", label="Contrived failure", result=False)]
         )
 
     registry_mod._REGISTRY["always_fails"] = RegisteredCheck(
@@ -218,9 +216,7 @@ def test_batch_ranks_by_concerns(tmp_path, scratch_registry):
 
     def flag_bad(doc, ctx):
         ok = "bad" not in doc.text.lower()
-        return CheckOutput(
-            ledger=[LedgerRow(check="flag_bad", label="No bad phrases", result=ok)]
-        )
+        return CheckOutput(ledger=[LedgerRow(check="flag_bad", label="No bad phrases", result=ok)])
 
     registry_mod._REGISTRY["flag_bad"] = RegisteredCheck(
         meta=Check(id="flag_bad", name="No bad phrases", tier="deterministic"),
