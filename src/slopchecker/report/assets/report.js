@@ -13,33 +13,61 @@
       document.querySelectorAll('mark[data-anno~="' + id + '"]'));
   }
 
-  // Place every anchored card at its passage's height, pushing down to avoid
-  // overlap. Cards whose quote never landed a highlight stack after the
-  // anchored ones — at top 0 they used to pile on the first paragraph,
-  // looking connected to text they had nothing to do with.
+  // Place every anchored card at its passage's height. Cards whose quote
+  // never landed a highlight stack after the anchored ones — at top 0 they
+  // used to pile on the first paragraph, looking connected to text they had
+  // nothing to do with.
   // Returns the bottom of the stack so the caller can detect overflow.
+  var GAP = 10;
   function place() {
     var anchored = [], loose = [];
     annos.forEach(function (a) {
       var m = marksFor(a)[0];
       if (m) {
-        anchored.push({ a: a, top: m.getBoundingClientRect().top - layoutEl.getBoundingClientRect().top });
+        anchored.push({ a: a, ideal: m.getBoundingClientRect().top - layoutEl.getBoundingClientRect().top });
       } else {
         loose.push(a);
       }
     });
-    anchored.sort(function (x, y) { return x.top - y.top; });
+    anchored.sort(function (x, y) { return x.ideal - y.ideal; });
+
+    // Down pass: no overlaps, every card at or below its passage.
     var prev = 0;
+    anchored.forEach(function (it) {
+      it.h = it.a.offsetHeight;
+      it.p = Math.max(it.ideal, prev);
+      prev = it.p + it.h + GAP;
+    });
+
+    // Balance pass: a dense run (nine metadata cards anchored in one
+    // references section) pushes its tail far below the passages it refers
+    // to. Shift each contiguous cluster of touching cards up by its mean
+    // displacement — bounded by the cluster above — so the run straddles
+    // its passages instead of accumulating downward.
+    var bound = 0, i = 0;
+    while (i < anchored.length) {
+      var j = i;
+      while (j + 1 < anchored.length &&
+             anchored[j + 1].p - (anchored[j].p + anchored[j].h + GAP) < 0.5) j++;
+      var disp = 0;
+      for (var k = i; k <= j; k++) disp += anchored[k].p - anchored[k].ideal;
+      var shift = Math.max(0, Math.min(disp / (j - i + 1), anchored[i].p - bound));
+      for (k = i; k <= j; k++) anchored[k].p -= shift;
+      bound = anchored[j].p + anchored[j].h + GAP;
+      i = j + 1;
+    }
+
+    var bottom = 0;
     function put(a, top) {
       a.style.position = "absolute";
       a.style.left = "0";
       a.style.right = "0";
       a.style.top = top + "px";
-      prev = top + a.offsetHeight + 10;
+      bottom = Math.max(bottom, top + a.offsetHeight + GAP);
     }
-    anchored.forEach(function (it) { put(it.a, Math.max(it.top, prev)); });
-    loose.forEach(function (a) { put(a, prev); });
-    return prev;
+    anchored.forEach(function (it) { put(it.a, it.p); });
+    loose.forEach(function (a) { put(a, bottom); });
+    return bottom;
   }
 
   function layout() {

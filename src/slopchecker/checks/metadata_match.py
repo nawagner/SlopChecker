@@ -203,10 +203,12 @@ def _finding(
                 status="skipped",
                 reason="no canonical record from Crossref, OpenAlex, or arXiv",
             )
-            label = "Metadata could not be checked"
+            # "Citation" up front: without it this read as a statement about
+            # the *document's* metadata (it confused the first real reviewer).
+            label = "Citation metadata could not be checked"
             note = (
-                "Not found in our metadata providers — expected for books and gray "
-                "literature, and reported as a coverage gap."
+                "This citation was not found in our metadata providers — expected "
+                "for books and gray literature, and reported as a coverage gap."
             )
     elif match.grade is Grade.different:
         check = CheckResult(name=CHECK_ID, result=False)
