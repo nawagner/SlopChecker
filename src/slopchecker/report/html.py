@@ -115,6 +115,31 @@ def _mark_paragraph(par: str, offset: int, spans: list[tuple[int, int, dict]]) -
 
 _REF_RE = re.compile(r"^\[\d+\]")
 
+# Paragraph boundaries in the flattened text: blank lines (born-digital text)
+# and form feeds (the ingest page separator for PDFs). Offsets are taken from
+# the match positions, never from arithmetic over a split — anchors index into
+# the exact text, so the two must not drift.
+_PARA_SEP = re.compile(r"\f|\n{2,}")
+
+
+def _paragraphs(text: str) -> list[tuple[int, str, int]]:
+    """Split into (offset, paragraph, page) with exact offsets preserved.
+
+    ``page`` is 1-based and advances on each form feed, so a PDF renders as
+    one block per page with a divider between pages. Text with no ``\\f`` is
+    all "page 1" and gets no dividers.
+    """
+    out: list[tuple[int, str, int]] = []
+    pos, page = 0, 1
+    for sep in _PARA_SEP.finditer(text):
+        if sep.start() > pos:
+            out.append((pos, text[pos : sep.start()], page))
+        page += sep.group().count("\f")
+        pos = sep.end()
+    if pos < len(text):
+        out.append((pos, text[pos:], page))
+    return out
+
 
 def _render_document(doc: dict, findings: list[dict]) -> str:
     text = doc.get("text", "")
@@ -122,11 +147,13 @@ def _render_document(doc: dict, findings: list[dict]) -> str:
 
     body: list[str] = []
     refs: list[str] = []
-    offset = 0
-    for par in text.split("\n\n"):
+    last_page = 1
+    for offset, par, page in _paragraphs(text):
+        if page != last_page:
+            body.append(f'<div class="pgbrk">p. {page}</div>')
+            last_page = page
         html = f"<p>{_mark_paragraph(par, offset, spans)}</p>"
         (refs if _REF_RE.match(par) else body).append(html)
-        offset += len(par) + 2
 
     parts = ['<div class="doc">']
     if doc.get("title"):
