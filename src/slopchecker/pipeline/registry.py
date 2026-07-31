@@ -34,8 +34,9 @@ DEFAULT_TIMEOUT_S = 30.0
 # built-ins; slopchecker.checks is Nick's deterministic-tier package (#8 etc.)
 # and is picked up automatically once it exists; pipeline/checks_llm.py + the
 # pipeline/claim_support package are #11's LLM check (tier="llm");
-# pipeline/checks_similarity.py is the batch-aware near-dup check (#14) — kept
-# in pipeline/ because it wraps the Dan-owned similarity/ engine.
+# pipeline/budget_feasibility is #17's LLM lens+evaluator check (also
+# tier="llm"); pipeline/checks_similarity.py is the batch-aware near-dup check
+# (#14) — kept in pipeline/ because it wraps the Dan-owned similarity/ engine.
 CHECK_PACKAGES: tuple[str, ...] = (
     "slopchecker.pipeline.checks_builtin",
     "slopchecker.pipeline.checks_citations",
@@ -45,6 +46,7 @@ CHECK_PACKAGES: tuple[str, ...] = (
     "slopchecker.pipeline.checks_similarity",
     "slopchecker.pipeline.checks_topics",
     "slopchecker.pipeline.claim_support",
+    "slopchecker.pipeline.budget_feasibility",
     "slopchecker.checks",
 )
 

@@ -19,3 +19,12 @@ evaluator (Phase 3).
 """
 
 from __future__ import annotations
+
+# Importing `check` registers the ``budget_feasibility`` check via @register.
+from slopchecker.pipeline.budget_feasibility import check as _check  # noqa: F401
+from slopchecker.pipeline.budget_feasibility.check import (
+    BudgetFeasibilityCheck,
+    BudgetFeasibilityConfig,
+)
+
+__all__ = ["BudgetFeasibilityCheck", "BudgetFeasibilityConfig"]

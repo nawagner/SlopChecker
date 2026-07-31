@@ -622,3 +622,360 @@ def test_us_2026_bands_match_design_convo_lockdown():
     assert US_2026.salary_bands_usd["consultant"] == (100_000, 300_000)
     assert US_2026.salary_bands_usd["other"] is None
     assert US_2026.fringe_rate_default == 0.28
+
+
+# ===========================================================================
+# Orchestrator tests (Phase 3): LLM wiring with a mocked transport.
+#
+# These verify the seam that turns a lens JSON payload into `Finding` records:
+#
+#   load_lens → LLM call (mocked) → parse → quotecheck → evaluate_lens_output.
+#
+# Two invariants stay non-negotiable across every test below:
+#
+# 1. No LLM output that lacks a quote verbatim-present in ``doc.text``
+#    reaches the evaluator. A hallucinated quote drops the item; the
+#    downstream ``personnel_underfunded`` finding for that item MUST
+#    NOT appear.
+# 2. Any transport failure records a gap (skipped/errored ledger row) —
+#    the check never crashes the run.
+#
+# The fake transport is a mirror of ``test_claim_support.FakeTransport``.
+# It records every call and replays scripted responses; a scripted
+# ``role`` mismatch or a missing turn blows up loudly rather than
+# silently mis-aligning.
+# ===========================================================================
+
+
+import json  # noqa: E402
+
+from slopchecker.lenses import load_lens  # noqa: E402
+from slopchecker.models import FlattenedDoc  # noqa: E402
+from slopchecker.pipeline.budget_feasibility.check import (  # noqa: E402
+    BudgetFeasibilityCheck,
+    BudgetFeasibilityConfig,
+)
+from slopchecker.pipeline.budget_feasibility.llm import (  # noqa: E402
+    TransportAuthError,
+    TransportRateLimit,
+    TransportServerError,
+)
+from slopchecker.pipeline.registry import CheckContext  # noqa: E402
+
+
+class FakeTransport:
+    """Scripted transport for orchestrator tests. Never touches the network.
+
+    Each item in ``turns`` is either a dict (parsed structured output — what
+    the Anthropic Messages API's ``output_config.format`` guarantees) or an
+    Exception instance to raise. If a scripted turn carries
+    ``_expect_role``, the transport asserts it matches the call — so a
+    scripted response for the wrong role blows up loudly instead of
+    landing silently.
+    """
+
+    # `name` lands in Finding.evidence["provider"] downstream; asserting
+    # the exact value confirms the pass-through wiring works.
+    name = "anthropic-fake"
+
+    def __init__(self, turns: list[object]) -> None:
+        self._turns = list(turns)
+        self.calls: list[dict] = []
+
+    def complete_json(
+        self,
+        *,
+        system: str,
+        user: str,
+        schema: dict,
+        model: str,
+        role: str,
+    ) -> dict:
+        self.calls.append(
+            {"system": system, "user": user, "model": model, "role": role, "schema": schema}
+        )
+        if not self._turns:
+            raise AssertionError(f"FakeTransport out of scripted turns (role={role})")
+        turn = self._turns.pop(0)
+        if isinstance(turn, Exception):
+            raise turn
+        expected_role = turn.pop("_expect_role", None)
+        if expected_role is not None and expected_role != role:
+            raise AssertionError(
+                f"scripted turn expected role={expected_role!r} but got role={role!r}"
+            )
+        return turn
+
+
+def _meridian_doc() -> FlattenedDoc:
+    """A FlattenedDoc whose ``text`` is the lens's example_input verbatim.
+
+    The example_input is under test by ``tests/test_lenses.py`` (quote-
+    verbatim gate), so every ``quote`` string in the example_output is
+    guaranteed to be a substring of this doc's text. That's what makes
+    the orchestrator tests below robust against typo drift in the lens
+    markdown: if a quote in the example ever stops matching the input,
+    ``test_lenses.py`` fails first, not these tests.
+    """
+    lens = load_lens("budget_feasibility")
+    return FlattenedDoc(file="meridian.md", text=lens.example_input)
+
+
+def _meridian_lens_payload() -> dict:
+    """The Meridian JSON payload as the LLM would return it.
+
+    Loaded from the lens's example_output block so a schema drift in the
+    lens surfaces here before the orchestrator tests run.
+    """
+    lens = load_lens("budget_feasibility")
+    return json.loads(lens.example_output)
+
+
+def _lens_response(payload: dict) -> dict:
+    """Wrap a raw lens JSON payload as a scripted transport turn."""
+    return {"_expect_role": "lens", **payload}
+
+
+def _bf_config(**overrides) -> BudgetFeasibilityConfig:
+    base = dict(
+        model="claude-opus-5",
+        max_attempts=3,
+        initial_backoff_seconds=0.0,  # no real sleeping in tests
+        shortfall_flag_threshold=3.0,
+    )
+    base.update(overrides)
+    return BudgetFeasibilityConfig(**base)
+
+
+# --- Test cases -------------------------------------------------------------
+
+
+def test_check_skipped_when_api_key_missing(monkeypatch):
+    """No ANTHROPIC_API_KEY → skipped ledger row, no LLM call, no findings.
+
+    Mirrors ``claim_support``'s degrade-to-gap contract: a missing key
+    is a report row, not a crash.
+    """
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    transport = FakeTransport([])  # must be untouched
+    check = BudgetFeasibilityCheck(config=_bf_config(), transport=transport)
+    out = check.run(_meridian_doc(), CheckContext())
+
+    assert out.findings == []
+    assert transport.calls == []
+    assert len(out.ledger) == 1
+    row = out.ledger[0]
+    assert row.status == "skipped"
+    assert row.check == "budget_feasibility"
+    assert "ANTHROPIC_API_KEY" in (row.reason or "")
+
+
+def test_check_meridian_end_to_end_emits_expected_findings(monkeypatch):
+    """A valid Meridian payload runs the full pipe and emits the finding
+    set the evaluator tests already lock in — but with the added
+    guarantee that it flowed through parse + quotecheck first.
+
+    Expected shape (matches ``test_evaluate_meridian_emits_expected_finding_shape``):
+    - 1 personnel_underfunded (PL1, true, ~4.1x shortfall)
+    - 2 pairing_ratio_usd_per_unit (SC1, SC2)
+    - 2 unfunded_quantitative_commitment (SC3, SC4)
+    - 2 unallocated_budget_line (NL1, NL3)
+    - 1 sum_of_lines_matches_stated_total (true)
+    """
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    transport = FakeTransport([_lens_response(_meridian_lens_payload())])
+    check = BudgetFeasibilityCheck(config=_bf_config(), transport=transport)
+    out = check.run(_meridian_doc(), CheckContext())
+
+    # Exactly one LLM call (single-pass lens; no judge/refuter here).
+    assert len(transport.calls) == 1
+    assert transport.calls[0]["role"] == "lens"
+    assert transport.calls[0]["model"] == "claude-opus-5"
+
+    counts: dict[str, int] = {}
+    for f in out.findings:
+        for cr in f.checks:
+            counts[cr.name] = counts.get(cr.name, 0) + 1
+    assert counts.get("personnel_underfunded", 0) == 1
+    assert counts.get("pairing_ratio_usd_per_unit", 0) == 2
+    assert counts.get("unfunded_quantitative_commitment", 0) == 2
+    assert counts.get("unallocated_budget_line", 0) == 2
+    assert counts.get("sum_of_lines_matches_stated_total", 0) == 1
+
+    # Ledger surfaces the run with the finding count as the numeric result.
+    [row] = out.ledger
+    assert row.check == "budget_feasibility"
+    assert row.status == "ok"
+    assert row.result == len(out.findings)
+
+
+def test_check_meridian_evidence_carries_benchmark_assumption(monkeypatch):
+    """The orchestrator must not strip the ``assumed_bands_usd`` and
+    friends the evaluator prints — reviewer overrides depend on that data
+    reaching ``report.json`` intact."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    transport = FakeTransport([_lens_response(_meridian_lens_payload())])
+    check = BudgetFeasibilityCheck(config=_bf_config(), transport=transport)
+    out = check.run(_meridian_doc(), CheckContext())
+
+    underfunded = _finding_by_check(out.findings, "personnel_underfunded", target="PL1")
+    assert underfunded is not None
+    ev = underfunded.evidence
+    assert ev["amount_stated_usd"] == 40_000
+    assert ev["assumed_bands_usd"]["pi"] == [95_000, 220_000]
+    assert ev["assumed_bands_usd"]["postdoc"] == [52_000, 82_000]
+    assert ev["assumed_fringe_rate"] == 0.28
+    assert "benchmark_source" in ev and ev["benchmark_source"]
+    assert ev["flagged_because"] == "stated < expected_p20 / threshold"
+
+
+def test_check_hallucinated_quote_drops_only_that_line(monkeypatch):
+    """A ``personnel_lines[0].quote`` not present in ``doc.text`` is
+    dropped by quotecheck; the ``personnel_underfunded`` finding for
+    PL1 MUST NOT appear.
+
+    The rest of the payload (NL*, SC*, project) still evaluates, and the
+    ledger detail surfaces that an extracted item was dropped so the
+    reviewer sees the gap.
+    """
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    doc = _meridian_doc()
+    payload = _meridian_lens_payload()
+    # Sabotage: replace PL1's quote with text that does not exist in the
+    # Meridian doc. The line survives structurally (schema-valid) but
+    # quotecheck drops it because there is no verbatim match.
+    payload["personnel_lines"][0]["quote"] = (
+        "This exact sentence appears nowhere in the Meridian proposal at all."
+    )
+    # Remove pairings that reference PL1, since a dropped item drops its
+    # pairings. Otherwise the evaluator would try to sum an amount for a
+    # scope commitment against a missing budget id.
+    payload["pairings"] = [p for p in payload["pairings"] if p["budget_id"] != "PL1"]
+
+    transport = FakeTransport([_lens_response(payload)])
+    check = BudgetFeasibilityCheck(config=_bf_config(), transport=transport)
+    out = check.run(doc, CheckContext())
+
+    # Invariant 1: no finding for the dropped line.
+    assert _finding_by_check(out.findings, "personnel_underfunded", target="PL1") is None
+    # Other findings still evaluate — NL1/NL3 unallocated, SC3/SC4 unfunded,
+    # sum-check still emitted.
+    assert _finding_by_check(out.findings, "unallocated_budget_line", target="NL1") is not None
+    assert (
+        _finding_by_check(out.findings, "unfunded_quantitative_commitment", target="SC3")
+        is not None
+    )
+    # Ledger detail surfaces the drop so the reader sees the gap.
+    [row] = out.ledger
+    assert row.status == "ok"
+    assert row.detail is not None
+    assert "quote" in row.detail.lower()
+
+
+def test_check_permanent_transport_error_records_errored_ledger(monkeypatch):
+    """Auth failure is not a rate-limit blip — surfaces as an errored
+    ledger row, and no findings escape."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    transport = FakeTransport([TransportAuthError(401, "invalid key")])
+    check = BudgetFeasibilityCheck(config=_bf_config(), transport=transport)
+    out = check.run(_meridian_doc(), CheckContext())
+
+    assert out.findings == []
+    [row] = out.ledger
+    assert row.check == "budget_feasibility"
+    assert row.status == "errored"
+    assert row.reason and "401" in row.reason
+
+
+def test_check_transient_errors_retry_then_succeed(monkeypatch):
+    """429/5xx retries follow the ``claim_support`` pattern; a permanent
+    payload after the transient failures resolves cleanly."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    transport = FakeTransport(
+        [
+            TransportRateLimit("[429] slow down"),
+            TransportServerError(503, "unavailable"),
+            _lens_response(_meridian_lens_payload()),
+        ]
+    )
+    check = BudgetFeasibilityCheck(
+        config=_bf_config(max_attempts=3, initial_backoff_seconds=0.0),
+        transport=transport,
+    )
+    out = check.run(_meridian_doc(), CheckContext())
+
+    # Two retries + one successful call.
+    assert len(transport.calls) == 3
+    # Findings landed — the retry loop didn't drop them on the floor.
+    assert len(out.findings) > 0
+
+
+def test_check_transient_errors_exhaust_retries_records_errored(monkeypatch):
+    """When every attempt hits 429/5xx, the final transient error is
+    surfaced as an errored ledger row — the run doesn't loop forever."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    transport = FakeTransport(
+        [
+            TransportRateLimit("[429] slow down"),
+            TransportRateLimit("[429] still slow"),
+            TransportRateLimit("[429] give up"),
+        ]
+    )
+    check = BudgetFeasibilityCheck(
+        config=_bf_config(max_attempts=3, initial_backoff_seconds=0.0),
+        transport=transport,
+    )
+    out = check.run(_meridian_doc(), CheckContext())
+
+    # All three attempts fired, no more.
+    assert len(transport.calls) == 3
+    assert out.findings == []
+    [row] = out.ledger
+    assert row.status == "errored"
+
+
+def test_check_malformed_lens_payload_becomes_errored_ledger(monkeypatch):
+    """A payload whose ``role`` enum is out of range → errored ledger row,
+    not an uncaught exception. ``output_config.format`` enforces the
+    schema server-side but the "degrade to gaps, never crash" rule from
+    CLAUDE.md means we don't rely on that."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    bad_payload = _meridian_lens_payload()
+    # Sabotage: a schema-invalid role slips past the fake transport (which
+    # doesn't validate) and must land as a gap rather than a stack trace.
+    bad_payload["personnel_lines"][0]["roles_named"][0]["role"] = "not_a_real_role_enum"
+    transport = FakeTransport([_lens_response(bad_payload)])
+    check = BudgetFeasibilityCheck(config=_bf_config(), transport=transport)
+    out = check.run(_meridian_doc(), CheckContext())
+
+    assert out.findings == []
+    [row] = out.ledger
+    assert row.status == "errored"
+
+
+def test_check_missing_required_key_in_payload_becomes_errored(monkeypatch):
+    """A payload missing a required key (e.g. ``project``) becomes an
+    errored ledger row rather than a KeyError escape."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    bad_payload = _meridian_lens_payload()
+    del bad_payload["project"]
+    transport = FakeTransport([_lens_response(bad_payload)])
+    check = BudgetFeasibilityCheck(config=_bf_config(), transport=transport)
+    out = check.run(_meridian_doc(), CheckContext())
+
+    assert out.findings == []
+    [row] = out.ledger
+    assert row.status == "errored"
+
+
+def test_check_registered_under_llm_tier():
+    """The check must appear in the registry under tier=llm.
+
+    Discovery must find the ``budget_feasibility`` package via
+    ``registry.CHECK_PACKAGES``.
+    """
+    from slopchecker.pipeline import registry
+
+    registry.discover()
+    ids = {rc.meta.id for rc in registry.all_checks() if rc.meta.tier == "llm"}
+    assert "budget_feasibility" in ids
